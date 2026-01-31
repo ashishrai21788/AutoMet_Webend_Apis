@@ -945,15 +945,21 @@ exports.getRecords = async (req, res) => {
     // Set proper headers for mobile compatibility
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
-    
+
+    // When drivers list is filtered by driverId and exactly one driver is found, return data as object
+    // so clients (e.g. SyncDutyStatus) that expect data to be a single driver object get BEGIN_OBJECT, not BEGIN_ARRAY
+    const payloadData = (collectionName.toLowerCase() === 'drivers' && query.driverId && data.length === 1)
+      ? data[0]
+      : data;
+
     res.status(200).json({
       success: true,
       message: records.length === 0 ? 'No drivers found' : `${records.length} driver(s) found`,
       count: records.length.toString(), // Convert to string for Kotlin compatibility
-      data: data
+      data: payloadData
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Server error',
       error: 'Server error', 

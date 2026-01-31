@@ -74,14 +74,19 @@ exports.saveAnalytics = async (req, res) => {
       event.actorType = raw.actorType ?? raw.actor_type ?? 'user';
       event.pageIdentifier = raw.pageIdentifier ?? raw.page_identifier ?? null;
       event.metadata = raw.metadata ?? {};
-      // Normalize driver_ids/driverIds to array for map visibility events so aggregation and map_views upsert work
+      // Normalize driver_ids to array for map visibility / snapshot events (see MAP_ANALYTICS_DESIGN.md)
       const name = (event.eventName || '').toLowerCase();
-      if (name === 'map_visible_drivers' || name === 'map_viewport') {
+      const mapVisibilityEvents = ['map_visible_drivers', 'map_viewport', 'visible_driver_snapshot'];
+      const mapOpenEvents = ['map_screen_opened'];
+      if (mapVisibilityEvents.includes(name)) {
         const rawIds = event.params.driver_ids ?? event.params.driverIds;
         const arr = toDriverIdArray(rawIds);
-        if (arr.length) {
-          event.params = { ...event.params, driver_ids: arr };
-        }
+        if (arr.length) event.params = { ...event.params, driver_ids: arr };
+      }
+      if (mapOpenEvents.includes(name)) {
+        const rawIds = event.params.initial_visible_driver_ids ?? event.params.driver_ids ?? event.params.driverIds;
+        const arr = toDriverIdArray(rawIds);
+        if (arr.length) event.params = { ...event.params, initial_visible_driver_ids: arr };
       }
       // Do not duplicate: appId, deviceId, sessionId, source, platform, appVersion stay at document level only
       return event;
@@ -99,10 +104,12 @@ exports.saveAnalytics = async (req, res) => {
 
     const saved = await doc.save();
 
+    // Update TTL "currently viewing" when visible set is sent (visible_driver_snapshot = only on change; legacy = map_visible_drivers/map_viewport)
     for (const evt of saved.events) {
       const name = (evt.eventName || '').toLowerCase();
-      if (name !== 'map_visible_drivers' && name !== 'map_viewport') continue;
-      const rawIds = evt.params && (evt.params.driver_ids ?? evt.params.driverIds);
+      const ttlEvents = ['map_visible_drivers', 'map_viewport', 'visible_driver_snapshot'];
+      if (!ttlEvents.includes(name)) continue;
+      const rawIds = evt.params && (evt.params.driver_ids ?? evt.params.driverIds ?? evt.params.initial_visible_driver_ids);
       const ids = toDriverIdArray(rawIds);
       if (ids.length === 0) continue;
       const sessionIdStr = saved.sessionId || saved.deviceId;

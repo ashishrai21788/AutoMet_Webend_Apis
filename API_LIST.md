@@ -168,19 +168,29 @@ http://YOUR_IP:3000
 - **Description:** Get vehicle details by driverId
 - **URL Parameters:** `driverId` (e.g., `0656798311`)
 
-### 9. Get All Drivers
+### 9. Get Driver Analytics
+- **Method:** `GET`
+- **Endpoint:** `/api/drivers/:driverId/analytics`
+- **Description:** Aggregated analytics for a driver. **Map appearances** = only `map_screen_opened` (once per session, no overcounting). **todayTotalViewed** = `map_screen_opened` + `visible_driver_snapshot`. **currentlyViewing** = active search live (TTL). See [MAP_ANALYTICS_DESIGN.md](./MAP_ANALYTICS_DESIGN.md).
+- **URL Parameters:** `driverId` (e.g., `1017299105`)
+- **Query Parameters:**
+  - `period` (optional): `today`, `day`, `week`, `month`. Default: `week`.
+  - `from`, `to` (optional): ISO 8601 dates for custom range; max 365 days.
+- **Response:** `mapAppearances`, `markerTaps`, `calls`, `pickupRequests`, `infoCardViews`, `profileOpenedFromMap`, `messageTaps`, `directionsTapped`, `todayTotalViewed`, `currentlyViewing`, `totalVisibilityDurationMs`, `totalVisibilityDurationMinutes`, `totalVisibilityDurationHours` (for plotting "time visible on map"), plus `from`, `to`, `period`.
+
+### 10. Get All Drivers
 - **Method:** `GET`
 - **Endpoint:** `/api/drivers`
 - **Description:** Get all drivers or filter by driverId
 - **Query Parameters:** `driverId` (optional, e.g., `?driverId=0656798311`)
 
-### 10. Get Driver by ID
+### 11. Get Driver by ID
 - **Method:** `GET`
 - **Endpoint:** `/api/drivers/:id`
 - **Description:** Get driver by MongoDB _id
 - **URL Parameters:** `id` (MongoDB ObjectId)
 
-### 11. Update Driver by ID
+### 12. Update Driver by ID
 - **Method:** `PUT`
 - **Endpoint:** `/api/drivers/:id`
 - **Description:** Update driver by MongoDB _id
@@ -193,7 +203,7 @@ http://YOUR_IP:3000
 }
 ```
 
-### 12. Delete Driver by ID
+### 13. Delete Driver by ID
 - **Method:** `DELETE`
 - **Endpoint:** `/api/drivers/:id`
 - **Description:** Delete driver by MongoDB _id

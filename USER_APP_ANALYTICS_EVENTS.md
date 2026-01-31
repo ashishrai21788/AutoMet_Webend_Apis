@@ -65,8 +65,12 @@ Reference for event names, params, and categories used when sending analytics to
 
 ## 5. Map / Driver Visibility and Interaction
 
+**Preferred events (no overcounting):** See [MAP_ANALYTICS_DESIGN.md](./MAP_ANALYTICS_DESIGN.md).
+
 | Event name                     | Description                          | Typical params                                              |
 |--------------------------------|--------------------------------------|-------------------------------------------------------------|
+| `map_screen_opened`           | **Map opened once per session** (do not fire on refresh) | `session_id`, `initial_visible_driver_count`, `initial_visible_driver_ids` (or `driver_ids`) |
+| `visible_driver_snapshot`      | **Visible drivers changed** (fire only when set changes) | `session_id`, `visible_driver_count`, `driver_ids`, optional `driver_ids_hash` |
 | `map_screen_view`              | Map shown                            | `source`                                                    |
 | `map_visible_drivers_count`    | Count of drivers visible on map      | `count`, `zoom_level`, `bounds` (optional)                  |
 | `map_drivers_loaded`           | Drivers loaded for current area       | `count`, `lat`, `lng`, `radius_km`, `zoom_level`            |
@@ -86,6 +90,13 @@ Reference for event names, params, and categories used when sending analytics to
 | `driver_message_tapped`       | User tapped message driver            | `driver_id`, `source`                                       |
 | `driver_book_tapped_from_map` | User tapped book from map/card        | `driver_id`, `vehicle_id`, `source`                         |
 | `driver_directions_tapped`    | User asked for directions             | `driver_id`, `destination`                                  |
+
+### Map appearances and active search live (driver analytics)
+
+See **[MAP_ANALYTICS_DESIGN.md](./MAP_ANALYTICS_DESIGN.md)** for the full design (no overcounting).
+
+- **Map appearances:** Counted **only** from `map_screen_opened` — once per map screen session. Do **not** fire on every driver list refresh; fire when the user opens the map (e.g. first load or navigate to map). Backend counts one appearance per driver in `initial_visible_driver_ids` (or `driver_ids`) so refreshes do not inflate the metric.
+- **Currently viewing (active search live):** TTL collection is updated when the app sends `visible_driver_snapshot` (or legacy `map_visible_drivers`/`map_viewport`). Send `visible_driver_snapshot` **only when the visible driver set changes** (set difference) so "currently viewing" is not inflated by refresh frequency.
 
 ---
 
