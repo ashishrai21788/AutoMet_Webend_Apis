@@ -1,6 +1,6 @@
 # Node.js Express MongoDB REST API Boilerplate
 
-A scalable REST API boilerplate using Node.js, Express, and MongoDB (with Mongoose) following MVC architecture.
+A scalable REST API boilerplate using Node.js, Express, and MongoDB (with Mongoose) following MVC architecture. **This backend serves both the driver app and the user app**; the same database is used, with **different collections** for driver and user data (see [COLLECTIONS_OVERVIEW.md](COLLECTIONS_OVERVIEW.md)).
 
 ## Features
 - MVC folder structure

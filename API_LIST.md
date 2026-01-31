@@ -283,6 +283,94 @@ http://YOUR_IP:3000
 
 ---
 
+## User App Analytics APIs
+
+**Event reference:** See **USER_APP_ANALYTICS_EVENTS.md** for all event names, params, and categories (platform, auth, map, legal, etc.).
+
+### 1. Save User App Analytics Events
+- **Method:** `POST`
+- **Endpoint:** `/api/user-app-analytics`
+- **Description:** Save user app analytics events to MongoDB (collection: `user_app_analytics`).
+- **Request Body:**
+```json
+{
+  "events": [
+    {
+      "eventName": "login_success",
+      "appId": "in.automet.user",
+      "source": "user_app",
+      "eventCategory": "user",
+      "pageIdentifier": "login",
+      "params": { "method": "phone" },
+      "eventId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "actorId": "user_mongo_id_here",
+      "actorType": "user",
+      "appVersion": "1.0",
+      "platform": "android",
+      "sessionId": "sess-uuid-here",
+      "deviceId": "device-hash-here",
+      "clientTimestamp": "2025-01-31T10:00:00.000Z",
+      "metadata": {}
+    }
+  ],
+  "deviceId": "device-hash-here",
+  "sessionId": "sess-uuid-here",
+  "appId": "in.automet.user",
+  "appVersion": "1.0",
+  "platform": "android",
+  "source": "user_app"
+}
+```
+- **Response:** 201 Created with `id`, `eventsCount`, `deviceId`, `sessionId`, `appId`, `createdAt`.
+
+---
+
+## Driver App Analytics APIs
+
+**Event reference:** See **ANALYTICS_DATA_MODEL.md**, **ANALYTICS_FOR_API.md**, **PROMPT_ANALYTICS_API.md** for duty_on, duty_off, online_session_summary, tracking_health and params (onlineAs, heading, lat, lng, onlineDurationSeconds, idleDurationSeconds, onlineStartedAt, etc.).
+
+### 1. Save Driver App Analytics Events
+- **Method:** `POST`
+- **Endpoint:** `/api/driver-app-analytics`
+- **Description:** Save driver app analytics events to MongoDB (collection: `driver_app_analytics`). Events: duty_on, duty_off, online_session_summary, tracking_health.
+- **Request Body:**
+```json
+{
+  "events": [
+    {
+      "eventName": "duty_on",
+      "appId": "in.automet.driver",
+      "source": "driver_app",
+      "eventCategory": "driver",
+      "params": {
+        "onlineAs": 0,
+        "heading": 45,
+        "lat": 28.6139,
+        "lng": 77.209
+      },
+      "eventId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "actorId": "driver_mongo_id_here",
+      "actorType": "driver",
+      "appVersion": "1.0",
+      "platform": "android",
+      "sessionId": "sess-uuid-here",
+      "deviceId": "device-hash-here",
+      "clientTimestamp": "2025-01-31T10:00:00.000Z",
+      "metadata": {}
+    }
+  ],
+  "deviceId": "device-hash-here",
+  "sessionId": "sess-uuid-here",
+  "appId": "in.automet.driver",
+  "appVersion": "1.0",
+  "platform": "android",
+  "source": "driver_app"
+}
+```
+- **Response:** 201 Created with `id`, `eventsCount`, `deviceId`, `sessionId`, `appId`, `createdAt`.
+
+---
+
 ## Dynamic Collection APIs
 
 These APIs work with any collection name. Replace `:collectionName` with your collection name (e.g., `drivers`, `users`, `vehicles`, etc.).
@@ -333,12 +421,14 @@ These APIs work with any collection name. Replace `:collectionName` with your co
 
 ## Summary
 
-**Total APIs: 28**
+**Total APIs: 30**
 
 - **Server Health & Test:** 2 APIs
 - **Driver APIs:** 12 APIs
 - **OTP APIs:** 5 APIs
 - **Image APIs:** 2 APIs
+- **User App Analytics APIs:** 1 API
+- **Driver App Analytics APIs:** 1 API
 - **Dynamic Collection APIs:** 5 APIs
 
 ---

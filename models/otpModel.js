@@ -26,8 +26,7 @@ const otpSchema = new mongoose.Schema({
   },
   expiresAt: {
     type: Date,
-    required: true,
-    index: { expireAfterSeconds: 0 } // MongoDB TTL index
+    required: true
   },
   createdAt: {
     type: Date,

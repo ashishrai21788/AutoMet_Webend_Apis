@@ -100,8 +100,8 @@ app.use((req, res, next) => {
 
 // Database connection check middleware for API routes
 app.use('/api', (req, res, next) => {
-  // Skip database check for health endpoint
-  if (req.path === '/health' || req.path === '/test') {
+  // Skip database check for API health (so clients can diagnose when DB is down)
+  if (req.path === '/api/health' || req.path === '/health') {
     return next();
   }
   
@@ -109,10 +109,11 @@ app.use('/api', (req, res, next) => {
   if (!serverHealth.dbConnected || mongoose.connection.readyState !== 1) {
     return res.status(503).json({
       success: false,
-      message: 'Database connection not available. Please try again later.',
+      message: 'Database connection not available. All /api/* routes need MongoDB. Check server logs for connection errors and ensure .env has correct MONGODB_* and DB is reachable.',
       error: 'DATABASE_CONNECTION_ERROR',
       timestamp: new Date().toISOString(),
-      retryAfter: 30 // seconds
+      retryAfter: 30,
+      hint: 'Check GET /health or GET /api/health for dbConnected status. Fix MongoDB credentials in .env and restart the server.'
     });
   }
   
@@ -204,8 +205,22 @@ app.get('/test', (req, res) => {
   });
 });
 
+// API health (no DB required - use to check if APIs will work)
+app.get('/api/health', (req, res) => {
+  const dbConnected = serverHealth.dbConnected && mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    success: dbConnected,
+    message: dbConnected ? 'API and database ready' : 'Server is up but database is not connected. All other /api/* routes will return 503 until MongoDB connects.',
+    dbConnected,
+    mongooseState: mongoose.connection.readyState,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes
 app.use('/api/users', require('./routes/userRoutes')); // User: register, login, verify-otp, profile, resend-otp, logout, notifications (collections: users, users_otp, users_notification)
+app.use('/api/user-app-analytics', require('./routes/userAppAnalyticsRoutes')); // User app analytics (collection: user_app_analytics)
+app.use('/api/driver-app-analytics', require('./routes/driverAppAnalyticsRoutes')); // Driver app analytics (collection: driver_app_analytics)
 app.use('/api', dynamicRoutes); // Dynamic routes for any collection (includes drivers)
 app.use('/api/otp', otpRoutes); // OTP routes for driver verification (collection: drivers_otp)
 app.use('/api/images', require('./routes/imageRoutes')); // Image upload/delete routes
