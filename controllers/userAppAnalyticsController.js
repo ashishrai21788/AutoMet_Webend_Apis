@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const UserAppAnalytics = require('../models/userAppAnalyticsModel');
+const UserDriverMapView = require('../models/userDriverMapViewModel');
 
 function generateEventId() {
   return typeof crypto.randomUUID === 'function'
@@ -53,6 +54,13 @@ exports.saveAnalytics = async (req, res) => {
     const sourceStr = String(source).trim();
     const platformStr = platform != null ? String(platform).trim() : null;
 
+    // Ensure driver_ids/driverIds is always an array for map visibility events (client may send string or number)
+    function toDriverIdArray(val) {
+      if (val == null) return [];
+      if (Array.isArray(val)) return val.map((id) => (id != null ? String(id).trim() : null)).filter(Boolean);
+      return [String(val).trim()].filter(Boolean);
+    }
+
     // Store deviceId, sessionId, appId, source, platform, appVersion only at document level (no duplication in each event)
     const normalizedEvents = events.map((evt) => {
       const raw = { ...evt };
@@ -66,6 +74,15 @@ exports.saveAnalytics = async (req, res) => {
       event.actorType = raw.actorType ?? raw.actor_type ?? 'user';
       event.pageIdentifier = raw.pageIdentifier ?? raw.page_identifier ?? null;
       event.metadata = raw.metadata ?? {};
+      // Normalize driver_ids/driverIds to array for map visibility events so aggregation and map_views upsert work
+      const name = (event.eventName || '').toLowerCase();
+      if (name === 'map_visible_drivers' || name === 'map_viewport') {
+        const rawIds = event.params.driver_ids ?? event.params.driverIds;
+        const arr = toDriverIdArray(rawIds);
+        if (arr.length) {
+          event.params = { ...event.params, driver_ids: arr };
+        }
+      }
       // Do not duplicate: appId, deviceId, sessionId, source, platform, appVersion stay at document level only
       return event;
     });
@@ -81,6 +98,28 @@ exports.saveAnalytics = async (req, res) => {
     });
 
     const saved = await doc.save();
+
+    for (const evt of saved.events) {
+      const name = (evt.eventName || '').toLowerCase();
+      if (name !== 'map_visible_drivers' && name !== 'map_viewport') continue;
+      const rawIds = evt.params && (evt.params.driver_ids ?? evt.params.driverIds);
+      const ids = toDriverIdArray(rawIds);
+      if (ids.length === 0) continue;
+      const sessionIdStr = saved.sessionId || saved.deviceId;
+      for (const did of ids) {
+        if (!did) continue;
+        try {
+          await UserDriverMapView.updateOne(
+            { driverId: String(did).trim(), sessionId: sessionIdStr },
+            { $set: { driverId: String(did).trim(), sessionId: sessionIdStr, lastSeen: new Date() } },
+            { upsert: true }
+          );
+        } catch (e) {
+          // ignore TTL collection errors
+        }
+      }
+    }
+
     if (process.env.NODE_ENV === 'development') {
       console.log('[user-app-analytics] Saved', saved._id, 'events:', saved.events.length);
     }

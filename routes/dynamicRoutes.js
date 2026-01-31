@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const dynamicController = require('../controllers/dynamicController');
+const driverAnalyticsController = require('../controllers/driverAnalyticsController');
 
 // Driver Login Route - MUST come before dynamic routes
 router.post('/drivers/login', dynamicController.loginDriver);
@@ -29,6 +30,9 @@ router.put('/drivers/vehicle-details', dynamicController.updateVehicleDetails);
 
 // Get Vehicle Details by DriverId Route - MUST come before dynamic routes
 router.get('/drivers/:driverId/vehicle-details', dynamicController.getVehicleDetails);
+
+// Driver analytics (aggregate from user_app_analytics + currentlyViewing + todayTotalViewed)
+router.get('/drivers/:driverId/analytics', driverAnalyticsController.getDriverAnalytics);
 
 // Get Driver FAQs Route - MUST come before dynamic routes
 router.get('/drivers/faqs', dynamicController.getDriverFAQs);
