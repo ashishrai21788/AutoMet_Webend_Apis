@@ -1,0 +1,363 @@
+# Complete API List
+
+## Base URL
+```
+http://localhost:3000
+```
+or
+```
+http://YOUR_IP:3000
+```
+
+---
+
+## Server Health & Test Endpoints
+
+### 1. Health Check
+- **Method:** `GET`
+- **Endpoint:** `/health`
+- **Description:** Check server health status
+- **Request:** None
+- **Response:** Server health information
+
+### 2. Test Endpoint
+- **Method:** `GET`
+- **Endpoint:** `/test`
+- **Description:** Test endpoint for debugging
+- **Request:** None
+- **Response:** Server status and headers
+
+---
+
+## Driver APIs
+
+### 1. Create Driver (Signup)
+- **Method:** `POST`
+- **Endpoint:** `/api/drivers`
+- **Description:** Create a new driver account
+- **Request Body:**
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "phone": "1234567890",
+  "password": "password123",
+  "profilePhoto": "https://example.com/photo.jpg",
+  "vehicleNumber": "AB123CD",
+  "licenseNumber": "DL1234567890",
+  "vehicleType": "Car",
+  "vehicleModel": "Honda City",
+  "vehicleColor": "White",
+  "vehicleManufacturingYear": 2020,
+  "engineNumber": "ENG123456",
+  "chassisNumber": "CHS123456",
+  "vehicleInsurance": {
+    "policyNumber": "POL123456",
+    "insuranceCompany": "ABC Insurance",
+    "insuranceExpiryDate": "2025-12-31",
+    "insuranceAmount": 50000,
+    "isInsuranceValid": true
+  },
+  "vehicleRegistrationImages": [],
+  "vehicleInsuranceImages": [],
+  "drivingLicenseImages": [],
+  "idProofImages": []
+}
+```
+
+### 2. Driver Login
+- **Method:** `POST`
+- **Endpoint:** `/api/drivers/login`
+- **Description:** Login driver and get access token
+- **Request Body:**
+```json
+{
+  "emailOrPhone": "john.doe@example.com",
+  "password": "password123",
+  "fcmToken": "fcm_token_here",
+  "deviceId": "device_id_here",
+  "currentLocation": {
+    "coordinates": [77.2090, 28.6139]
+  }
+}
+```
+
+### 3. Driver Logout
+- **Method:** `POST`
+- **Endpoint:** `/api/drivers/logout`
+- **Description:** Logout driver
+- **Request Body:**
+```json
+{
+  "driverId": "1234567890"
+}
+```
+
+### 4. Update Online Status
+- **Method:** `PUT`
+- **Endpoint:** `/api/drivers/online-status`
+- **Description:** Update driver online status (onlineAs: 0=Public, 1=Private)
+- **Request Body:**
+```json
+{
+  "driverId": "1234567890",
+  "isOnline": true,
+  "onlineAs": 0
+}
+```
+
+### 5. Get Driver Status
+- **Method:** `GET`
+- **Endpoint:** `/api/drivers/status/:driverId`
+- **Description:** Get driver status by driverId
+- **URL Parameters:** `driverId` (e.g., `1234567890`)
+
+### 6. Get Driver Profile (Protected)
+- **Method:** `GET`
+- **Endpoint:** `/api/drivers/profile`
+- **Description:** Get driver profile (requires JWT token)
+- **Headers:** `Authorization: Bearer <access_token>`
+
+### 7. Update Vehicle Details
+- **Method:** `PUT`
+- **Endpoint:** `/api/drivers/vehicle-details`
+- **Description:** Update vehicle details with pre-uploaded image URLs
+- **Request Body:**
+```json
+{
+  "driverId": "0656798311",
+  "vehicleData": {
+    "vehicleType": "Car",
+    "vehicleNumber": "DL01AB1234",
+    "vehicleModel": "Bajaj RE",
+    "vehicleManufacturingYear": "2025",
+    "vehicleColor": "White",
+    "engineNumber": "weerwer234234234",
+    "chassisNumber": "erwerr23423424",
+    "vehicleInsurance": {
+      "policyNumber": "werewr",
+      "insuranceExpiryDate": "2025-09-17"
+    }
+  },
+  "licenseData": {
+    "license_number": "NEW123456789",
+    "license_type": "LMV",
+    "drivingLicenseIssueDate": "2020-01-15",
+    "expiry_date": "2027-12-31",
+    "drivingLicenseIssuingAuthority": "RTO Delhi"
+  },
+  "vehicleRegistrationImages": [
+    {"url": "https://res.cloudinary.com/...", "publicId": "driver-documents/vehicle-registration/abc123"}
+  ],
+  "drivingLicenseImages": [
+    {"url": "https://res.cloudinary.com/...", "publicId": "driver-documents/driving-license/abc123"}
+  ],
+  "insurance": [
+    {"url": "https://res.cloudinary.com/...", "publicId": "driver-documents/insurance/abc123"}
+  ],
+  "idProofImages": [
+    {"url": "https://res.cloudinary.com/...", "publicId": "driver-documents/id-proof/abc123"}
+  ]
+}
+```
+
+### 8. Get Vehicle Details by DriverId
+- **Method:** `GET`
+- **Endpoint:** `/api/drivers/:driverId/vehicle-details`
+- **Description:** Get vehicle details by driverId
+- **URL Parameters:** `driverId` (e.g., `0656798311`)
+
+### 9. Get All Drivers
+- **Method:** `GET`
+- **Endpoint:** `/api/drivers`
+- **Description:** Get all drivers or filter by driverId
+- **Query Parameters:** `driverId` (optional, e.g., `?driverId=0656798311`)
+
+### 10. Get Driver by ID
+- **Method:** `GET`
+- **Endpoint:** `/api/drivers/:id`
+- **Description:** Get driver by MongoDB _id
+- **URL Parameters:** `id` (MongoDB ObjectId)
+
+### 11. Update Driver by ID
+- **Method:** `PUT`
+- **Endpoint:** `/api/drivers/:id`
+- **Description:** Update driver by MongoDB _id
+- **URL Parameters:** `id` (MongoDB ObjectId)
+- **Request Body:**
+```json
+{
+  "firstName": "John Updated",
+  "vehicleNumber": "XY999ZZ"
+}
+```
+
+### 12. Delete Driver by ID
+- **Method:** `DELETE`
+- **Endpoint:** `/api/drivers/:id`
+- **Description:** Delete driver by MongoDB _id
+- **URL Parameters:** `id` (MongoDB ObjectId)
+
+---
+
+## OTP APIs
+
+### 1. Send OTP
+- **Method:** `POST`
+- **Endpoint:** `/api/otp/send`
+- **Description:** Send OTP for driver verification
+- **Request Body:**
+```json
+{
+  "driverId": "1234567890"
+}
+```
+
+### 2. Verify OTP
+- **Method:** `POST`
+- **Endpoint:** `/api/otp/verify`
+- **Description:** Verify OTP and update driver verification status
+- **Request Body:**
+```json
+{
+  "driverId": "1234567890",
+  "otp": "123456"
+}
+```
+
+### 3. Resend OTP
+- **Method:** `POST`
+- **Endpoint:** `/api/otp/resend`
+- **Description:** Resend OTP to driver
+- **Request Body:**
+```json
+{
+  "driverId": "1234567890"
+}
+```
+
+### 4. Generate OTP (Legacy)
+- **Method:** `POST`
+- **Endpoint:** `/api/otp/generate`
+- **Description:** Generate OTP (legacy endpoint)
+- **Request Body:**
+```json
+{
+  "driverId": "1234567890",
+  "email": "john.doe@example.com",
+  "phone": "1234567890"
+}
+```
+
+### 5. Update Profile Complete
+- **Method:** `POST`
+- **Endpoint:** `/api/otp/profile-complete`
+- **Description:** Update driver profile completion status
+- **Request Body:**
+```json
+{
+  "driverId": "1234567890",
+  "isProfileComplete": true
+}
+```
+
+---
+
+## Image APIs
+
+### 1. Upload Image to Cloudinary
+- **Method:** `POST`
+- **Endpoint:** `/api/images/upload`
+- **Description:** Upload single image to Cloudinary. Returns URL and publicId.
+- **Content-Type:** `multipart/form-data`
+- **Request Body:**
+  - `image` (file, required) - Image file to upload
+  - `folder` (string, optional) - Cloudinary folder path (default: `driver-documents`)
+
+### 2. Delete Image from Cloudinary
+- **Method:** `DELETE`
+- **Endpoint:** `/api/images/delete/:public_id`
+- **Description:** Delete image from Cloudinary by public_id
+- **URL Parameters:** `public_id` (e.g., `driver-documents/profile-photos/abc123xyz`)
+
+---
+
+## Dynamic Collection APIs
+
+These APIs work with any collection name. Replace `:collectionName` with your collection name (e.g., `drivers`, `users`, `vehicles`, etc.).
+
+### 1. Create Record
+- **Method:** `POST`
+- **Endpoint:** `/api/:collectionName`
+- **Description:** Create a record in any collection
+- **Request Body:**
+```json
+{
+  "field1": "value1",
+  "field2": "value2"
+}
+```
+
+### 2. Get All Records
+- **Method:** `GET`
+- **Endpoint:** `/api/:collectionName`
+- **Description:** Get all records from a collection
+- **Query Parameters:** Varies by collection (e.g., `driverId` for drivers)
+
+### 3. Get Record by ID
+- **Method:** `GET`
+- **Endpoint:** `/api/:collectionName/:id`
+- **Description:** Get a record by MongoDB _id
+- **URL Parameters:** `id` (MongoDB ObjectId)
+
+### 4. Update Record
+- **Method:** `PUT`
+- **Endpoint:** `/api/:collectionName/:id`
+- **Description:** Update a record by MongoDB _id
+- **URL Parameters:** `id` (MongoDB ObjectId)
+- **Request Body:**
+```json
+{
+  "field1": "updated_value1"
+}
+```
+
+### 5. Delete Record
+- **Method:** `DELETE`
+- **Endpoint:** `/api/:collectionName/:id`
+- **Description:** Delete a record by MongoDB _id
+- **URL Parameters:** `id` (MongoDB ObjectId)
+
+---
+
+## Summary
+
+**Total APIs: 28**
+
+- **Server Health & Test:** 2 APIs
+- **Driver APIs:** 12 APIs
+- **OTP APIs:** 5 APIs
+- **Image APIs:** 2 APIs
+- **Dynamic Collection APIs:** 5 APIs
+
+---
+
+## Postman Collection
+
+A complete Postman collection is available in `API_Collection.postman_collection.json`
+
+**To import:**
+1. Open Postman
+2. Click "Import" button
+3. Select `API_Collection.postman_collection.json`
+4. Update the `base_url` variable to match your server URL
+
+**Collection Variables:**
+- `base_url`: `http://localhost:3000` (or your server IP)
+- `access_token`: JWT token for protected routes (set after login)
+
+---
+
+**Last Updated:** December 27, 2024
+
