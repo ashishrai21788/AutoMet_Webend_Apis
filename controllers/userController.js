@@ -1,4 +1,5 @@
 const { createModel } = require('../models/dynamicModel');
+const { sendFCMNotification } = require('../config/firestore');
 const UserOTP = require('../models/userOtpModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -537,6 +538,95 @@ exports.logoutUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error during logout',
+      data: { details: error.message }
+    });
+  }
+};
+
+// Send push notification to a user (FCM, Android-standard payload) and save to users_notification
+exports.sendUserNotification = async (req, res) => {
+  try {
+    const { user_id, userId, title, body, data, channelId } = req.body;
+    const userIdValue = (user_id || userId || '').toString().trim();
+    if (!userIdValue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: userId (or user_id)',
+        data: { missingFields: { userId: true } }
+      });
+    }
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: title',
+        data: { missingFields: { title: true } }
+      });
+    }
+    const UserModel = createModel('users');
+    const user = await UserModel.findOne({ userId: userIdValue }).lean();
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        data: { userId: userIdValue }
+      });
+    }
+    const fcmToken = user.fcmToken;
+    if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'User has no FCM token. Ask the user app to register the device token.',
+        data: { userId: userIdValue }
+      });
+    }
+    const payload = {
+      title: title.trim(),
+      body: (body && typeof body === 'string') ? body.trim() : '',
+      channelId: (channelId && typeof channelId === 'string') ? channelId.trim() : 'user_notifications'
+    };
+    if (data && typeof data === 'object') payload.data = data;
+    const result = await sendFCMNotification(fcmToken, payload);
+    if (!result.success) {
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to send push notification',
+        data: { error: result.error }
+      });
+    }
+    const mongoose = require('mongoose');
+    const coll = mongoose.connection.db.collection('users_notification');
+    const now = new Date();
+    const doc = {
+      userId: userIdValue,
+      title: payload.title,
+      description: payload.body || '',
+      date: now.toISOString(),
+      isUnread: true,
+      type: (data && data.type) || 'Informational',
+      createdAt: now,
+      updatedAt: now
+    };
+    try {
+      await coll.insertOne(doc);
+    } catch (insertErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[sendUserNotification] Could not save to users_notification:', insertErr.message);
+      }
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Push notification sent successfully',
+      data: {
+        messageId: result.messageId,
+        userId: userIdValue,
+        title: payload.title
+      }
+    });
+  } catch (error) {
+    console.error('Send user notification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while sending notification',
       data: { details: error.message }
     });
   }

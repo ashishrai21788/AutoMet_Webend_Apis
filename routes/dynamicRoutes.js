@@ -44,6 +44,7 @@ router.put('/drivers/issues/:issueId', dynamicController.updateIssueStatus);
 
 // Driver Notifications Routes - MUST come before dynamic routes
 router.get('/drivers/notifications', dynamicController.getDriverNotifications);
+router.post('/drivers/notifications/send', dynamicController.sendDriverNotification);
 router.put('/drivers/notifications/mark-read', dynamicController.updateNotificationReadStatus);
 
 // Prevent /drivers/login from being caught by dynamic route

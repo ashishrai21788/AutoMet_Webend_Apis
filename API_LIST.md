@@ -178,19 +178,32 @@ http://YOUR_IP:3000
   - `from`, `to` (optional): ISO 8601 dates for custom range; max 365 days.
 - **Response:** `mapAppearances`, `markerTaps`, `calls`, `pickupRequests`, `infoCardViews`, `profileOpenedFromMap`, `messageTaps`, `directionsTapped`, `todayTotalViewed`, `currentlyViewing`, `totalVisibilityDurationMs`, `totalVisibilityDurationMinutes`, `totalVisibilityDurationHours` (for plotting "time visible on map"), plus `from`, `to`, `period`.
 
-### 10. Get All Drivers
+### 10. Send Driver Push Notification (FCM, Android)
+- **Method:** `POST`
+- **Endpoint:** `/api/drivers/notifications/send`
+- **Description:** Send a push notification to a **driver app** Android device via FCM. Uses Android-standard payload (high priority, notification channel). Requires driver to have `fcmToken` set. Also saves to `driver_notification`.
+- **Request Body:**
+  - `driverId` or `driver_id` (required): Driver ID
+  - `title` (required): Notification title
+  - `body` (optional): Notification body text
+  - `data` (optional): Object of string key-value pairs (e.g. `{ "type": "booking", "id": "123" }`)
+  - `channelId` (optional): Android notification channel ID (default: `driver_notifications`). Create this channel in the driver app.
+- **Response:** `success`, `data.messageId`, `data.driverId`, `data.title`. On failure: 400 (missing token), 404 (driver not found), 502 (FCM send failed).
+- **Env:** Set `FIREBASE_SERVICE_ACCOUNT_KEY` or `FIREBASE_SERVICE_ACCOUNT_PATH` for FCM.
+
+### 11. Get All Drivers
 - **Method:** `GET`
 - **Endpoint:** `/api/drivers`
 - **Description:** Get all drivers or filter by driverId
 - **Query Parameters:** `driverId` (optional, e.g., `?driverId=0656798311`)
 
-### 11. Get Driver by ID
+### 12. Get Driver by ID
 - **Method:** `GET`
 - **Endpoint:** `/api/drivers/:id`
 - **Description:** Get driver by MongoDB _id
 - **URL Parameters:** `id` (MongoDB ObjectId)
 
-### 12. Update Driver by ID
+### 13. Update Driver by ID
 - **Method:** `PUT`
 - **Endpoint:** `/api/drivers/:id`
 - **Description:** Update driver by MongoDB _id
@@ -203,11 +216,30 @@ http://YOUR_IP:3000
 }
 ```
 
-### 13. Delete Driver by ID
+### 14. Delete Driver by ID
 - **Method:** `DELETE`
 - **Endpoint:** `/api/drivers/:id`
 - **Description:** Delete driver by MongoDB _id
 - **URL Parameters:** `id` (MongoDB ObjectId)
+
+---
+
+## User Notifications (FCM, Android)
+
+Notifications for the **user app** (Android). Same FCM/Android payload standard as driver notifications; separate endpoint and channel.
+
+### 1. Send User Push Notification (FCM, Android)
+- **Method:** `POST`
+- **Endpoint:** `/api/users/notifications/send`
+- **Description:** Send a push notification to a **user app** Android device via FCM. Uses Android-standard payload (high priority, notification channel). Requires user to have `fcmToken` set. Also saves to `users_notification`.
+- **Request Body:**
+  - `userId` or `user_id` (required): User ID
+  - `title` (required): Notification title
+  - `body` (optional): Notification body text
+  - `data` (optional): Object of string key-value pairs (e.g. `{ "type": "ride", "id": "456" }`)
+  - `channelId` (optional): Android notification channel ID (default: `user_notifications`). Create this channel in the user app.
+- **Response:** `success`, `data.messageId`, `data.userId`, `data.title`. On failure: 400 (missing token), 404 (user not found), 502 (FCM send failed).
+- **Env:** Set `FIREBASE_SERVICE_ACCOUNT_KEY` or `FIREBASE_SERVICE_ACCOUNT_PATH` for FCM.
 
 ---
 

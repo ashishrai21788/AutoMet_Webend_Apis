@@ -26,6 +26,7 @@ router.post('/logout', userController.logoutUser);
 
 // User Notifications - users_notification
 router.get('/notifications', userController.getUserNotifications);
+router.post('/notifications/send', userController.sendUserNotification);
 router.put('/notifications/mark-read', userController.updateUserNotificationReadStatus);
 
 module.exports = router;

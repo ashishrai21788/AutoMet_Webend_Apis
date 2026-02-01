@@ -57,6 +57,64 @@ const getFirestore = () => {
   return admin.firestore();
 };
 
+// Get Firebase Admin instance (for FCM messaging)
+const getAdmin = () => {
+  if (!firestoreInitialized && admin.apps.length === 0) {
+    initializeFirestore();
+  }
+  return admin.apps.length > 0 ? admin : null;
+};
+
+/**
+ * Send a push notification via FCM to a single device token (Android-standard payload).
+ * Uses Android config: high priority, notification channel, so messages display correctly on Android.
+ * @param {string} fcmToken - Device FCM token (from driver/user fcmToken field)
+ * @param {{ title: string, body?: string, data?: Record<string, string>, channelId?: string }} payload - title, body, optional data (values stringified), optional channelId (Android; default 'default')
+ * @returns {{ success: true, messageId: string } | { success: false, error: string }}
+ */
+const sendFCMNotification = async (fcmToken, payload) => {
+  try {
+    const adm = getAdmin();
+    if (!adm || !adm.messaging) {
+      return { success: false, error: 'Firebase Admin not initialized or FCM unavailable. Set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_SERVICE_ACCOUNT_PATH.' };
+    }
+    if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
+      return { success: false, error: 'FCM token is required' };
+    }
+    const channelId = (payload.channelId && typeof payload.channelId === 'string') ? payload.channelId.trim() : 'default';
+    const message = {
+      token: fcmToken.trim(),
+      notification: {
+        title: payload.title || 'Notification',
+        body: payload.body || ''
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId,
+          sound: 'default',
+          priority: 'high',
+          defaultVibrateTimings: true
+        }
+      },
+      data: {}
+    };
+    if (payload.data && typeof payload.data === 'object') {
+      for (const [k, v] of Object.entries(payload.data)) {
+        message.data[String(k)] = typeof v === 'string' ? v : JSON.stringify(v);
+      }
+    }
+    const messageId = await adm.messaging().send(message);
+    return { success: true, messageId };
+  } catch (error) {
+    const msg = error.message || String(error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[FCM] Send error:', msg);
+    }
+    return { success: false, error: msg };
+  }
+};
+
 // Delete driver from Firestore
 const deleteDriverFromFirestore = async (driverId) => {
   try {
@@ -89,5 +147,7 @@ const deleteDriverFromFirestore = async (driverId) => {
 module.exports = {
   initializeFirestore,
   getFirestore,
+  getAdmin,
+  sendFCMNotification,
   deleteDriverFromFirestore
 };

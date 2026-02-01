@@ -1,4 +1,5 @@
 const { createModel } = require('../models/dynamicModel');
+const { sendFCMNotification } = require('../config/firestore');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -2663,6 +2664,95 @@ exports.getDriverNotifications = async (req, res) => {
       data: {
         details: error.message
       }
+    });
+  }
+};
+
+// Send push notification to a driver (FCM) and optionally save to driver_notification
+exports.sendDriverNotification = async (req, res) => {
+  try {
+    const { driver_id, driverId, title, body, data } = req.body;
+    const driverIdValue = (driver_id || driverId || '').toString().trim();
+    if (!driverIdValue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: driverId (or driver_id)',
+        data: { missingFields: { driverId: true } }
+      });
+    }
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: title',
+        data: { missingFields: { title: true } }
+      });
+    }
+    const DriverModel = createModel('drivers');
+    const driver = await DriverModel.findOne({ driverId: driverIdValue }).lean();
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver not found',
+        data: { driverId: driverIdValue }
+      });
+    }
+    const fcmToken = driver.fcmToken;
+    if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Driver has no FCM token. Ask the driver app to register the device token.',
+        data: { driverId: driverIdValue }
+      });
+    }
+    const payload = {
+      title: title.trim(),
+      body: (body && typeof body === 'string') ? body.trim() : '',
+      channelId: (req.body.channelId && typeof req.body.channelId === 'string') ? req.body.channelId.trim() : 'driver_notifications'
+    };
+    if (data && typeof data === 'object') payload.data = data;
+    const result = await sendFCMNotification(fcmToken, payload);
+    if (!result.success) {
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to send push notification',
+        data: { error: result.error }
+      });
+    }
+    const mongoose = require('mongoose');
+    const notificationsCollection = mongoose.connection.db.collection('driver_notification');
+    const now = new Date();
+    const doc = {
+      driverId: driverIdValue,
+      title: payload.title,
+      description: payload.body || '',
+      date: now.toISOString(),
+      isUnread: true,
+      type: (data && data.type) || 'Informational',
+      createdAt: now,
+      updatedAt: now
+    };
+    try {
+      await notificationsCollection.insertOne(doc);
+    } catch (insertErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[sendDriverNotification] Could not save to driver_notification:', insertErr.message);
+      }
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Push notification sent successfully',
+      data: {
+        messageId: result.messageId,
+        driverId: driverIdValue,
+        title: payload.title
+      }
+    });
+  } catch (error) {
+    console.error('Send driver notification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while sending notification',
+      data: { details: error.message }
     });
   }
 };
