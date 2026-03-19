@@ -527,7 +527,7 @@ Authorization: Bearer <access_token>
         "isInsuranceValid": true
       },
       "vehicleRegistrationImages": [
-        {"url": "https://res.cloudinary.com/drjv1dcre/image/upload/v1761289512/driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh.jpg", "publicId": "driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh"}
+        {"url": "https://res.cloudinary.com/your_cloud_name/image/upload/v1761289512/driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh.jpg", "publicId": "driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh"}
       ],
       "vehicleInsuranceImages": [],
       "drivingLicenseImages": [],
@@ -822,7 +822,7 @@ These APIs work with any collection name. Replace `:collectionName` with your co
         "isInsuranceValid": true
       },
       "vehicleRegistrationImages": [
-        {"url": "https://res.cloudinary.com/drjv1dcre/image/upload/v1761289512/driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh.jpg", "publicId": "driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh"}
+        {"url": "https://res.cloudinary.com/your_cloud_name/image/upload/v1761289512/driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh.jpg", "publicId": "driver-documents/vehicle-registration/e0ucacfkczwvfflyk7fh"}
       ],
       "vehicleInsuranceImages": [],
       "drivingLicenseImages": [],
@@ -1159,7 +1159,7 @@ console.log(result);
   "success": true,
   "message": "Image uploaded successfully to Cloudinary",
   "data": {
-    "url": "https://res.cloudinary.com/drjv1dcre/image/upload/v1761289512/driver-documents/profile-photos/abc123xyz.jpg",
+    "url": "https://res.cloudinary.com/your_cloud_name/image/upload/v1761289512/driver-documents/profile-photos/abc123xyz.jpg",
     "public_id": "driver-documents/profile-photos/abc123xyz",
     "width": 1920,
     "height": 1080,

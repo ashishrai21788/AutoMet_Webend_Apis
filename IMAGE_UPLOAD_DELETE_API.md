@@ -109,7 +109,7 @@ const uploadImage = async () => {
   "success": true,
   "message": "Image uploaded successfully to Cloudinary",
   "data": {
-    "url": "https://res.cloudinary.com/drjv1dcre/image/upload/v1761289512/driver-documents/profile-photos/abc123xyz.jpg",
+    "url": "https://res.cloudinary.com/your_cloud_name/image/upload/v1761289512/driver-documents/profile-photos/abc123xyz.jpg",
     "public_id": "driver-documents/profile-photos/abc123xyz",
     "width": 1920,
     "height": 1080,
@@ -312,7 +312,7 @@ curl -X POST http://localhost:3000/api/images/upload \
   "success": true,
   "message": "Image uploaded successfully to Cloudinary",
   "data": {
-    "url": "https://res.cloudinary.com/drjv1dcre/image/upload/v1761289512/driver-documents/profile-photos/abc123xyz.jpg",
+    "url": "https://res.cloudinary.com/your_cloud_name/image/upload/v1761289512/driver-documents/profile-photos/abc123xyz.jpg",
     "public_id": "driver-documents/profile-photos/abc123xyz",
     "width": 1920,
     "height": 1080,
