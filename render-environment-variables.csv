@@ -1,0 +1,12 @@
+Key,Value
+MONGODB_USERNAME,ashishrai21788
+MONGODB_PASSWORD,Ashish@123
+MONGODB_CLUSTER,ashishrai.rwyojvh.mongodb.net
+DB_NAME,api_database
+COLLECTION_NAME,drivers
+PORT,3000
+JWT_SECRET,your_super_secret_jwt_key_for_driver_authentication_2024
+CLOUDINARY_CLOUD_NAME,drjv1dcre
+CLOUDINARY_API_KEY,149495759997658
+CLOUDINARY_API_SECRET,dUHbdv2TrtUdKGbDtuBXt1BGrPQ
+NODE_ENV,production

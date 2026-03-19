@@ -11,6 +11,9 @@ router.post('/generate', otpController.generateOTP);
 // Verify OTP and update driver verification status
 router.post('/verify', otpController.verifyOTP);
 
+// Update FCM token / device ID (call when token refreshes on mobile)
+router.post('/update-token', otpController.updateDriverToken);
+
 // Update driver profile completion status
 router.post('/profile-complete', otpController.updateProfileComplete);
 

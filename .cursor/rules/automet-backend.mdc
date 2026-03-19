@@ -1,0 +1,22 @@
+---
+description: AutoMet Backend – conventions and cross-app awareness
+globs: AutoMet_Webend_Apis/**/*
+alwaysApply: false
+---
+
+# AutoMet Backend Rules
+
+## Key Paths
+- Trips (create-request, driver-response): `controllers/tripsController.js`
+- Rides (accept, reject, status): `controllers/rideController.js`
+- FCM trip push: `lib/fcmTripPush.js`
+- Models: `tripDetailsModel.js`, `tripModel.js`, `rideModel.js`
+
+## Conventions
+- **Response**: `res.status(XXX).json({ success, message, data })` on all endpoints
+- **Status flow**: `REQUESTED` → `ACCEPTED` → `DRIVER_ON_THE_WAY` → `ARRIVED` → `ON_GOING` → `COMPLETED`
+- **FCM data**: Include `type`, `trip_id`, `pickup_lat/lng`, `drop_lat/lng`, `rider_name`
+- **Dual systems**: `trip_details` (tripsController) and `trips`/`rides` (rideController); active/details read from trip_details
+
+## Cross-App
+API changes affect Driver and User apps. Verify DTOs and status enums.

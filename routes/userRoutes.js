@@ -11,6 +11,9 @@ router.post('/login', userController.loginUser);
 // User OTP Verification - users_otp, updates users
 router.post('/verify-otp', userController.verifyUserOtp);
 
+// Update FCM token / device ID (call when token refreshes on mobile)
+router.post('/update-token', userController.updateUserToken);
+
 // User Profile Edit
 router.put('/profile', userController.updateUserProfile);
 router.post('/profile', userController.updateUserProfile);

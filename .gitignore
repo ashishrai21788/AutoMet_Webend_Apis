@@ -57,6 +57,7 @@ Thumbs.db
 firebase-service-account.json
 **/firebase-service-account.json
 config/firebase-service-account.json
+automet-89e4b-firebase-adminsdk-fbsvc-973c0f0fdd.json
 *.json
 !package.json
 !package-lock.json

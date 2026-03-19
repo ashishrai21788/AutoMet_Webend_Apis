@@ -1,0 +1,32 @@
+---
+description: API response shape and error handling for AutoMet backend
+globs: AutoMet_Webend_Apis/controllers/**/*.js, AutoMet_Webend_Apis/lib/**/*.js
+alwaysApply: false
+---
+
+# AutoMet API Response Conventions
+
+## Response Shape
+All endpoints must return:
+```javascript
+res.status(HTTP_CODE).json({
+  success: true | false,
+  message: "Human-readable message",
+  data: { ... }  // optional
+});
+```
+
+## HTTP Codes
+- `200` — Success or soft failure (e.g. trip already cancelled)
+- `400` — Bad request (missing/invalid fields)
+- `404` — Resource not found
+- `409` — Conflict (duplicate request, already processed)
+- `500` — Server error
+
+## Cancelled/Expired Messages
+When trip is cancelled or expired, return messages like:
+- `"Ride was cancelled by user"`
+- `"Request expired or another action was taken"`
+- `"Trip already processed with status X"`
+
+Driver app uses these to dismiss the ride request UI.

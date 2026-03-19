@@ -193,10 +193,10 @@ exports.generateOTP = async (req, res) => {
   }
 };
 
-// Verify OTP and return complete driver record
+// Verify OTP and return complete driver record (accepts optional device_id, fcm_id)
 exports.verifyOTP = async (req, res) => {
   try {
-    const { driverId, otp } = req.body;
+    const { driverId, otp, device_id, fcm_id } = req.body;
 
     // Validate required fields
     if (!driverId || !otp) {
@@ -263,15 +263,21 @@ exports.verifyOTP = async (req, res) => {
       expiresIn: '7d' // Token expires in 7 days
     });
 
-    // Update driver's login information and store access token
+    const updateFields = {
+      isLoggedin: true,
+      lastActive: new Date(),
+      accessToken: accessToken,
+      updatedAt: new Date()
+    };
+    if (device_id != null && typeof device_id === 'string' && device_id.trim()) {
+      updateFields.deviceId = device_id.trim();
+    }
+    if (fcm_id != null && typeof fcm_id === 'string' && fcm_id.trim()) {
+      updateFields.fcmToken = fcm_id.trim();
+    }
     const updatedDriver = await DriverModel.findByIdAndUpdate(
       driver._id,
-      {
-        isLoggedin: true,
-        lastActive: new Date(),
-        accessToken: accessToken,
-        updatedAt: new Date()
-      },
+      updateFields,
       { new: true }
     );
 
@@ -311,6 +317,65 @@ exports.verifyOTP = async (req, res) => {
       data: {
         details: error.message
       }
+    });
+  }
+};
+
+/**
+ * Update FCM token and/or device ID for driver (call when token refreshes on mobile).
+ * POST /api/otp/update-token
+ * Body: driverId (required), fcm_id (optional), device_id (optional). At least one of fcm_id or device_id.
+ */
+exports.updateDriverToken = async (req, res) => {
+  try {
+    const { driverId, fcm_id, device_id } = req.body;
+    const driverIdValue = (driverId != null && typeof driverId === 'string') ? driverId.trim() : '';
+    if (!driverIdValue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: driverId',
+        data: { missingFields: { driverId: true } }
+      });
+    }
+    const hasFcm = fcm_id != null && typeof fcm_id === 'string' && fcm_id.trim() !== '';
+    const hasDevice = device_id != null && typeof device_id === 'string' && device_id.trim() !== '';
+    if (!hasFcm && !hasDevice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one of: fcm_id, device_id',
+        data: { missingFields: { fcm_id: !hasFcm, device_id: !hasDevice } }
+      });
+    }
+    const DriverModel = createModel('drivers');
+    const driver = await DriverModel.findOne({ driverId: driverIdValue });
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver not found',
+        data: { driverId: driverIdValue }
+      });
+    }
+    const updateFields = { updatedAt: new Date() };
+    if (hasFcm) updateFields.fcmToken = fcm_id.trim();
+    if (hasDevice) updateFields.deviceId = device_id.trim();
+    await DriverModel.findByIdAndUpdate(driver._id, { $set: updateFields });
+    const updated = await DriverModel.findOne({ driverId: driverIdValue }).select('fcmToken deviceId').lean();
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(200).json({
+      success: true,
+      message: 'Token updated successfully',
+      data: {
+        driverId: driverIdValue,
+        fcmToken: updated.fcmToken != null,
+        deviceId: updated.deviceId != null
+      }
+    });
+  } catch (error) {
+    console.error('updateDriverToken error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating token',
+      data: { details: error.message }
     });
   }
 };

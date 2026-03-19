@@ -4,14 +4,15 @@ const path = require('path');
 const os = require('os');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+
+// Load .env from project root (where this file lives) so it works regardless of cwd
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const connectDB = require('./config/db');
 const { validateCloudinaryConfig, testCloudinaryConnection } = require('./config/cloudinary');
 const { initializeFirestore } = require('./config/firestore');
 const dynamicRoutes = require('./routes/dynamicRoutes');
 const otpRoutes = require('./routes/otpRoutes');
-
-// Load environment variables
-dotenv.config();
 
 // Server health monitoring
 let serverHealth = {
@@ -71,13 +72,18 @@ connectWithRetry();
 
 // Function to get local network IP address
 function getLocalIP() {
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    for (const interface of interfaces[name]) {
-      // Skip internal and non-IPv4 addresses
-      if (interface.family === 'IPv4' && !interface.internal) {
-        return interface.address;
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
       }
+    }
+  } catch (err) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[getLocalIP]', err.message || err);
     }
   }
   return '0.0.0.0';
@@ -224,6 +230,9 @@ app.use('/api/driver-app-analytics', require('./routes/driverAppAnalyticsRoutes'
 app.use('/api', dynamicRoutes); // Dynamic routes for any collection (includes drivers)
 app.use('/api/otp', otpRoutes); // OTP routes for driver verification (collection: drivers_otp)
 app.use('/api/images', require('./routes/imageRoutes')); // Image upload/delete routes
+app.use('/api/v1/rides', require('./routes/rideRoutes')); // Ride request, accept, reject, status, timeline, check-timeouts
+app.use('/api/v1/ride-actions', require('./routes/rideActionRoutes')); // Ride actions: request, accept, reject, cancel (atomic, idempotent)
+app.use('/api/v1/trips', require('./routes/tripRoutes')); // Trip create-request (30s wait), driver-response, check-timeouts
 
 // JSON Syntax Error Handler - must come before general error handler
 app.use((err, req, res, next) => {
@@ -324,6 +333,14 @@ const LOCAL_IP = getLocalIP(); // Get actual network IP
 
 // Create HTTP server
 const httpServer = http.createServer(app);
+
+// Socket.IO for real-time ride events (optional; requires socket.io dependency)
+try {
+  const { initSocket } = require('./config/socket');
+  initSocket(httpServer);
+} catch (e) {
+  console.warn('⚠️  Socket.IO not initialized:', e.message);
+}
 
 // Graceful shutdown handling
 let isShuttingDown = false;
@@ -458,8 +475,13 @@ httpServer.listen(PORT, HOST, () => {
   console.log(`🚀 HTTP Server running on http://${HOST}:${PORT}`);
   console.log(`📍 Local HTTP access: http://localhost:${PORT}`);
   console.log(`🌐 Network HTTP access: http://${LOCAL_IP}:${PORT}`);
-  console.log(`📱 API Base URL: http://${LOCAL_IP}:${PORT}/api`);
-  console.log(`🏥 Health Check: http://${LOCAL_IP}:${PORT}/health`);
+  if (LOCAL_IP !== '0.0.0.0') {
+    console.log(`📱 Use on physical device (same WiFi): http://${LOCAL_IP}:${PORT}`);
+    console.log(`   API Base URL: http://${LOCAL_IP}:${PORT}/api`);
+    console.log(`   Health: http://${LOCAL_IP}:${PORT}/health`);
+  } else {
+    console.log(`📱 For physical device: run \`node scripts/get-server-ip.js\` or use your machine's LAN IP with port ${PORT}`);
+  }
   console.log(`🔧 Test Endpoint: http://${LOCAL_IP}:${PORT}/test`);
   console.log(`⏰ Server started at: ${new Date().toISOString()}`);
   console.log(`🔄 Database connection status: ${serverHealth.dbConnected ? 'Connected' : 'Connecting...'}`);

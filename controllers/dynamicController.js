@@ -646,17 +646,6 @@ exports.logoutDriver = async (req, res) => {
       });
     }
 
-    // Remove driver from Firestore bucket
-    let firestoreResult = null;
-    try {
-      const { deleteDriverFromFirestore } = require('../config/firestore');
-      firestoreResult = await deleteDriverFromFirestore(driverId);
-    } catch (firestoreError) {
-      console.error('Firestore deletion error (non-blocking):', firestoreError.message);
-      // Don't fail the logout if Firestore deletion fails
-      firestoreResult = { success: false, message: firestoreError.message };
-    }
-
     // Remove password hash from response
     const driverResponse = updatedDriver.toObject();
     delete driverResponse.passwordHash;
@@ -676,8 +665,7 @@ exports.logoutDriver = async (req, res) => {
           lastActive: updatedDriver.lastActive,
           fcmToken: null,
           deviceId: null
-        },
-        firestore: firestoreResult || { success: false, message: 'Firestore not configured' }
+        }
       }
     });
 

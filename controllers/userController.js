@@ -224,10 +224,10 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// Verify OTP - users_otp, update users (isLoggedin, isPhoneVerified, accessToken)
+// Verify OTP - users_otp, update users (isLoggedin, isPhoneVerified, accessToken, deviceId, fcmToken)
 exports.verifyUserOtp = async (req, res) => {
   try {
-    const { userId, otp } = req.body;
+    const { userId, otp, device_id, fcm_id } = req.body;
 
     if (!userId || !otp) {
       return res.status(400).json({
@@ -275,13 +275,20 @@ exports.verifyUserOtp = async (req, res) => {
     };
     const accessToken = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '7d' });
 
-    await UserModel.findByIdAndUpdate(user._id, {
+    const updateFields = {
       isLoggedin: true,
       isPhoneVerified: true,
       lastActive: new Date(),
       accessToken,
       updatedAt: new Date()
-    });
+    };
+    if (device_id != null && typeof device_id === 'string' && device_id.trim()) {
+      updateFields.deviceId = device_id.trim();
+    }
+    if (fcm_id != null && typeof fcm_id === 'string' && fcm_id.trim()) {
+      updateFields.fcmToken = fcm_id.trim();
+    }
+    await UserModel.findByIdAndUpdate(user._id, updateFields);
 
     const updatedUser = await UserModel.findOne({ userId }).lean();
 
@@ -302,6 +309,65 @@ exports.verifyUserOtp = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error during OTP verification',
+      data: { details: error.message }
+    });
+  }
+};
+
+/**
+ * Update FCM token and/or device ID for user (call when token refreshes on mobile).
+ * POST /api/users/update-token
+ * Body: userId (required), fcm_id (optional), device_id (optional). At least one of fcm_id or device_id.
+ */
+exports.updateUserToken = async (req, res) => {
+  try {
+    const { userId, fcm_id, device_id } = req.body;
+    const userIdValue = (userId != null && typeof userId === 'string') ? userId.trim() : '';
+    if (!userIdValue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: userId',
+        data: { missingFields: { userId: true } }
+      });
+    }
+    const hasFcm = fcm_id != null && typeof fcm_id === 'string' && fcm_id.trim() !== '';
+    const hasDevice = device_id != null && typeof device_id === 'string' && device_id.trim() !== '';
+    if (!hasFcm && !hasDevice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one of: fcm_id, device_id',
+        data: { missingFields: { fcm_id: !hasFcm, device_id: !hasDevice } }
+      });
+    }
+    const UserModel = createModel('users');
+    const user = await UserModel.findOne({ userId: userIdValue });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        data: { userId: userIdValue }
+      });
+    }
+    const updateFields = { updatedAt: new Date() };
+    if (hasFcm) updateFields.fcmToken = fcm_id.trim();
+    if (hasDevice) updateFields.deviceId = device_id.trim();
+    await UserModel.findByIdAndUpdate(user._id, { $set: updateFields });
+    const updated = await UserModel.findOne({ userId: userIdValue }).lean();
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(200).json({
+      success: true,
+      message: 'Token updated successfully',
+      data: {
+        userId: userIdValue,
+        fcmToken: updated.fcmToken != null,
+        deviceId: updated.deviceId != null
+      }
+    });
+  } catch (error) {
+    console.error('updateUserToken error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating token',
       data: { details: error.message }
     });
   }
