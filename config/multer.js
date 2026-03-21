@@ -23,13 +23,9 @@ const storage = multer.diskStorage({
 });
 
 // File filter for image validation
+// Note: file.size is not available at fileFilter stage; size is enforced by limits.fileSize below
 const fileFilter = (req, file, cb) => {
-  // Check if file is an image
   if (file.mimetype.startsWith('image/')) {
-    // Check file size (max 10MB)
-    if (file.size && file.size > 10 * 1024 * 1024) {
-      return cb(new Error('File size too large. Maximum size is 10MB.'), false);
-    }
     cb(null, true);
   } else {
     cb(new Error('Only image files are allowed!'), false);

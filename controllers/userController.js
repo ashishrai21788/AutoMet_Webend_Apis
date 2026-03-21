@@ -1,8 +1,13 @@
+const crypto = require('crypto');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const UserOTP = require('../models/userOtpModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Refusing to start with insecure fallback.');
+}
 
 // Helper to ensure all user fields are present in response (excluding passwordHash)
 const ensureAllUserFields = (user) => {
@@ -120,7 +125,7 @@ exports.registerUser = async (req, res) => {
     await user.save();
 
     // Create OTP for phone verification
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     const otpRecord = new UserOTP({
@@ -140,7 +145,7 @@ exports.registerUser = async (req, res) => {
       message: 'User registered successfully. OTP sent for verification.',
       data: {
         user: ensureAllUserFields(user),
-        otp: { otp, expiresAt, message: 'Verify using the OTP sent to your phone.' }
+        otp: { expiresAt, message: 'Verify using the OTP sent to your phone.' }
       }
     });
   } catch (error) {
@@ -184,7 +189,7 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     let otpRecord = await UserOTP.findOne({ userId: user.userId, phoneNumber, isUsed: false });
@@ -211,7 +216,7 @@ exports.loginUser = async (req, res) => {
       message: 'OTP sent to your registered phone number',
       data: {
         user: ensureAllUserFields(user),
-        otp: { otp, expiresAt, message: 'Verify OTP to complete login.' }
+        otp: { expiresAt, message: 'Verify OTP to complete login.' }
       }
     });
   } catch (error) {
@@ -265,7 +270,7 @@ exports.verifyUserOtp = async (req, res) => {
     otpRecord.isUsed = true;
     await otpRecord.save();
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
+    const jwtSecret = process.env.JWT_SECRET;
     const tokenPayload = {
       userId: user.userId,
       phone: user.phone,
@@ -478,7 +483,7 @@ exports.resendUserOtp = async (req, res) => {
       });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     await UserOTP.deleteMany({ userId });
@@ -499,7 +504,7 @@ exports.resendUserOtp = async (req, res) => {
       message: 'OTP resent successfully',
       data: {
         user: ensureAllUserFields(user),
-        otp: { otp, expiresAt, message: 'New OTP sent to your registered phone number.' }
+        otp: { expiresAt, message: 'New OTP sent to your registered phone number.' }
       }
     });
   } catch (error) {
@@ -833,6 +838,87 @@ exports.updateUserNotificationReadStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while updating notification read status',
+      data: { details: error.message }
+    });
+  }
+};
+
+// Delete a User Notification - collection: users_notification
+exports.deleteUserNotification = async (req, res) => {
+  try {
+    const { userId, user_id, notificationId, notification_id } = req.query;
+    const userIdValue = userId || user_id;
+    const notificationIdValue = notificationId || notification_id;
+
+    if (!userIdValue || !notificationIdValue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required query parameters: userId, notificationId',
+        data: { missingFields: { userId: !userIdValue, notificationId: !notificationIdValue } }
+      });
+    }
+
+    const mongoose = require('mongoose');
+    const ObjectId = mongoose.Types.ObjectId;
+    const db = mongoose.connection.db;
+    const coll = db.collection('users_notification');
+
+    if (!ObjectId.isValid(notificationIdValue)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid notification ID format',
+        data: { notificationId: notificationIdValue }
+      });
+    }
+
+    const deleteResult = await coll.deleteOne({
+      _id: new ObjectId(notificationIdValue),
+      userId: userIdValue
+    });
+
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found or does not belong to this user',
+        data: { userId: userIdValue, notificationId: notificationIdValue }
+      });
+    }
+
+    // Return remaining notifications
+    const notifications = await coll
+      .find({ userId: userIdValue })
+      .sort({ date: -1 })
+      .toArray();
+
+    const formatted = notifications.map(n => ({
+      id: n._id.toString(),
+      notification_id: n.notification_id || n._id.toString(),
+      title: n.title || '',
+      description: n.description || '',
+      date: n.date || '',
+      isUnread: n.isUnread !== undefined ? n.isUnread : true,
+      type: n.type || 'Informational',
+      userId: n.userId || null,
+      createdAt: n.createdAt || null,
+      updatedAt: n.updatedAt || null
+    }));
+
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).json({
+      success: true,
+      message: 'Notification deleted successfully',
+      data: {
+        notifications: formatted,
+        totalCount: formatted.length,
+        unreadCount: formatted.filter(n => n.isUnread === true).length
+      }
+    });
+  } catch (error) {
+    console.error('deleteUserNotification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting notification',
       data: { details: error.message }
     });
   }

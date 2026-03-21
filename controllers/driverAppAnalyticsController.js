@@ -16,6 +16,7 @@ exports.saveAnalytics = async (req, res) => {
   try {
     const body = req.body || {};
     const events = body.events;
+    const driverId = body.driverId ?? body.driver_id ?? null;
     const deviceId = body.deviceId ?? body.device_id;
     const sessionId = body.sessionId ?? body.session_id ?? deviceId;
     const appId = body.appId ?? body.app_id ?? 'in.automet.driver';
@@ -75,6 +76,7 @@ exports.saveAnalytics = async (req, res) => {
 
     const doc = new DriverAppAnalytics({
       events: normalizedEvents,
+      driverId: driverId != null ? String(driverId).trim() : null,
       deviceId: String(deviceId).trim(),
       sessionId: sessionIdStr,
       appId: appIdStr,

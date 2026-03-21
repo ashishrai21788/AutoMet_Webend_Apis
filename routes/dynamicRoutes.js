@@ -46,6 +46,8 @@ router.put('/drivers/issues/:issueId', dynamicController.updateIssueStatus);
 router.get('/drivers/notifications', dynamicController.getDriverNotifications);
 router.post('/drivers/notifications/send', dynamicController.sendDriverNotification);
 router.put('/drivers/notifications/mark-read', dynamicController.updateNotificationReadStatus);
+router.get('/drivers/notifications/mark-all-read', dynamicController.markAllDriverNotificationsRead);
+router.get('/drivers/notifications/delete', dynamicController.deleteDriverNotification);
 
 // Prevent /drivers/login from being caught by dynamic route
 router.get('/drivers/login', (req, res) => {

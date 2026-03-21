@@ -1,7 +1,18 @@
+const crypto = require('crypto');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Refusing to start with insecure fallback.');
+}
+
+// Allowed collections for dynamic CRUD routes
+const ALLOWED_COLLECTIONS = ['drivers', 'users', 'admins', 'driver_faqs', 'driver_issues', 'drivers_notification'];
+
+// Fields that cannot be set via generic update endpoints
+const SENSITIVE_FIELDS = ['passwordHash', 'accessToken', 'role', 'isVerified', 'walletBalance'];
 
 // Helper function to ensure all driver fields are present in response
 const ensureAllDriverFields = (driver) => {
@@ -155,10 +166,33 @@ const ensureAllDriverFields = (driver) => {
 // Export ensureAllDriverFields for use in other controllers
 exports.ensureAllDriverFields = ensureAllDriverFields;
 
+// Validate collection name for dynamic routes
+function validateCollectionName(collectionName, res) {
+  if (!ALLOWED_COLLECTIONS.includes(collectionName.toLowerCase())) {
+    res.status(403).json({
+      success: false,
+      message: `Collection '${collectionName}' is not allowed`,
+      data: { allowedCollections: ALLOWED_COLLECTIONS }
+    });
+    return false;
+  }
+  return true;
+}
+
+// Strip sensitive fields from update data
+function stripSensitiveFields(data) {
+  const cleaned = { ...data };
+  for (const field of SENSITIVE_FIELDS) {
+    delete cleaned[field];
+  }
+  return cleaned;
+}
+
 // Dynamic controller that works with any collection
 exports.createRecord = async (req, res) => {
   try {
     const { collectionName } = req.params;
+    if (!validateCollectionName(collectionName, res)) return;
     const Model = createModel(collectionName);
     
     // Special handling for driver signup
@@ -269,11 +303,13 @@ const generateUniqueDriverId = async (DriverModel) => {
 // Special function for driver creation with password hashing
 const createDriver = async (req, res, DriverModel) => {
   try {
-    // Accept ONLY: name, email, phoneNumber
-    const { 
+    // Accept: name, email, phoneNumber, plus optional lastName and password from driver app
+    const {
       name,
-      email, 
-      phoneNumber
+      lastName: explicitLastName,
+      email,
+      phoneNumber,
+      password: explicitPassword
     } = req.body;
     
     // Validate required fields for driver signup
@@ -291,10 +327,10 @@ const createDriver = async (req, res, DriverModel) => {
       });
     }
 
-    // Split name into firstName and lastName (use name for both if no space)
+    // Use explicit lastName if provided by driver app, otherwise split name
     const nameParts = name.trim().split(/\s+/);
     const firstName = nameParts[0] || name;
-    const lastName = nameParts.slice(1).join(' ') || name;
+    const lastName = explicitLastName || nameParts.slice(1).join(' ') || name;
     const phone = phoneNumber;
     const emailLower = email.toLowerCase().trim();
 
@@ -332,10 +368,10 @@ const createDriver = async (req, res, DriverModel) => {
     // Generate unique driver ID
     const driverId = await generateUniqueDriverId(DriverModel);
     
-    // Generate a default password hash (driver will set password later or use password reset)
+    // Use explicit password if provided by driver app, otherwise generate random
     const saltRounds = 10;
-    const defaultPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12); // Random password
-    const passwordHash = await bcrypt.hash(defaultPassword, saltRounds);
+    const passwordToHash = explicitPassword || (Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12));
+    const passwordHash = await bcrypt.hash(passwordToHash, saltRounds);
     
     // Create driver with ALL fields explicitly set to ensure complete data
     const driverData = {
@@ -429,7 +465,7 @@ const createDriver = async (req, res, DriverModel) => {
     
     // Generate OTP for phone verification
     const DriverOTP = require('../models/otpModel');
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
     const createdAt = new Date();
 
@@ -466,7 +502,6 @@ const createDriver = async (req, res, DriverModel) => {
       data: {
         driver: driverWithAllFields,
         otp: {
-          otp: otp, // Remove this in production
           expiresAt: expiresAt,
           message: 'Please verify your account using the OTP sent to your email and phone'
         }
@@ -500,7 +535,7 @@ const createDriver = async (req, res, DriverModel) => {
 // Driver Login API - Now accepts only phone number and sends OTP
 exports.loginDriver = async (req, res) => {
   try {
-    const { phoneNumber } = req.body;
+    const { phoneNumber, device_id, fcm_id } = req.body;
 
     // Validate required fields - only phoneNumber is required
     if (!phoneNumber) {
@@ -530,7 +565,7 @@ exports.loginDriver = async (req, res) => {
     }
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
     const createdAt = new Date();
 
@@ -566,6 +601,14 @@ exports.loginDriver = async (req, res) => {
       await otpRecord.save();
     }
 
+    // Update device_id and fcm_id if provided by the app
+    const deviceUpdates = {};
+    if (fcm_id) deviceUpdates.fcmToken = fcm_id;
+    if (device_id) deviceUpdates.deviceId = device_id;
+    if (Object.keys(deviceUpdates).length > 0) {
+      await DriverModel.updateOne({ _id: driver._id }, { $set: deviceUpdates });
+    }
+
     // Get complete driver data with all fields
     const completeDriver = await DriverModel.findById(driver._id).lean();
     delete completeDriver.passwordHash;
@@ -585,7 +628,6 @@ exports.loginDriver = async (req, res) => {
       data: {
         driver: driverWithAllFields, // All driver fields
         otp: {
-          otp: otp, // Remove this in production - only for testing
           expiresAt: expiresAt,
           message: 'OTP sent to your registered phone number. Please verify to complete login.'
         }
@@ -864,6 +906,7 @@ exports.getDriverStatus = async (req, res) => {
 exports.getRecords = async (req, res) => {
   try {
     const { collectionName } = req.params;
+    if (!validateCollectionName(collectionName, res)) return;
     const Model = createModel(collectionName);
     
     // Build query filters
@@ -961,6 +1004,7 @@ exports.getRecords = async (req, res) => {
 exports.getRecordById = async (req, res) => {
   try {
     const { collectionName, id } = req.params;
+    if (!validateCollectionName(collectionName, res)) return;
     const Model = createModel(collectionName);
     
     const record = await Model.findById(id);
@@ -992,11 +1036,12 @@ exports.getRecordById = async (req, res) => {
 exports.updateRecord = async (req, res) => {
   try {
     const { collectionName, id } = req.params;
+    if (!validateCollectionName(collectionName, res)) return;
     const Model = createModel(collectionName);
-    
+
     const record = await Model.findByIdAndUpdate(
-      id, 
-      req.body, 
+      id,
+      { $set: stripSensitiveFields(req.body) },
       { new: true, runValidators: true }
     );
     
@@ -1025,6 +1070,7 @@ exports.updateRecord = async (req, res) => {
 exports.deleteRecord = async (req, res) => {
   try {
     const { collectionName, id } = req.params;
+    if (!validateCollectionName(collectionName, res)) return;
     const Model = createModel(collectionName);
     
     const record = await Model.findByIdAndDelete(id);
@@ -1060,31 +1106,52 @@ exports.verifyToken = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
+    const jwtSecret = process.env.JWT_SECRET;
 
     // Verify JWT token
     const decoded = jwt.verify(token, jwtSecret);
     
-    // Check if driver exists and token is still valid in database
-    const DriverModel = createModel('drivers');
-    const driver = await DriverModel.findOne({ 
-      driverId: decoded.driverId,
-      accessToken: token // Ensure token matches stored token
-    });
-
-    if (!driver) {
+    // Check if driver or user exists and token is still valid in database
+    if (decoded.driverId) {
+      const DriverModel = createModel('drivers');
+      const driver = await DriverModel.findOne({
+        driverId: decoded.driverId,
+        accessToken: token
+      });
+      if (!driver) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired token',
+          data: { error: 'Driver not found or token invalidated' }
+        });
+      }
+      req.driver = driver;
+      req.user = null;
+    } else if (decoded.userId) {
+      const UserModel = createModel('users');
+      const user = await UserModel.findOne({
+        userId: decoded.userId,
+        accessToken: token
+      });
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired token',
+          data: { error: 'User not found or token invalidated' }
+        });
+      }
+      req.user = user;
+      req.driver = null;
+    } else {
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired token',
-        data: {
-          error: 'Driver not found or token invalidated'
-        }
+        message: 'Invalid token payload',
+        data: { error: 'Token does not contain driverId or userId' }
       });
     }
 
-    // Add driver info to request object
-    req.driver = driver;
     req.token = token;
+    req.decoded = decoded;
     next();
 
   } catch (error) {
@@ -1451,11 +1518,6 @@ exports.updateVehicleDetails = async (req, res) => {
       });
     }
 
-    // Debug: Log updateData to see what's being sent
-    console.log('Update data before save:', JSON.stringify(updateData, null, 2));
-    console.log('vehicleType value:', updateData.vehicleType);
-    console.log('vehicleType type:', typeof updateData.vehicleType);
-
     // Update driver with better error handling
     let updatedDriver;
     try {
@@ -1588,7 +1650,7 @@ exports.getDriverProfile = async (req, res) => {
 exports.updateDriverFields = async (req, res) => {
   try {
     const { driverId } = req.body;
-    const updateData = { ...req.body };
+    const updateData = stripSensitiveFields({ ...req.body });
     delete updateData.driverId; // Remove driverId from update data
 
     // Validate required fields
@@ -2897,4 +2959,148 @@ exports.updateNotificationReadStatus = async (req, res) => {
       }
     });
   }
-}; 
+};
+
+// Mark All Driver Notifications as Read
+exports.markAllDriverNotificationsRead = async (req, res) => {
+  try {
+    const { driverId, driver_id } = req.query;
+    const driverIdValue = driverId || driver_id;
+
+    if (!driverIdValue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required query parameter: driverId',
+        data: { missingFields: { driverId: true } }
+      });
+    }
+
+    const mongoose = require('mongoose');
+    const db = mongoose.connection.db;
+    const notificationsCollection = db.collection('driver_notification');
+
+    const updateResult = await notificationsCollection.updateMany(
+      { driverId: driverIdValue, isUnread: true },
+      { $set: { isUnread: false, updatedAt: new Date() } }
+    );
+
+    const notifications = await notificationsCollection
+      .find({ driverId: driverIdValue })
+      .sort({ date: -1 })
+      .toArray();
+
+    const formatted = notifications.map(n => ({
+      id: n._id.toString(),
+      notification_id: n.notification_id || n._id.toString(),
+      title: n.title || '',
+      description: n.description || '',
+      date: n.date || '',
+      isUnread: n.isUnread !== undefined ? n.isUnread : false,
+      type: n.type || 'Informational',
+      driverId: n.driverId || null,
+      createdAt: n.createdAt || null,
+      updatedAt: n.updatedAt || null
+    }));
+
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).json({
+      success: true,
+      message: 'All notifications marked as read',
+      data: {
+        notifications: formatted,
+        totalCount: formatted.length,
+        unreadCount: 0,
+        markedCount: updateResult.modifiedCount
+      }
+    });
+  } catch (error) {
+    console.error('markAllDriverNotificationsRead error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while marking all notifications as read',
+      data: { details: error.message }
+    });
+  }
+};
+
+// Delete a Driver Notification
+exports.deleteDriverNotification = async (req, res) => {
+  try {
+    const { driverId, driver_id, notificationId, notification_id } = req.query;
+    const driverIdValue = driverId || driver_id;
+    const notificationIdValue = notificationId || notification_id;
+
+    if (!driverIdValue || !notificationIdValue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required query parameters: driverId, notificationId',
+        data: { missingFields: { driverId: !driverIdValue, notificationId: !notificationIdValue } }
+      });
+    }
+
+    const mongoose = require('mongoose');
+    const ObjectId = mongoose.Types.ObjectId;
+    const db = mongoose.connection.db;
+    const notificationsCollection = db.collection('driver_notification');
+
+    if (!ObjectId.isValid(notificationIdValue)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid notification ID format',
+        data: { notificationId: notificationIdValue }
+      });
+    }
+
+    const deleteResult = await notificationsCollection.deleteOne({
+      _id: new ObjectId(notificationIdValue),
+      driverId: driverIdValue
+    });
+
+    if (deleteResult.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found or does not belong to this driver',
+        data: { driverId: driverIdValue, notificationId: notificationIdValue }
+      });
+    }
+
+    // Return remaining notifications
+    const notifications = await notificationsCollection
+      .find({ driverId: driverIdValue })
+      .sort({ date: -1 })
+      .toArray();
+
+    const formatted = notifications.map(n => ({
+      id: n._id.toString(),
+      notification_id: n.notification_id || n._id.toString(),
+      title: n.title || '',
+      description: n.description || '',
+      date: n.date || '',
+      isUnread: n.isUnread !== undefined ? n.isUnread : true,
+      type: n.type || 'Informational',
+      driverId: n.driverId || null,
+      createdAt: n.createdAt || null,
+      updatedAt: n.updatedAt || null
+    }));
+
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).json({
+      success: true,
+      message: 'Notification deleted successfully',
+      data: {
+        notifications: formatted,
+        totalCount: formatted.length,
+        unreadCount: formatted.filter(n => n.isUnread === true).length
+      }
+    });
+  } catch (error) {
+    console.error('deleteDriverNotification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting notification',
+      data: { details: error.message }
+    });
+  }
+};

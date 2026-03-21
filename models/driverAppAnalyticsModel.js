@@ -22,6 +22,7 @@ const driverAppAnalyticsSchema = new mongoose.Schema({
       message: 'events must be a non-empty array'
     }
   },
+  driverId: { type: String, default: null, trim: true },
   deviceId: { type: String, required: true, trim: true },
   sessionId: { type: String, required: true, trim: true },
   appId: { type: String, required: true, trim: true },

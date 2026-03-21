@@ -3,9 +3,9 @@ const { Trip, TRIP_STATUSES } = require('../models/tripModel');
 const { TripDetails } = require('../models/tripDetailsModel');
 const { getNextTripId } = require('../models/tripCounterModel');
 const TripEvent = require('../models/tripEventModel');
-const { sendPushToDriver } = require('../lib/pushNotification');
+const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { clearForDriver: clearTripRateLimitForDriver } = require('../lib/tripRateLimit');
-const { emitToDriver } = require('../config/socket');
+const { emitToDriver, emitToUser } = require('../config/socket');
 
 const DRIVER_RESPONSE_TIMEOUT_SECONDS = Number(process.env.RIDE_REQUEST_TIMEOUT_SECONDS) || 60;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -202,7 +202,7 @@ exports.createRideRequest = async (req, res) => {
     console.error('[createRideRequest]', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to create ride request'
+      message: 'Failed to create ride request'
     });
   }
 };
@@ -214,24 +214,33 @@ exports.createRideRequest = async (req, res) => {
 exports.acceptRide = async (req, res) => {
   try {
     const tripId = (req.params.tripId || '').trim();
+    const driverId = (req.body.driver_id || req.body.driverId || '').toString().trim();
     if (!tripId) {
       return res.status(400).json({ success: false, message: 'tripId is required' });
     }
-    const trip = await Trip.findOne({ trip_id: tripId });
-    if (!trip) {
-      return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
-    }
-    if (trip.status !== 'REQUESTED') {
-      return res.status(400).json({
-        success: false,
-        message: `Trip cannot be accepted. Current status: ${trip.status}`,
-        data: { trip_id: tripId, status: trip.status }
-      });
+    if (!driverId) {
+      return res.status(400).json({ success: false, message: 'driver_id is required in request body' });
     }
     const now = new Date();
-    trip.status = 'ACCEPTED';
-    trip.accepted_at = now;
-    await trip.save();
+    const trip = await Trip.findOneAndUpdate(
+      { trip_id: tripId, status: 'REQUESTED', driver_id: driverId },
+      { $set: { status: 'ACCEPTED', accepted_at: now } },
+      { new: true }
+    );
+    if (!trip) {
+      const existing = await Trip.findOne({ trip_id: tripId }).lean();
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
+      }
+      if (existing.driver_id !== driverId) {
+        return res.status(403).json({ success: false, message: 'Driver does not match this trip' });
+      }
+      return res.status(400).json({
+        success: false,
+        message: `Trip cannot be accepted. Current status: ${existing.status}`,
+        data: { trip_id: tripId, status: existing.status }
+      });
+    }
     await logTripEvent(tripId, 'ACCEPTED', { accepted_at: now.toISOString() });
 
     res.status(200).json({
@@ -242,7 +251,7 @@ exports.acceptRide = async (req, res) => {
     });
   } catch (error) {
     console.error('[acceptRide]', error);
-    res.status(500).json({ success: false, message: error.message || 'Failed to accept ride' });
+    res.status(500).json({ success: false, message: 'Failed to accept ride' });
   }
 };
 
@@ -254,6 +263,7 @@ exports.rejectRide = async (req, res) => {
   try {
     const tripId = (req.params.tripId || '').trim();
     const body = req.body || {};
+    const driverId = (body.driver_id || body.driverId || '').toString().trim();
     const rejectedReason = body.rejected_reason != null ? String(body.rejected_reason).trim() : null;
     const rejectedBy = (body.rejected_by && ['USER', 'DRIVER'].includes(String(body.rejected_by).toUpperCase()))
       ? String(body.rejected_by).toUpperCase()
@@ -262,23 +272,30 @@ exports.rejectRide = async (req, res) => {
     if (!tripId) {
       return res.status(400).json({ success: false, message: 'tripId is required' });
     }
-    const trip = await Trip.findOne({ trip_id: tripId });
-    if (!trip) {
-      return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
-    }
-    if (trip.status !== 'REQUESTED') {
-      return res.status(400).json({
-        success: false,
-        message: `Trip cannot be rejected. Current status: ${trip.status}`,
-        data: { trip_id: tripId, status: trip.status }
-      });
+    if (!driverId) {
+      return res.status(400).json({ success: false, message: 'driver_id is required in request body' });
     }
 
     const newStatus = rejectedReason ? 'REJECTED_WITH_REASON' : 'REJECTED';
-    trip.status = newStatus;
-    trip.rejected_reason = rejectedReason || undefined;
-    trip.rejected_by = rejectedBy;
-    await trip.save();
+    const trip = await Trip.findOneAndUpdate(
+      { trip_id: tripId, status: 'REQUESTED', driver_id: driverId },
+      { $set: { status: newStatus, rejected_reason: rejectedReason || undefined, rejected_by: rejectedBy } },
+      { new: true }
+    );
+    if (!trip) {
+      const existing = await Trip.findOne({ trip_id: tripId }).lean();
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
+      }
+      if (existing.driver_id !== driverId) {
+        return res.status(403).json({ success: false, message: 'Driver does not match this trip' });
+      }
+      return res.status(400).json({
+        success: false,
+        message: `Trip cannot be rejected. Current status: ${existing.status}`,
+        data: { trip_id: tripId, status: existing.status }
+      });
+    }
     await logTripEvent(tripId, newStatus, { rejected_by: rejectedBy, rejected_reason: rejectedReason || undefined });
 
     res.status(200).json({
@@ -290,7 +307,7 @@ exports.rejectRide = async (req, res) => {
     });
   } catch (error) {
     console.error('[rejectRide]', error);
-    res.status(500).json({ success: false, message: error.message || 'Failed to reject ride' });
+    res.status(500).json({ success: false, message: 'Failed to reject ride' });
   }
 };
 
@@ -367,7 +384,7 @@ exports.cancelRideByUser = async (req, res) => {
         data: { ride_id: resolvedRideId, request_id: resolvedRequestId, status: trip.status }
       });
     }
-    const nonCancellableStatuses = ['DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING', 'COMPLETED'];
+    const nonCancellableStatuses = ['ON_GOING', 'COMPLETED'];
     if (nonCancellableStatuses.includes(trip.status)) {
       return res.status(400).json({
         success: false,
@@ -493,6 +510,34 @@ const STATUS_MESSAGES = {
 };
 
 /**
+ * Notify the rider (user who requested the ride) when driver updates trip status.
+ * Socket for in-app; FCM when user has a token (same payload as trip_details flow).
+ */
+async function notifyRiderRideStatusUpdated(userId, tripId, status) {
+  if (!userId || typeof userId !== 'string' || !String(userId).trim()) return;
+  const uid = String(userId).trim();
+  emitToUser(uid, 'ride_status_updated', { trip_id: tripId, status });
+  try {
+    const bodyMsg =
+      status === 'ARRIVED'
+        ? 'Driver has arrived'
+        : status === 'ON_GOING'
+          ? 'Trip started'
+          : status === 'COMPLETED'
+            ? 'Trip completed'
+            : 'Driver is on the way';
+    await sendPushToUser(uid, {
+      title: 'Ride update',
+      body: bodyMsg,
+      channelId: 'user_notifications',
+      data: { type: 'ride_status_updated', trip_id: String(tripId), status }
+    });
+  } catch (pushErr) {
+    if (process.env.NODE_ENV === 'development') console.warn('[updateTripStatus] Push to user failed:', pushErr.message);
+  }
+}
+
+/**
  * PATCH /api/v1/rides/:tripId/status
  * Update status: DRIVER_ON_THE_WAY | ARRIVED | ON_GOING | COMPLETED. Body: { status }
  * Flow: ACCEPTED → DRIVER_ON_THE_WAY → ARRIVED → ON_GOING → COMPLETED
@@ -536,19 +581,7 @@ exports.updateTripStatus = async (req, res) => {
         });
       }
       await TripDetails.updateOne({ trip_id: tripId }, { $set: updatePayload });
-      const { emitToUser } = require('../config/socket');
-      const { sendPushToUser } = require('../lib/pushNotification');
-      emitToUser(tripDetails.user_id, 'ride_status_updated', { trip_id: tripId, status });
-      try {
-        const UserModel = createModel('users');
-        const user = await UserModel.findOne({ userId: tripDetails.user_id }).lean();
-        if (user?.fcmToken) {
-          const bodyMsg = status === 'ARRIVED' ? 'Driver has arrived' : status === 'ON_GOING' ? 'Trip started' : status === 'COMPLETED' ? 'Trip completed' : 'Driver is on the way';
-          await sendPushToUser(tripDetails.user_id, { title: 'Ride update', body: bodyMsg, channelId: 'user_notifications', data: { type: 'ride_status_updated', trip_id: tripId, status } });
-        }
-      } catch (pushErr) {
-        if (process.env.NODE_ENV === 'development') console.warn('[updateTripStatus] Push to user failed:', pushErr.message);
-      }
+      await notifyRiderRideStatusUpdated(tripDetails.user_id, tripId, status);
       return res.status(200).json({ success: true, trip_id: tripId, status, message: STATUS_MESSAGES[status] || status });
     }
 
@@ -574,6 +607,8 @@ exports.updateTripStatus = async (req, res) => {
 
     const timestampField = status === 'DRIVER_ON_THE_WAY' ? 'driver_on_the_way_at' : status === 'ARRIVED' ? 'arrived_at' : status === 'ON_GOING' ? 'started_at' : 'completed_at';
     await logTripEvent(tripId, status, { [timestampField]: now.toISOString() });
+
+    await notifyRiderRideStatusUpdated(trip.user_id, tripId, status);
 
     res.status(200).json({ success: true, trip_id: tripId, status, message: STATUS_MESSAGES[status] || status });
   } catch (error) {
@@ -726,6 +761,12 @@ exports.listTrips = async (req, res) => {
     if (req.query.status) {
       const s = String(req.query.status).trim().toUpperCase();
       if (TRIP_STATUSES.includes(s)) query.status = s;
+    }
+    if (!query.user_id && !query.driver_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one of user_id or driver_id is required'
+      });
     }
     const limit = Math.min(Math.max(0, parseInt(req.query.limit, 10) || 20), 100);
     const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);

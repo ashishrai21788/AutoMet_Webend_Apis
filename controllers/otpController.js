@@ -1,6 +1,11 @@
+const crypto = require('crypto');
 const DriverOTP = require('../models/otpModel');
 const { createModel } = require('../models/dynamicModel');
 const jwt = require('jsonwebtoken');
+
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Refusing to start with insecure fallback.');
+}
 
 // Send OTP for driver verification (creates or updates existing OTP)
 exports.sendOTP = async (req, res) => {
@@ -47,7 +52,7 @@ exports.sendOTP = async (req, res) => {
     }
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     
     // Set expiration time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -83,7 +88,6 @@ exports.sendOTP = async (req, res) => {
         driverId: driverId,
         email: driver.email,
         phone: driver.phone,
-        otp: otp, // Remove this in production
         expiresAt: expiresAt,
         message: 'OTP sent to your registered email and phone number',
         action: otpRecord.isNew ? 'created' : 'updated'
@@ -148,7 +152,7 @@ exports.generateOTP = async (req, res) => {
     }
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     
     // Set expiration time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -176,7 +180,6 @@ exports.generateOTP = async (req, res) => {
         driverId: driverId,
         email: email,
         phone: phone,
-        otp: otp, // Remove this in production
         expiresAt: expiresAt,
         message: 'OTP sent to your registered email and phone number'
       }
@@ -225,8 +228,7 @@ exports.verifyOTP = async (req, res) => {
         success: false,
         message: 'Invalid or expired OTP',
         data: {
-          driverId: driverId,
-          otp: otp
+          driverId: driverId
         }
       });
     }
@@ -250,7 +252,7 @@ exports.verifyOTP = async (req, res) => {
     await otpRecord.save();
 
     // Generate JWT access token
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
+    const jwtSecret = process.env.JWT_SECRET;
     const tokenPayload = {
       driverId: driver.driverId,
       email: driver.email,
@@ -488,7 +490,7 @@ exports.resendOTP = async (req, res) => {
     }
 
     // Generate new 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     
     // Set expiration time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -515,7 +517,6 @@ exports.resendOTP = async (req, res) => {
         driverId: driverId,
         email: driver.email,
         phone: driver.phone,
-        otp: otp, // Remove this in production
         expiresAt: expiresAt,
         message: 'New OTP sent to your registered email and phone number'
       }

@@ -57,12 +57,7 @@ exports.uploadImage = async (req, res) => {
 
   } catch (error) {
     console.error('Image upload error:', error);
-    
-    // Clean up uploaded file on error
-    if (uploadedFile) {
-      cleanupUploadedFiles(uploadedFile);
-    }
-    
+    // Cleanup handled by finally block
     res.status(500).json({
       success: false,
       message: 'Server error during image upload',

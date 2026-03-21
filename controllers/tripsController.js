@@ -205,6 +205,21 @@ exports.createRequest = async (req, res) => {
     const tripId = await getNextTripId();
     const timeoutAt = new Date(now.getTime() + DRIVER_RESPONSE_TIMEOUT_MS);
 
+    // Create trip in DB BEFORE sending push so driver-response finds it
+    const trip = await TripDetails.create({
+      trip_id: tripId,
+      request_id: requestId,
+      user_id: userId,
+      driver_id: driverId,
+      pickup: { address: pickupAddress, lat: pickupLat, lng: pickupLng },
+      drop: { address: dropAddress, lat: dropLat, lng: dropLng },
+      ride_note: rideNote || undefined,
+      status: 'REQUESTED',
+      requested_at: now,
+      timeout_at: timeoutAt,
+      push_sent: false
+    });
+
     const riderName = user
       ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.fullName || null
       : null;
@@ -226,28 +241,19 @@ exports.createRequest = async (req, res) => {
     );
 
     if (!pushResult.success) {
+      // Clean up the trip since we couldn't notify the driver
+      await TripDetails.deleteOne({ trip_id: tripId });
       return res.status(200).json({
         success: false,
         message: 'Unable to send request to driver. Please try another driver.'
       });
     }
 
-    const trip = await TripDetails.create({
-      trip_id: tripId,
-      request_id: requestId,
-      user_id: userId,
-      driver_id: driverId,
-      pickup: { address: pickupAddress, lat: pickupLat, lng: pickupLng },
-      drop: { address: dropAddress, lat: dropLat, lng: dropLng },
-      ride_note: rideNote || undefined,
-      status: 'REQUESTED',
-      requested_at: now,
-      timeout_at: timeoutAt,
-      push_sent: true,
-      push_message_id: pushResult.messageId || undefined,
-      push_sent_at: now,
-      push_status: 'DELIVERED'
-    });
+    // Update trip with push delivery info
+    await TripDetails.updateOne(
+      { trip_id: tripId },
+      { $set: { push_sent: true, push_message_id: pushResult.messageId || undefined, push_sent_at: now, push_status: 'DELIVERED' } }
+    );
 
     const tripPayload = {
       trip_id: tripId,
@@ -322,6 +328,84 @@ exports.createRequest = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to create trip request'
+    });
+  }
+};
+
+/**
+ * POST /api/v1/trips/cancel-request
+ * Body: trip_id, cancelled_by (USER | DRIVER)
+ * Cancels a trip that is still in REQUESTED status (before driver accepts).
+ */
+exports.cancelRequest = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const tripId = (body.trip_id != null ? String(body.trip_id) : '').trim();
+    const cancelledBy = (body.cancelled_by != null ? String(body.cancelled_by) : 'USER').trim().toUpperCase();
+
+    if (!tripId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: trip_id'
+      });
+    }
+
+    const trip = await TripDetails.findOne({ trip_id: tripId });
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trip not found',
+        data: { trip_id: tripId }
+      });
+    }
+
+    // Only allow cancellation of REQUESTED trips (before acceptance)
+    if (trip.status !== 'REQUESTED') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel trip with status: ${trip.status}. Only REQUESTED trips can be cancelled via this endpoint.`,
+        data: { trip_id: tripId, current_status: trip.status }
+      });
+    }
+
+    const now = new Date();
+    const newStatus = cancelledBy === 'DRIVER' ? 'CANCELLED_BY_DRIVER' : 'CANCELLED_BY_USER';
+
+    await TripDetails.updateOne(
+      { trip_id: tripId, status: 'REQUESTED' },
+      { $set: { status: newStatus, cancelled_by: cancelledBy, cancelled_at: now, updated_at: now } }
+    );
+
+    // Resolve any pending waiter so create-request returns immediately
+    resolveWaiter(tripId, { success: false, status: newStatus, message: `Ride cancelled by ${cancelledBy.toLowerCase()}` });
+
+    // Notify the other party via socket
+    if (cancelledBy === 'USER' && trip.driver_id) {
+      emitToDriver(trip.driver_id, 'ride_cancelled_by_user', {
+        trip_id: tripId,
+        request_id: trip.request_id,
+        status: newStatus,
+        message: 'Ride was cancelled by user'
+      });
+    } else if (cancelledBy === 'DRIVER' && trip.user_id) {
+      emitToUser(trip.user_id, 'ride_request_rejected', {
+        trip_id: tripId,
+        request_id: trip.request_id,
+        status: newStatus,
+        message: 'Ride was cancelled by driver'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Trip cancelled by ${cancelledBy.toLowerCase()}`,
+      data: { trip_id: tripId, status: newStatus }
+    });
+  } catch (error) {
+    console.error('[trips cancelRequest]', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to cancel trip request'
     });
   }
 };
