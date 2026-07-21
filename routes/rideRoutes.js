@@ -1,32 +1,48 @@
 const express = require('express');
 const router = express.Router();
 const rideController = require('../controllers/rideController');
+const tripsController = require('../controllers/tripsController');
+const { requireAuth, requireRideScopeQuery, requireSchedulerSecret } = require('../lib/authMiddleware');
+const { deprecateLegacyRideApi } = require('../lib/deprecationHeaders');
 
-// Create ride request (user → driver)
-router.post('/request', rideController.createRideRequest);
+// Create ride request (user → driver) — legacy; prefer /trips/create-request
+router.post(
+  '/request',
+  deprecateLegacyRideApi('/api/v1/trips/create-request', 'POST /rides/request'),
+  requireAuth({ roles: ['user'], enforceBodyUserId: true }),
+  rideController.createRideRequest
+);
 
-// Cron: mark REQUESTED trips past timeout as NO_RESPONSE
-router.post('/check-timeouts', rideController.checkTimeouts);
-// User cancels ride (before or after driver acceptance, before trip start)
-router.post('/cancel', rideController.cancelRideByUser);
+router.post('/check-timeouts', requireSchedulerSecret, tripsController.checkTimeouts);
 
-// Active (incomplete) ride for driver or user - call on landing (before /:tripId)
-router.get('/active', rideController.getActiveRide);
-// Ride details by ride_id + user_id or driver_id (before /:tripId)
-router.get('/details', rideController.getRideDetails);
-// List trips (query: user_id, driver_id, status, limit, skip)
+router.post(
+  '/cancel',
+  requireAuth({ roles: ['user'], enforceBodyUserId: true }),
+  rideController.cancelRideByUser
+);
+
+router.get('/active', requireRideScopeQuery, rideController.getActiveRide);
+
+router.get('/details', requireRideScopeQuery, rideController.getRideDetails);
+
 router.get('/', rideController.listTrips);
-
-// Trip timeline / audit (must be before /:tripId)
 router.get('/:tripId/timeline', rideController.getTripTimeline);
-// Trip by id
 router.get('/:tripId', rideController.getTrip);
 
-// Driver accept
-router.patch('/:tripId/accept', rideController.acceptRide);
-// Driver or user reject
-router.patch('/:tripId/reject', rideController.rejectRide);
-// Status update (ON_GOING, COMPLETED)
-router.patch('/:tripId/status', rideController.updateTripStatus);
+router.patch(
+  '/:tripId/accept',
+  requireAuth({ roles: ['driver'], enforceBodyDriverId: true }),
+  rideController.acceptRide
+);
+router.patch(
+  '/:tripId/reject',
+  requireAuth({ roles: ['driver'], enforceBodyDriverId: true }),
+  rideController.rejectRide
+);
+router.patch(
+  '/:tripId/status',
+  requireAuth({ roles: ['driver'] }),
+  rideController.updateTripStatus
+);
 
 module.exports = router;

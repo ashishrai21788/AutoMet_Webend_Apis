@@ -1,8 +1,9 @@
 const { createModel } = require('../models/dynamicModel');
 const { TripDetails } = require('../models/tripDetailsModel');
 const { getNextTripId } = require('../models/tripCounterModel');
+const { isFcmReady } = require('../config/firestore');
 const { emitToDriver, emitToUser } = require('../config/socket');
-const { registerWaiter, resolveWaiter } = require('../lib/tripWaitResolver');
+const { buildImmediateCreateResponse } = require('../lib/createRequestMode');
 const { isDriverReachable, getDriverFcmInfo, sendRideRequestPushWithRetry } = require('../lib/fcmTripPush');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 
@@ -30,9 +31,10 @@ async function notifyDriverRideTimeout(driverId, tripId, requestId) {
       trip_id: tripId,
       request_id: requestId || '',
       status: 'NO_RESPONSE'
-    }
+    },
+    dataOnly: true
   });
-  if (process.env.NODE_ENV === 'development' && !result.success) console.warn('[notifyDriverRideTimeout] FCM failed:', result.error);
+  if (!result.success) console.warn('[notifyDriverRideTimeout] FCM failed:', result.error, { driverId });
 }
 
 /**
@@ -72,9 +74,33 @@ async function notifyUserDriverResponse(userId, trip, status, message, rejectRea
     title,
     body,
     channelId: 'user_notifications',
-    data
+    data,
+    dataOnly: true
   });
-  if (process.env.NODE_ENV === 'development' && !result.success) console.warn('[notifyUserDriverResponse] FCM failed:', result.error);
+  if (!result.success) console.warn('[notifyUserDriverResponse] FCM failed:', result.error, { userId });
+}
+
+async function notifyUserRideTimeout(userId, trip) {
+  if (!userId || !trip) return;
+  const pickupAddress = (trip.pickup && trip.pickup.address) ? trip.pickup.address : '';
+  const dropAddress = (trip.drop && trip.drop.address) ? trip.drop.address : '';
+  const result = await sendPushToUser(userId, {
+    title: 'No response from driver',
+    body: `No response for your ride request: ${pickupAddress} → ${dropAddress}`,
+    channelId: 'user_notifications',
+    data: {
+      type: 'ride_request_timeout',
+      trip_id: trip.trip_id,
+      request_id: trip.request_id || '',
+      status: 'NO_RESPONSE',
+      message: 'No response from driver',
+      pickup_address: pickupAddress,
+      drop_address: dropAddress,
+      driver_id: trip.driver_id || ''
+    },
+    dataOnly: true
+  });
+  if (!result.success) console.warn('[notifyUserRideTimeout] FCM failed:', result.error, { userId });
 }
 
 function isValidLat(lat) {
@@ -201,6 +227,15 @@ exports.createRequest = async (req, res) => {
       });
     }
 
+    if (!isFcmReady()) {
+      console.error('[trips createRequest] FCM not configured — cannot send ride request notification. Set FIREBASE_SERVICE_ACCOUNT_PATH or FIREBASE_SERVICE_ACCOUNT_KEY.');
+      return res.status(503).json({
+        success: false,
+        message: 'Ride notifications are unavailable (server push not configured). Contact support or try again later.',
+        error: 'FCM_NOT_CONFIGURED'
+      });
+    }
+
     const { fcmToken: driverFcmToken } = getDriverFcmInfo(driver);
     const tripId = await getNextTripId();
     const timeoutAt = new Date(now.getTime() + DRIVER_RESPONSE_TIMEOUT_MS);
@@ -224,6 +259,7 @@ exports.createRequest = async (req, res) => {
       ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.fullName || null
       : null;
     const pushPayload = {
+      request_id: requestId,
       pickup_address: pickupAddress,
       drop_address: dropAddress,
       pickup_lat: pickupLat,
@@ -241,6 +277,10 @@ exports.createRequest = async (req, res) => {
     );
 
     if (!pushResult.success) {
+      console.warn('[trips createRequest] FCM ride request push failed:', pushResult.error, {
+        driverId,
+        invalidToken: pushResult.invalidToken
+      });
       // Clean up the trip since we couldn't notify the driver
       await TripDetails.deleteOne({ trip_id: tripId });
       return res.status(200).json({
@@ -268,61 +308,11 @@ exports.createRequest = async (req, res) => {
     };
     emitToDriver(driverId, 'ride_request_received', tripPayload);
 
-    const waitForDriver = new Promise((resolve) => {
-      registerWaiter(tripId, resolve, resolve);
-    });
-    const timeoutPromise = new Promise((resolve) => {
-      setTimeout(() => resolve({ _timeout: true }), DRIVER_RESPONSE_TIMEOUT_MS);
-    });
-
-    const outcome = await Promise.race([waitForDriver, timeoutPromise]);
-
-    let finalStatus = outcome.status;
-    let success = outcome.success;
-    let message = outcome.message;
-
-    if (outcome._timeout) {
-      const updated = await TripDetails.findOneAndUpdate(
-        { trip_id: tripId, status: 'REQUESTED' },
-        { $set: { status: 'NO_RESPONSE', driver_response: 'NO_RESPONSE', updated_at: new Date() } },
-        { new: true }
-      );
-      if (updated) {
-        finalStatus = 'NO_RESPONSE';
-        success = false;
-        message = 'No response from driver';
-        emitToUser(userId, 'ride_request_timeout', { trip_id: tripId, request_id: requestId, status: finalStatus, message });
-        await notifyDriverRideTimeout(updated.driver_id, updated.trip_id, updated.request_id);
-      } else {
-        const current = await TripDetails.findOne({ trip_id: tripId }).lean();
-        if (current) {
-          finalStatus = current.status;
-          success = current.status === 'ACCEPTED';
-          message = current.status === 'ACCEPTED' ? 'Driver accepted your request' : current.status === 'REJECTED' || current.status === 'REJECTED_WITH_REASON' ? 'Driver rejected the request' : 'No response from driver';
-        }
-      }
-    }
-
-    if (success === undefined) {
-      if (finalStatus === 'ACCEPTED') {
-        success = true;
-        message = 'Driver accepted your request';
-      } else if (finalStatus === 'REJECTED' || finalStatus === 'REJECTED_WITH_REASON') {
-        success = false;
-        message = 'Driver rejected the request';
-      } else {
-        success = false;
-        message = message || 'No response from driver';
-      }
-    }
-
-    res.status(200).json({
-      success: success !== false,
-      trip_id: tripId,
-      request_id: requestId,
-      status: finalStatus,
-      message: message || (success ? 'Driver accepted your request' : 'Driver rejected the request')
-    });
+    return res.status(201).json(buildImmediateCreateResponse({
+      tripId,
+      requestId,
+      timeoutAt: timeoutAt.toISOString()
+    }));
   } catch (error) {
     console.error('[trips createRequest]', error);
     res.status(500).json({
@@ -359,6 +349,24 @@ exports.cancelRequest = async (req, res) => {
       });
     }
 
+    const actorId = req.authActorId;
+    const actorRole = req.authRole;
+    if (actorRole === 'user') {
+      if (trip.user_id !== actorId) {
+        return res.status(403).json({ success: false, message: 'Only the trip user can cancel this request' });
+      }
+      if (cancelledBy === 'DRIVER') {
+        return res.status(403).json({ success: false, message: 'Users cannot cancel as DRIVER' });
+      }
+    } else if (actorRole === 'driver') {
+      if (trip.driver_id !== actorId) {
+        return res.status(403).json({ success: false, message: 'Only the assigned driver can cancel this request' });
+      }
+      if (cancelledBy === 'USER') {
+        return res.status(403).json({ success: false, message: 'Drivers cannot cancel as USER' });
+      }
+    }
+
     // Only allow cancellation of REQUESTED trips (before acceptance)
     if (trip.status !== 'REQUESTED') {
       return res.status(400).json({
@@ -375,9 +383,6 @@ exports.cancelRequest = async (req, res) => {
       { trip_id: tripId, status: 'REQUESTED' },
       { $set: { status: newStatus, cancelled_by: cancelledBy, cancelled_at: now, updated_at: now } }
     );
-
-    // Resolve any pending waiter so create-request returns immediately
-    resolveWaiter(tripId, { success: false, status: newStatus, message: `Ride cancelled by ${cancelledBy.toLowerCase()}` });
 
     // Notify the other party via socket
     if (cancelledBy === 'USER' && trip.driver_id) {
@@ -478,7 +483,6 @@ exports.driverResponse = async (req, res) => {
         { $set: { status: 'NO_RESPONSE', driver_response: 'NO_RESPONSE', updated_at: now } }
       );
       const result = { success: false, trip_id: tripId, request_id: requestId, status: 'NO_RESPONSE', message: 'No response from driver' };
-      resolveWaiter(tripId, result);
       emitToUser(trip.user_id, 'ride_request_timeout', { trip_id: tripId, request_id: requestId, status: 'NO_RESPONSE', message: 'No response from driver' });
       await notifyDriverRideTimeout(trip.driver_id, tripId, requestId);
       return res.status(200).json(result);
@@ -499,8 +503,6 @@ exports.driverResponse = async (req, res) => {
     const success = newStatus === 'ACCEPTED';
     const message = success ? 'Driver accepted your request' : 'Driver rejected the request';
     const result = { success, trip_id: tripId, request_id: requestId, status: newStatus, message };
-
-    resolveWaiter(tripId, result);
 
     if (success) {
       emitToUser(trip.user_id, 'ride_request_accepted', { trip_id: tripId, request_id: requestId, status: newStatus, message });
@@ -547,8 +549,8 @@ exports.checkTimeouts = async (req, res) => {
       { $set: { status: 'NO_RESPONSE', driver_response: 'NO_RESPONSE', updated_at: now } }
     );
     for (const t of toUpdate) {
-      resolveWaiter(t.trip_id, { success: false, status: 'NO_RESPONSE', message: 'No response from driver' });
       emitToUser(t.user_id, 'ride_request_timeout', { trip_id: t.trip_id, request_id: t.request_id, status: 'NO_RESPONSE', message: 'No response from driver' });
+      await notifyUserRideTimeout(t.user_id, t);
       await notifyDriverRideTimeout(t.driver_id, t.trip_id, t.request_id);
     }
     res.status(200).json({

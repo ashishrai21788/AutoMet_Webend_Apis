@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const { requireAuth } = require('../lib/authMiddleware');
 
 // User Registration - collection: users
 router.post('/register', userController.registerUser);
@@ -12,11 +13,15 @@ router.post('/login', userController.loginUser);
 router.post('/verify-otp', userController.verifyUserOtp);
 
 // Update FCM token / device ID (call when token refreshes on mobile)
-router.post('/update-token', userController.updateUserToken);
+router.post(
+  '/update-token',
+  requireAuth({ roles: ['user'], enforceBodyUserIdCamelCase: true }),
+  userController.updateUserToken
+);
 
 // User Profile Edit
-router.put('/profile', userController.updateUserProfile);
-router.post('/profile', userController.updateUserProfile);
+router.put('/profile', requireAuth({ roles: ['user'] }), userController.updateUserProfile);
+router.post('/profile', requireAuth({ roles: ['user'] }), userController.updateUserProfile);
 
 // Resend OTP - users_otp
 router.post('/resend-otp', userController.resendUserOtp);
@@ -25,12 +30,24 @@ router.post('/resend-otp', userController.resendUserOtp);
 router.get('/detail/:userId', userController.getUserByUserId);
 
 // User Logout - users
-router.post('/logout', userController.logoutUser);
+router.post('/logout', requireAuth({ roles: ['user'] }), userController.logoutUser);
 
 // User Notifications - users_notification
-router.get('/notifications', userController.getUserNotifications);
-router.post('/notifications/send', userController.sendUserNotification);
-router.put('/notifications/mark-read', userController.updateUserNotificationReadStatus);
-router.get('/notifications/delete', userController.deleteUserNotification);
+router.get(
+  '/notifications',
+  requireAuth({ roles: ['user'] }),
+  userController.getUserNotifications
+);
+router.post('/notifications/send', requireAuth({ roles: ['user'] }), userController.sendUserNotification);
+router.put(
+  '/notifications/mark-read',
+  requireAuth({ roles: ['user'] }),
+  userController.updateUserNotificationReadStatus
+);
+router.get(
+  '/notifications/delete',
+  requireAuth({ roles: ['user'] }),
+  userController.deleteUserNotification
+);
 
 module.exports = router;

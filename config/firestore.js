@@ -43,9 +43,12 @@ const initializeFirestore = () => {
         });
       }
       else if (process.env.FIREBASE_PROJECT_ID) {
-        admin.initializeApp({
-          projectId: process.env.FIREBASE_PROJECT_ID
-        });
+        // projectId alone does not grant FCM send permissions — avoid a false "initialized" state
+        console.warn(
+          '⚠️  FCM: FIREBASE_PROJECT_ID is set but no service account credentials were found. ' +
+            'Push will not work until you set FIREBASE_SERVICE_ACCOUNT_PATH, FIREBASE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS.'
+        );
+        return null;
       }
       else {
         const envPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
@@ -77,12 +80,24 @@ const getAdmin = () => {
 };
 
 /**
+ * True if Firebase Admin is initialized and FCM send() can be used.
+ * Call before creating a trip so we fail fast with a clear error instead of creating then deleting the trip.
+ */
+const isFcmReady = () => {
+  if (admin.apps.length === 0) {
+    initializeFirestore();
+  }
+  return admin.apps.length > 0;
+};
+
+/**
  * Send a push notification via FCM (Firebase Cloud Messaging). FCM token from MongoDB (drivers.fcmToken / users.fcmToken).
  * @param {string} fcmToken - Device FCM token from MongoDB (driver or user document)
  * @param {{ title: string, body?: string, data?: Record<string, string>, channelId?: string }} payload - title, body, optional data (values stringified), optional channelId (Android; default 'default')
+ * @param {{ dataOnly?: boolean }} [options] - If dataOnly=true, omit top-level `notification` so Android always invokes onMessageReceived (high-priority data message). title/body/channel_id are copied into `data` for client display.
  * @returns {{ success: true, messageId: string } | { success: false, error: string }}
  */
-const sendFCMNotification = async (fcmToken, payload) => {
+const sendFCMNotification = async (fcmToken, payload, options = {}) => {
   try {
     const adm = getAdmin();
     if (!adm || !adm.messaging) {
@@ -91,37 +106,45 @@ const sendFCMNotification = async (fcmToken, payload) => {
     if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
       return { success: false, error: 'FCM token is required' };
     }
+    const dataOnly = options.dataOnly === true;
     const channelId = (payload.channelId && typeof payload.channelId === 'string') ? payload.channelId.trim() : 'default';
+    const title = payload.title || 'Notification';
+    const body = payload.body || '';
+
     const message = {
       token: fcmToken.trim(),
-      notification: {
-        title: payload.title || 'Notification',
-        body: payload.body || ''
-      },
       android: {
-        priority: 'high',
-        notification: {
-          channelId,
-          sound: 'default',
-          priority: 'high',
-          defaultVibrateTimings: true
-        }
+        priority: 'high'
       },
       data: {}
     };
+
     if (payload.data && typeof payload.data === 'object') {
       for (const [k, v] of Object.entries(payload.data)) {
         message.data[String(k)] = typeof v === 'string' ? v : JSON.stringify(v);
       }
     }
+
+    if (dataOnly) {
+      if (message.data.title == null || message.data.title === '') message.data.title = title;
+      if (message.data.body == null || message.data.body === '') message.data.body = body;
+      if (message.data.channel_id == null || message.data.channel_id === '') message.data.channel_id = channelId;
+    } else {
+      message.notification = { title, body };
+      message.android.notification = {
+        channelId,
+        sound: 'default',
+        priority: 'high',
+        defaultVibrateTimings: true
+      };
+    }
+
     const messageId = await adm.messaging().send(message);
     return { success: true, messageId };
   } catch (error) {
     const msg = error.message || String(error);
     const errorCode = error.code || (error.errorInfo && error.errorInfo.code) || null;
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[FCM] Send error:', msg, errorCode || '');
-    }
+    console.warn('[FCM] Send failed:', msg, errorCode || '');
     return { success: false, error: msg, errorCode };
   }
 };
@@ -129,5 +152,6 @@ const sendFCMNotification = async (fcmToken, payload) => {
 module.exports = {
   initializeFirestore,
   getAdmin,
+  isFcmReady,
   sendFCMNotification
 };

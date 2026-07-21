@@ -8,7 +8,9 @@
     "dev": "nodemon index.js",
     "monitor": "node monitor.js",
     "start:monitored": "node monitor.js",
-    "health": "curl -s http://localhost:3000/health | jq .",
+    "health": "curl -s http://localhost:3000/health",
+    "health:api": "curl -s http://localhost:3000/api/health",
+    "test:health-push": "bash scripts/test-health-and-push.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

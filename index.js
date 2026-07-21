@@ -10,9 +10,16 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 const connectDB = require('./config/db');
 const { validateCloudinaryConfig, testCloudinaryConnection } = require('./config/cloudinary');
-const { initializeFirestore } = require('./config/firestore');
+const { initializeFirestore, isFcmReady } = require('./config/firestore');
+// Initialize FCM early so logs show push readiness even before MongoDB connects (ride requests need both).
+try {
+  initializeFirestore();
+} catch (e) {
+  console.warn('⚠️  FCM early init:', e.message);
+}
 const dynamicRoutes = require('./routes/dynamicRoutes');
 const otpRoutes = require('./routes/otpRoutes');
+const { logHardeningConfig } = require('./lib/hardeningConfig');
 
 // Server health monitoring
 let serverHealth = {
@@ -179,11 +186,12 @@ app.use((err, req, res, next) => {
 app.get('/health', (req, res) => {
   const currentMemory = process.memoryUsage();
   const memoryUsageMB = Math.round(currentMemory.heapUsed / 1024 / 1024);
-  
+  const fcmReady = isFcmReady();
+
   serverHealth.memoryUsage = currentMemory;
   serverHealth.uptime = process.uptime();
   serverHealth.isHealthy = serverHealth.dbConnected && memoryUsageMB < 500; // 500MB limit
-  
+
   res.status(serverHealth.isHealthy ? 200 : 503).json({
     success: serverHealth.isHealthy,
     message: serverHealth.isHealthy ? 'Server is healthy' : 'Server health issues detected',
@@ -193,6 +201,7 @@ app.get('/health', (req, res) => {
       uptime: Math.round(serverHealth.uptime),
       memoryUsage: `${memoryUsageMB}MB`,
       dbConnected: serverHealth.dbConnected,
+      fcmReady,
       totalRequests: serverHealth.totalRequests,
       errorCount: serverHealth.errorCount,
       startTime: serverHealth.startTime,
@@ -214,10 +223,15 @@ app.get('/test', (req, res) => {
 // API health (no DB required - use to check if APIs will work)
 app.get('/api/health', (req, res) => {
   const dbConnected = serverHealth.dbConnected && mongoose.connection.readyState === 1;
+  const fcmReady = isFcmReady();
   res.status(dbConnected ? 200 : 503).json({
     success: dbConnected,
-    message: dbConnected ? 'API and database ready' : 'Server is up but database is not connected. All other /api/* routes will return 503 until MongoDB connects.',
+    message: dbConnected
+      ? 'API and database ready'
+      : 'Server is up but database is not connected. All other /api/* routes will return 503 until MongoDB connects.',
     dbConnected,
+    /** False means ride-request push to drivers will fail until FIREBASE_SERVICE_ACCOUNT_* is set */
+    fcmReady,
     mongooseState: mongoose.connection.readyState,
     timestamp: new Date().toISOString()
   });
@@ -473,6 +487,7 @@ setInterval(() => {
 // Start HTTP server
 httpServer.listen(PORT, HOST, () => {
   console.log(`🚀 HTTP Server running on http://${HOST}:${PORT}`);
+  logHardeningConfig();
   console.log(`📍 Local HTTP access: http://localhost:${PORT}`);
   console.log(`🌐 Network HTTP access: http://${LOCAL_IP}:${PORT}`);
   if (LOCAL_IP !== '0.0.0.0') {

@@ -28,10 +28,10 @@ Quick reference for `.env` / `.env.example` and which config files use each vari
 | `HOST` | index.js | Bind address (default `0.0.0.0`) |
 | `NODE_ENV` | index.js, analytics/dynamic controllers | e.g. `development` for extra logging |
 | `CLOUDINARY_URL` | — | Alternative single URL; app uses the three vars above |
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | config/firestore.js | Firebase SA as JSON string |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | config/firestore.js | Path to Firebase SA JSON file |
-| `GOOGLE_APPLICATION_CREDENTIALS` | config/firestore.js | Path to Google credentials |
-| `FIREBASE_PROJECT_ID` | config/firestore.js | Firebase project ID (dev) |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | config/firestore.js | Firebase SA as JSON string (**required** for driver ride-request push from `POST /api/v1/trips/create-request`) |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | config/firestore.js | Path to Firebase SA JSON file (same as above) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | config/firestore.js | Path to Google credentials (alternative to the two above) |
+| `FIREBASE_PROJECT_ID` | config/firestore.js | **Not sufficient alone** for FCM; use a service account (see below) |
 | `FIRESTORE_DRIVERS_COLLECTION` | config/firestore.js | Firestore collection name (default `drivers`) |
 
 ---
@@ -42,7 +42,7 @@ Quick reference for `.env` / `.env.example` and which config files use each vari
 |------|---------|
 | config/db.js | MongoDB connection (Mongoose); requires MongoDB vars |
 | config/cloudinary.js | Cloudinary config and image upload/delete; requires Cloudinary vars |
-| config/firestore.js | Firebase Admin / Firestore; optional, uses Firebase vars if set |
+| config/firestore.js | Firebase Admin for **FCM** (push). Required for sending “new ride request” to drivers; optional only if you never use push |
 | config/multer.js | File upload (disk storage); no env vars, uses `uploads/` |
 
 ---

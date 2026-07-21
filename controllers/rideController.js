@@ -68,6 +68,66 @@ async function logTripEvent(tripId, event, payload = {}) {
   }
 }
 
+function assertAuthenticatedDriverOwnsTrip(req, tripDriverId) {
+  const actorId = req.authActorId || req.driver?.driverId;
+  if (actorId && tripDriverId && actorId !== tripDriverId) {
+    return { ok: false, status: 403, message: 'Driver does not match this trip' };
+  }
+  return { ok: true };
+}
+
+async function notifyUserTripDetailsResponse(trip, status, message, rejectReason) {
+  if (!trip?.user_id) return;
+  const pickupAddress = (trip.pickup && trip.pickup.address) ? trip.pickup.address : (trip.pickup_address || '');
+  const dropAddress = (trip.drop && trip.drop.address) ? trip.drop.address : (trip.drop_address || '');
+  const isAccepted = status === 'ACCEPTED';
+  const title = isAccepted ? 'Ride accepted' : 'Ride rejected';
+  const body = isAccepted
+    ? `Driver accepted your ride: ${pickupAddress} → ${dropAddress}`
+    : (rejectReason ? `Driver declined: ${rejectReason}` : `Driver declined your ride: ${pickupAddress} → ${dropAddress}`);
+  const data = {
+    type: isAccepted ? 'ride_request_accepted' : 'ride_request_rejected',
+    trip_id: trip.trip_id,
+    request_id: trip.request_id || '',
+    status,
+    message: message || (isAccepted ? 'Driver accepted your request' : 'Driver rejected the request'),
+    pickup_address: pickupAddress,
+    drop_address: dropAddress,
+    driver_id: trip.driver_id || '',
+    reject_reason: rejectReason || ''
+  };
+  const pickupLat = trip.pickup?.lat ?? trip.pickup_latitude;
+  const pickupLng = trip.pickup?.lng ?? trip.pickup_longitude;
+  const dropLat = trip.drop?.lat ?? trip.drop_latitude;
+  const dropLng = trip.drop?.lng ?? trip.drop_longitude;
+  if (pickupLat != null) data.pickup_lat = String(pickupLat);
+  if (pickupLng != null) data.pickup_lng = String(pickupLng);
+  if (dropLat != null) data.drop_lat = String(dropLat);
+  if (dropLng != null) data.drop_lng = String(dropLng);
+  if (trip.ride_note) data.ride_note = trip.ride_note;
+  try {
+    emitToUser(trip.user_id, isAccepted ? 'ride_request_accepted' : 'ride_request_rejected', {
+      trip_id: trip.trip_id,
+      request_id: trip.request_id,
+      status,
+      message: data.message,
+      reject_reason: rejectReason || undefined
+    });
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development') console.warn('[notifyUserTripDetailsResponse] Socket emit failed:', e.message);
+  }
+  const result = await sendPushToUser(trip.user_id, {
+    title,
+    body,
+    channelId: 'user_notifications',
+    data,
+    dataOnly: true
+  });
+  if (!result.success && process.env.NODE_ENV === 'development') {
+    console.warn('[notifyUserTripDetailsResponse] FCM failed:', result.error, { userId: trip.user_id });
+  }
+}
+
 /**
  * POST /api/v1/rides/request
  * Create ride request intent. Validates user, driver, driver online, lat/lng, no duplicate active request.
@@ -142,16 +202,22 @@ exports.createRideRequest = async (req, res) => {
       });
     }
 
+    const duplicateDetails = await TripDetails.findOne({
+      user_id: userId,
+      driver_id: driverId,
+      status: { $in: ACTIVE_STATUSES_TRIP_DETAILS }
+    }).lean();
     const duplicate = await Trip.findOne({
       user_id: userId,
       driver_id: driverId,
       status: { $in: ACTIVE_STATUSES }
     });
-    if (duplicate) {
+    if (duplicate || duplicateDetails) {
+      const existing = duplicateDetails || duplicate;
       return res.status(409).json({
         success: false,
         message: 'An active ride request already exists for this user and driver.',
-        data: { trip_id: duplicate.trip_id, status: duplicate.status }
+        data: { trip_id: existing.trip_id, status: existing.status }
       });
     }
 
@@ -180,15 +246,21 @@ exports.createRideRequest = async (req, res) => {
       body: `${pickupAddress} → ${dropAddress}`,
       channelId: 'driver_notifications',
       data: {
-        type: 'ride_request',
-        trip_id: tripId,
+        type: 'RIDE_REQUEST',
+        trip_id: String(tripId),
         user_id: userId,
         pickup_address: pickupAddress,
-        drop_address: dropAddress
-      }
+        drop_address: dropAddress,
+        pickup_lat: String(pickupLat),
+        pickup_lng: String(pickupLng),
+        drop_lat: String(dropLat),
+        drop_lng: String(dropLng),
+        ride_note: rideNote || ''
+      },
+      dataOnly: true
     });
-    if (process.env.NODE_ENV === 'development' && !notifyResult.success) {
-      console.warn('[ride_request] FCM notify failed:', notifyResult.error);
+    if (!notifyResult.success) {
+      console.warn('[ride_request] FCM notify failed:', notifyResult.error, { driverId, tripId });
     }
 
     res.status(201).json({
@@ -222,6 +294,41 @@ exports.acceptRide = async (req, res) => {
       return res.status(400).json({ success: false, message: 'driver_id is required in request body' });
     }
     const now = new Date();
+
+    const tripDetails = await TripDetails.findOne({ trip_id: tripId });
+    if (tripDetails) {
+      const ownerCheck = assertAuthenticatedDriverOwnsTrip(req, tripDetails.driver_id);
+      if (!ownerCheck.ok) {
+        return res.status(ownerCheck.status).json({ success: false, message: ownerCheck.message });
+      }
+      if (tripDetails.driver_id !== driverId) {
+        return res.status(403).json({ success: false, message: 'Driver does not match this trip' });
+      }
+      if (tripDetails.status !== 'REQUESTED') {
+        const alreadySuccess = tripDetails.status === 'ACCEPTED';
+        return res.status(200).json({
+          success: alreadySuccess,
+          trip_id: tripId,
+          request_id: tripDetails.request_id,
+          status: tripDetails.status,
+          message: alreadySuccess ? 'Ride accepted by driver' : `Trip cannot be accepted. Current status: ${tripDetails.status}`
+        });
+      }
+      await TripDetails.updateOne(
+        { trip_id: tripId, status: 'REQUESTED' },
+        { $set: { status: 'ACCEPTED', driver_response: 'ACCEPTED', responded_at: now, updated_at: now } }
+      );
+      tripDetails.status = 'ACCEPTED';
+      await notifyUserTripDetailsResponse(tripDetails, 'ACCEPTED', 'Driver accepted your request');
+      return res.status(200).json({
+        success: true,
+        trip_id: tripId,
+        request_id: tripDetails.request_id,
+        status: 'ACCEPTED',
+        message: 'Ride accepted by driver'
+      });
+    }
+
     const trip = await Trip.findOneAndUpdate(
       { trip_id: tripId, status: 'REQUESTED', driver_id: driverId },
       { $set: { status: 'ACCEPTED', accepted_at: now } },
@@ -264,7 +371,8 @@ exports.rejectRide = async (req, res) => {
     const tripId = (req.params.tripId || '').trim();
     const body = req.body || {};
     const driverId = (body.driver_id || body.driverId || '').toString().trim();
-    const rejectedReason = body.rejected_reason != null ? String(body.rejected_reason).trim() : null;
+    const rejectedReason = body.rejected_reason != null ? String(body.rejected_reason).trim()
+      : (body.reject_reason != null ? String(body.reject_reason).trim() : null);
     const rejectedBy = (body.rejected_by && ['USER', 'DRIVER'].includes(String(body.rejected_by).toUpperCase()))
       ? String(body.rejected_by).toUpperCase()
       : 'DRIVER';
@@ -274,6 +382,48 @@ exports.rejectRide = async (req, res) => {
     }
     if (!driverId) {
       return res.status(400).json({ success: false, message: 'driver_id is required in request body' });
+    }
+
+    const tripDetails = await TripDetails.findOne({ trip_id: tripId });
+    if (tripDetails) {
+      const ownerCheck = assertAuthenticatedDriverOwnsTrip(req, tripDetails.driver_id);
+      if (!ownerCheck.ok) {
+        return res.status(ownerCheck.status).json({ success: false, message: ownerCheck.message });
+      }
+      if (tripDetails.driver_id !== driverId) {
+        return res.status(403).json({ success: false, message: 'Driver does not match this trip' });
+      }
+      if (tripDetails.status !== 'REQUESTED') {
+        return res.status(400).json({
+          success: false,
+          message: `Trip cannot be rejected. Current status: ${tripDetails.status}`,
+          data: { trip_id: tripId, status: tripDetails.status }
+        });
+      }
+      const newStatus = rejectedReason ? 'REJECTED_WITH_REASON' : 'REJECTED';
+      const now = new Date();
+      await TripDetails.updateOne(
+        { trip_id: tripId, status: 'REQUESTED' },
+        {
+          $set: {
+            status: newStatus,
+            driver_response: newStatus,
+            reject_reason: rejectedReason || undefined,
+            responded_at: now,
+            updated_at: now
+          }
+        }
+      );
+      tripDetails.status = newStatus;
+      await notifyUserTripDetailsResponse(tripDetails, newStatus, 'Driver rejected the request', rejectedReason);
+      return res.status(200).json({
+        success: true,
+        trip_id: tripId,
+        request_id: tripDetails.request_id,
+        status: newStatus,
+        rejected_by: rejectedBy,
+        message: 'Ride rejected'
+      });
     }
 
     const newStatus = rejectedReason ? 'REJECTED_WITH_REASON' : 'REJECTED';
@@ -343,16 +493,16 @@ exports.cancelRideByUser = async (req, res) => {
       });
     }
 
-    let source = 'trips';
-    let trip = await Trip.findOne({
+    let source = 'trip_details';
+    let trip = await TripDetails.findOne({
       $or: [
         { trip_id: rideOrRequestId },
         { request_id: rideOrRequestId }
       ]
     });
     if (!trip) {
-      source = 'trip_details';
-      trip = await TripDetails.findOne({
+      source = 'trips';
+      trip = await Trip.findOne({
         $or: [
           { trip_id: rideOrRequestId },
           { request_id: rideOrRequestId }
@@ -475,10 +625,11 @@ exports.cancelRideByUser = async (req, res) => {
           status: newStatus,
           cancellation_reason: cancellationReason || '',
           cancel_stage: cancelStage
-        }
+        },
+        dataOnly: true
       });
-      if (process.env.NODE_ENV === 'development' && !notifyResult.success) {
-        console.warn('[cancelRideByUser] FCM notify failed:', notifyResult.error);
+      if (!notifyResult.success) {
+        console.warn('[cancelRideByUser] FCM notify failed:', notifyResult.error, { driverId });
       }
     }
 
@@ -530,7 +681,8 @@ async function notifyRiderRideStatusUpdated(userId, tripId, status) {
       title: 'Ride update',
       body: bodyMsg,
       channelId: 'user_notifications',
-      data: { type: 'ride_status_updated', trip_id: String(tripId), status }
+      data: { type: 'ride_status_updated', trip_id: String(tripId), status },
+      dataOnly: true
     });
   } catch (pushErr) {
     if (process.env.NODE_ENV === 'development') console.warn('[updateTripStatus] Push to user failed:', pushErr.message);
@@ -572,6 +724,10 @@ exports.updateTripStatus = async (req, res) => {
     // Try trip_details first (trips/create-request flow - User app)
     let tripDetails = await TripDetails.findOne({ trip_id: tripId });
     if (tripDetails) {
+      const ownerCheck = assertAuthenticatedDriverOwnsTrip(req, tripDetails.driver_id);
+      if (!ownerCheck.ok) {
+        return res.status(ownerCheck.status).json({ success: false, message: ownerCheck.message });
+      }
       const allowedFrom = STATUS_TRANSITIONS[status];
       if (!allowedFrom.includes(tripDetails.status)) {
         return res.status(400).json({
@@ -844,9 +1000,10 @@ exports.checkTimeouts = async (req, res) => {
           title: 'Ride timed out',
           body: 'The ride request has expired. You can hide the accept/reject view.',
           channelId: 'driver_notifications',
-          data: { type: 'ride_request_timeout', trip_id: t.trip_id, status: 'NO_RESPONSE' }
+          data: { type: 'ride_request_timeout', trip_id: t.trip_id, status: 'NO_RESPONSE' },
+          dataOnly: true
         });
-        if (process.env.NODE_ENV === 'development' && !notifyResult.success) console.warn('[checkTimeouts] FCM failed:', notifyResult.error);
+        if (!notifyResult.success) console.warn('[checkTimeouts] FCM failed:', notifyResult.error, { driverId: t.driver_id });
       }
     }
     res.status(200).json({
