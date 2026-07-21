@@ -50,6 +50,14 @@ const connectDB = async () => {
     
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
+    if (error.message.includes('ENOTFOUND') || error.message.includes('querySrv')) {
+      console.error(
+        '💡 DNS lookup failed for MONGODB_CLUSTER. Open MongoDB Atlas → Connect → Drivers, copy the host (e.g. cluster0.xxxxx.mongodb.net) and update MONGODB_CLUSTER in Render + .env.'
+      );
+    }
+    if (error.message.includes('Missing required MongoDB environment variables')) {
+      console.error('💡 Set MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER, and DB_NAME on Render (Environment tab).');
+    }
     throw error; // Re-throw to let the calling function handle it
   }
 };

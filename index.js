@@ -182,25 +182,30 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-// Health check endpoint
+// Liveness probe — process is up (Render deploy health check should use this path).
+// Readiness (MongoDB + FCM) is reported in the body and on GET /api/health.
 app.get('/health', (req, res) => {
   const currentMemory = process.memoryUsage();
   const memoryUsageMB = Math.round(currentMemory.heapUsed / 1024 / 1024);
   const fcmReady = isFcmReady();
+  const dbConnected = serverHealth.dbConnected && mongoose.connection.readyState === 1;
+  const memoryOk = memoryUsageMB < 500;
+  const ready = dbConnected && memoryOk;
 
   serverHealth.memoryUsage = currentMemory;
   serverHealth.uptime = process.uptime();
-  serverHealth.isHealthy = serverHealth.dbConnected && memoryUsageMB < 500; // 500MB limit
+  serverHealth.isHealthy = ready;
 
-  res.status(serverHealth.isHealthy ? 200 : 503).json({
-    success: serverHealth.isHealthy,
-    message: serverHealth.isHealthy ? 'Server is healthy' : 'Server health issues detected',
+  res.status(200).json({
+    success: true,
+    message: ready ? 'Server is healthy' : 'Server is up but not fully ready (check dbConnected / fcmReady)',
+    ready,
     timestamp: new Date().toISOString(),
     health: {
-      isHealthy: serverHealth.isHealthy,
+      isHealthy: ready,
       uptime: Math.round(serverHealth.uptime),
       memoryUsage: `${memoryUsageMB}MB`,
-      dbConnected: serverHealth.dbConnected,
+      dbConnected,
       fcmReady,
       totalRequests: serverHealth.totalRequests,
       errorCount: serverHealth.errorCount,
