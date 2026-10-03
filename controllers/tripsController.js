@@ -6,6 +6,7 @@ const { emitToDriver, emitToUser } = require('../config/socket');
 const { buildImmediateCreateResponse } = require('../lib/createRequestMode');
 const { isDriverReachable, getDriverFcmInfo, sendRideRequestPushWithRetry } = require('../lib/fcmTripPush');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
+const { estimateTrip } = require('../lib/fare');
 
 const DRIVER_RESPONSE_TIMEOUT_MS = (Number(process.env.TRIP_DRIVER_RESPONSE_TIMEOUT_SECONDS) || 60) * 1000;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -240,6 +241,14 @@ exports.createRequest = async (req, res) => {
     const tripId = await getNextTripId();
     const timeoutAt = new Date(now.getTime() + DRIVER_RESPONSE_TIMEOUT_MS);
 
+    // Distance, duration and fare are computed here (not on the phones) so the rider, the driver and the receipt
+    // always agree. Based on the driver's vehicle type; see lib/fare.js for the tariff and its limits.
+    const estimate = estimateTrip({
+      pickup: { lat: pickupLat, lng: pickupLng },
+      drop: { lat: dropLat, lng: dropLng },
+      vehicleType: driver.vehicleType
+    });
+
     // Create trip in DB BEFORE sending push so driver-response finds it
     const trip = await TripDetails.create({
       trip_id: tripId,
@@ -249,6 +258,12 @@ exports.createRequest = async (req, res) => {
       pickup: { address: pickupAddress, lat: pickupLat, lng: pickupLng },
       drop: { address: dropAddress, lat: dropLat, lng: dropLng },
       ride_note: rideNote || undefined,
+      fare: estimate.fare,
+      currency: estimate.currency,
+      distance_km: estimate.distance_km,
+      estimated_duration_min: estimate.duration_min,
+      fare_basis: estimate.fare_basis,
+      payment_mode: 'CASH',
       status: 'REQUESTED',
       requested_at: now,
       timeout_at: timeoutAt,
@@ -267,7 +282,13 @@ exports.createRequest = async (req, res) => {
       drop_lat: dropLat,
       drop_lng: dropLng,
       ride_note: rideNote || '',
-      rider_name: riderName || ''
+      rider_name: riderName || '',
+      // Shown on the driver's "New Ride Request" sheet (distance in km, duration in minutes).
+      distance: String(estimate.distance_km),
+      estimated_duration: String(estimate.duration_min),
+      fare: String(estimate.fare),
+      currency: estimate.currency,
+      payment_mode: 'CASH'
     };
     const pushResult = await sendRideRequestPushWithRetry(
       driverFcmToken,
@@ -311,7 +332,8 @@ exports.createRequest = async (req, res) => {
     return res.status(201).json(buildImmediateCreateResponse({
       tripId,
       requestId,
-      timeoutAt: timeoutAt.toISOString()
+      timeoutAt: timeoutAt.toISOString(),
+      estimate
     }));
   } catch (error) {
     console.error('[trips createRequest]', error);
@@ -319,6 +341,57 @@ exports.createRequest = async (req, res) => {
       success: false,
       message: error.message || 'Failed to create trip request'
     });
+  }
+};
+
+/**
+ * POST /api/v1/trips/estimate
+ * Body: pickup_latitude, pickup_longitude, drop_latitude, drop_longitude, and optionally driver_id (the fare then uses
+ * that driver's vehicle type) or vehicle_type. Returns the same fare the trip will be created with.
+ * Nothing is stored; it only calculates.
+ */
+exports.estimate = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const pickupLat = Number(body.pickup_latitude);
+    const pickupLng = Number(body.pickup_longitude);
+    const dropLat = Number(body.drop_latitude);
+    const dropLng = Number(body.drop_longitude);
+    if (!isValidLat(pickupLat) || !isValidLng(pickupLng) || !isValidLat(dropLat) || !isValidLng(dropLng)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid pickup_latitude, pickup_longitude, drop_latitude and drop_longitude are required.'
+      });
+    }
+
+    let vehicleType = body.vehicle_type != null ? String(body.vehicle_type) : '';
+    const driverId = body.driver_id != null ? String(body.driver_id).trim() : '';
+    if (driverId) {
+      const driver = await createModel('drivers').findOne({ driverId }).select('vehicleType').lean();
+      if (driver && driver.vehicleType) vehicleType = driver.vehicleType;
+    }
+
+    const estimate = estimateTrip({
+      pickup: { lat: pickupLat, lng: pickupLng },
+      drop: { lat: dropLat, lng: dropLng },
+      vehicleType
+    });
+    return res.status(200).json({
+      success: true,
+      message: 'Fare estimate',
+      data: {
+        fare: estimate.fare,
+        currency: estimate.currency,
+        distance_km: estimate.distance_km,
+        estimated_duration_min: estimate.duration_min,
+        fare_basis: estimate.fare_basis,
+        vehicle_type: estimate.vehicle_type,
+        payment_mode: 'CASH'
+      }
+    });
+  } catch (error) {
+    console.error('[trips estimate]', error);
+    return res.status(500).json({ success: false, message: 'Failed to estimate fare' });
   }
 };
 

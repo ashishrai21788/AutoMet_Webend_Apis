@@ -6,6 +6,7 @@ const TripEvent = require('../models/tripEventModel');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { clearForDriver: clearTripRateLimitForDriver } = require('../lib/tripRateLimit');
 const { emitToDriver, emitToUser } = require('../config/socket');
+const { estimateTrip } = require('../lib/fare');
 
 const DRIVER_RESPONSE_TIMEOUT_SECONDS = Number(process.env.RIDE_REQUEST_TIMEOUT_SECONDS) || 60;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -661,13 +662,60 @@ const STATUS_MESSAGES = {
 };
 
 /**
+ * Fare for a finished trip. Returns the fare stored on the trip; if the trip predates fares, computes it from the
+ * saved pickup/drop and the driver's vehicle type, stores it, and returns it. Returns null if it cannot be computed.
+ */
+async function ensureTripFare(tripDetails) {
+  try {
+    if (tripDetails.fare != null) {
+      return {
+        fare: tripDetails.fare,
+        currency: tripDetails.currency || 'INR',
+        distance_km: tripDetails.distance_km,
+        estimated_duration_min: tripDetails.estimated_duration_min,
+        fare_basis: tripDetails.fare_basis || 'ESTIMATE',
+        payment_mode: tripDetails.payment_mode || 'CASH'
+      };
+    }
+    const driver = await createModel('drivers').findOne({ driverId: tripDetails.driver_id }).select('vehicleType').lean();
+    const estimate = estimateTrip({
+      pickup: { lat: tripDetails.pickup.lat, lng: tripDetails.pickup.lng },
+      drop: { lat: tripDetails.drop.lat, lng: tripDetails.drop.lng },
+      vehicleType: driver && driver.vehicleType
+    });
+    const fields = {
+      fare: estimate.fare,
+      currency: estimate.currency,
+      distance_km: estimate.distance_km,
+      estimated_duration_min: estimate.duration_min,
+      fare_basis: estimate.fare_basis,
+      payment_mode: 'CASH'
+    };
+    await TripDetails.updateOne({ trip_id: tripDetails.trip_id }, { $set: fields });
+    return fields;
+  } catch (e) {
+    console.warn('[ensureTripFare] could not compute fare for', tripDetails && tripDetails.trip_id, e.message);
+    return null;
+  }
+}
+
+/**
  * Notify the rider (user who requested the ride) when driver updates trip status.
  * Socket for in-app; FCM when user has a token (same payload as trip_details flow).
  */
-async function notifyRiderRideStatusUpdated(userId, tripId, status) {
+async function notifyRiderRideStatusUpdated(userId, tripId, status, fareInfo) {
   if (!userId || typeof userId !== 'string' || !String(userId).trim()) return;
   const uid = String(userId).trim();
-  emitToUser(uid, 'ride_status_updated', { trip_id: tripId, status });
+  // Fare/distance travel with the COMPLETED update so the rider's receipt shows the real numbers.
+  const fareData = fareInfo
+    ? {
+        fare: String(fareInfo.fare),
+        currency: String(fareInfo.currency || ''),
+        distance_km: String(fareInfo.distance_km ?? ''),
+        payment_mode: String(fareInfo.payment_mode || 'CASH')
+      }
+    : {};
+  emitToUser(uid, 'ride_status_updated', { trip_id: tripId, status, ...(fareInfo || {}) });
   try {
     const bodyMsg =
       status === 'ARRIVED'
@@ -681,7 +729,7 @@ async function notifyRiderRideStatusUpdated(userId, tripId, status) {
       title: 'Ride update',
       body: bodyMsg,
       channelId: 'user_notifications',
-      data: { type: 'ride_status_updated', trip_id: String(tripId), status },
+      data: { type: 'ride_status_updated', trip_id: String(tripId), status, ...fareData },
       dataOnly: true
     });
   } catch (pushErr) {
@@ -737,8 +785,16 @@ exports.updateTripStatus = async (req, res) => {
         });
       }
       await TripDetails.updateOne({ trip_id: tripId }, { $set: updatePayload });
-      await notifyRiderRideStatusUpdated(tripDetails.user_id, tripId, status);
-      return res.status(200).json({ success: true, trip_id: tripId, status, message: STATUS_MESSAGES[status] || status });
+      // On completion make sure the trip has a fare (trips created before fares existed get one computed now).
+      const fareInfo = status === 'COMPLETED' ? await ensureTripFare(tripDetails) : null;
+      await notifyRiderRideStatusUpdated(tripDetails.user_id, tripId, status, fareInfo);
+      return res.status(200).json({
+        success: true,
+        trip_id: tripId,
+        status,
+        message: STATUS_MESSAGES[status] || status,
+        ...(fareInfo || {})
+      });
     }
 
     // Fallback: trips collection (rides flow)
