@@ -10,7 +10,7 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 const connectDB = require('./config/db');
 const { validateCloudinaryConfig, testCloudinaryConnection } = require('./config/cloudinary');
-const { initializeFirestore, isFcmReady } = require('./config/firestore');
+const { initializeFirestore, isFcmReady, getFcmStatus } = require('./config/firestore');
 // Initialize FCM early so logs show push readiness even before MongoDB connects (ride requests need both).
 try {
   initializeFirestore();
@@ -207,6 +207,9 @@ app.get('/health', (req, res) => {
       memoryUsage: `${memoryUsageMB}MB`,
       dbConnected,
       fcmReady,
+      // Fixed status code (e.g. OK, NOT_CONFIGURED, KEY_NOT_JSON, KEY_REJECTED) + project id of the key in use.
+      fcmStatus: getFcmStatus().status,
+      fcmProjectId: getFcmStatus().projectId,
       totalRequests: serverHealth.totalRequests,
       errorCount: serverHealth.errorCount,
       startTime: serverHealth.startTime,
@@ -237,6 +240,8 @@ app.get('/api/health', (req, res) => {
     dbConnected,
     /** False means ride-request push to drivers will fail until FIREBASE_SERVICE_ACCOUNT_* is set */
     fcmReady,
+    fcmStatus: getFcmStatus().status,
+    fcmProjectId: getFcmStatus().projectId,
     mongooseState: mongoose.connection.readyState,
     timestamp: new Date().toISOString()
   });

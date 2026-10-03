@@ -5,6 +5,19 @@ const fs = require('fs');
 // Firebase Admin SDK - used only for FCM (push notifications). No Firestore DB usage.
 let firebaseInitialized = false;
 
+// Coarse, secret-free reason FCM is (not) ready, exposed on /health so a misconfigured key can be diagnosed
+// without access to the server logs. Only fixed codes go in here: never key material or raw error text.
+//   OK | NOT_CONFIGURED | KEY_EMPTY | KEY_NOT_JSON | KEY_MISSING_FIELDS | KEY_REJECTED
+//   PATH_NOT_FOUND | PROJECT_ID_ONLY | INIT_ERROR | NOT_INITIALIZED
+let fcmStatus = 'NOT_INITIALIZED';
+let fcmProjectId = null;
+
+function fcmError(code, message) {
+  const err = new Error(message);
+  err.fcmCode = code;
+  return err;
+}
+
 function resolveServiceAccountPath(envPath) {
   if (!envPath || typeof envPath !== 'string') return null;
   const trimmed = envPath.trim();
@@ -21,7 +34,7 @@ function resolveServiceAccountPath(envPath) {
  */
 function parseServiceAccount(raw) {
   let text = String(raw == null ? '' : raw).trim();
-  if (!text) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is empty');
+  if (!text) throw fcmError('KEY_EMPTY', 'FIREBASE_SERVICE_ACCOUNT_KEY is empty');
   if (!text.startsWith('{')) {
     text = Buffer.from(text, 'base64').toString('utf8').trim();
   }
@@ -29,7 +42,8 @@ function parseServiceAccount(raw) {
   try {
     serviceAccount = JSON.parse(text);
   } catch (e) {
-    throw new Error(
+    throw fcmError(
+      'KEY_NOT_JSON',
       'FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON (or valid base64 of the JSON file): ' + e.message
     );
   }
@@ -37,7 +51,7 @@ function parseServiceAccount(raw) {
     serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
   }
   if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing project_id, client_email or private_key');
+    throw fcmError('KEY_MISSING_FIELDS', 'FIREBASE_SERVICE_ACCOUNT_KEY is missing project_id, client_email or private_key');
   }
   return serviceAccount;
 }
@@ -49,9 +63,16 @@ const initializeFirestore = () => {
     if (admin.apps.length === 0) {
       if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
         const serviceAccount = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount)
-        });
+        let credential;
+        try {
+          credential = admin.credential.cert(serviceAccount);
+        } catch (certError) {
+          // firebase-admin refused the key (typically a malformed private_key)
+          certError.fcmCode = 'KEY_REJECTED';
+          throw certError;
+        }
+        admin.initializeApp({ credential });
+        fcmProjectId = serviceAccount.project_id;
         console.log('✅ FCM: using service account for Firebase project', serviceAccount.project_id);
       }
       else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
@@ -61,8 +82,10 @@ const initializeFirestore = () => {
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
           });
+          fcmProjectId = serviceAccount.project_id || null;
         } else {
           console.warn('⚠️  FCM: FIREBASE_SERVICE_ACCOUNT_PATH set but file not found:', resolvedPath || process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+          fcmStatus = 'PATH_NOT_FOUND';
           return null;
         }
       }
@@ -77,6 +100,7 @@ const initializeFirestore = () => {
           '⚠️  FCM: FIREBASE_PROJECT_ID is set but no service account credentials were found. ' +
             'Push will not work until you set FIREBASE_SERVICE_ACCOUNT_PATH, FIREBASE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS.'
         );
+        fcmStatus = 'PROJECT_ID_ONLY';
         return null;
       }
       else {
@@ -88,18 +112,27 @@ const initializeFirestore = () => {
         if (!envPath || !envPath.trim()) {
           console.warn('    (FIREBASE_SERVICE_ACCOUNT_PATH is missing or empty. Expected file:', defaultPath + ')');
         }
+        fcmStatus = 'NOT_CONFIGURED';
         return null;
       }
     }
 
     firebaseInitialized = true;
+    fcmStatus = 'OK';
     console.log('✅ FCM (Firebase) initialized for push notifications');
     return admin.apps[0];
   } catch (error) {
+    fcmStatus = error.fcmCode || 'INIT_ERROR';
     console.error('❌ FCM initialization error:', error.message);
     return null;
   }
 };
+
+/**
+ * Secret-free FCM diagnostics for /health: a fixed status code and the Firebase project id of the key in use
+ * (the project id is not secret; it is embedded in every app's google-services.json).
+ */
+const getFcmStatus = () => ({ status: fcmStatus, projectId: fcmProjectId });
 
 const getAdmin = () => {
   if (!firebaseInitialized && admin.apps.length === 0) {
@@ -183,5 +216,6 @@ module.exports = {
   getAdmin,
   isFcmReady,
   sendFCMNotification,
-  parseServiceAccount
+  parseServiceAccount,
+  getFcmStatus
 };
