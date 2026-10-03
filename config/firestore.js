@@ -14,16 +14,45 @@ function resolveServiceAccountPath(envPath) {
   return path.resolve(projectRoot, trimmed);
 }
 
+/**
+ * Parse FIREBASE_SERVICE_ACCOUNT_KEY. Accepts either the raw service-account JSON or the same JSON base64-encoded
+ * (base64 avoids quote/newline mangling when a multi-line JSON file is pasted into a hosting dashboard).
+ * The private key's "\n" escape sequences are turned into real newlines, which firebase-admin requires.
+ */
+function parseServiceAccount(raw) {
+  let text = String(raw == null ? '' : raw).trim();
+  if (!text) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is empty');
+  if (!text.startsWith('{')) {
+    text = Buffer.from(text, 'base64').toString('utf8').trim();
+  }
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(text);
+  } catch (e) {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON (or valid base64 of the JSON file): ' + e.message
+    );
+  }
+  if (typeof serviceAccount.private_key === 'string') {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+  if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing project_id, client_email or private_key');
+  }
+  return serviceAccount;
+}
+
 const initializeFirestore = () => {
   try {
     require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
     if (admin.apps.length === 0) {
       if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        const serviceAccount = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount)
         });
+        console.log('✅ FCM: using service account for Firebase project', serviceAccount.project_id);
       }
       else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
         const resolvedPath = resolveServiceAccountPath(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
@@ -153,5 +182,6 @@ module.exports = {
   initializeFirestore,
   getAdmin,
   isFcmReady,
-  sendFCMNotification
+  sendFCMNotification,
+  parseServiceAccount
 };
