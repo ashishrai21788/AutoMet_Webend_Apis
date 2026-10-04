@@ -78,6 +78,7 @@ async function seedDemo(db) {
   await db.DriverIssue.create({ _id: '650000000000000000000002', driverId: 'drv_demo2', issueText: 'My last trip fare shows less than the rider paid.\nPlease check trip TRIP-1004.', status: 'under process', adminNotes: 'Checking the fare with the rider', notes: [{ at: ago(3600000), by: DEMO_ADMIN.email, text: 'Checking the fare with the rider', status: 'under process' }], createdAt: ago(26 * 3600000), updatedAt: ago(3600000) });
   await db.DriverIssue.create({ _id: '650000000000000000000003', driverId: 'drv_demo4', issueText: 'Could not upload my insurance document.', status: 'complete', resolvedAt: ago(2 * DAY), createdAt: ago(4 * DAY), updatedAt: ago(2 * DAY) });
 
+  await db.DriverIssue.create({ reporterType: 'rider', riderId: 'usr_demo1', tenantId: t, tripId: 'TRIP-1003', issueText: 'The driver took a longer route than the map showed.', status: 'issue submitted', createdAt: ago(40 * 60000), updatedAt: ago(40 * 60000) });
   const e = (action, targetType, targetId, actorEmail, at, meta) => db.AdminAudit.create({ tenantId: t, actorEmail, actorId: actorEmail, action, targetType, targetId, meta, at });
   await e('driver.created', 'driver', 'drv_demo1', DEMO_ADMIN.email, ago(10 * DAY));
   await e('document.reviewed', 'driver_document', 'dd_demo1', DEMO_ADMIN.email, ago(9 * DAY), { decision: 'APPROVED', number: 'KA0120250001' });

@@ -26,6 +26,9 @@ const PORT = Number(process.env.PORT) || 3000;
 // Uploaded documents live in memory and are served only through signed, expiring links, like the real storage.
 const storage = createMemoryStorage({ baseUrl: `http://localhost:${PORT}/dev-files` });
 privateStorage.setBackend(storage);
+const images = require('../lib/publicImages');
+const logoStore = images.createMemoryImages({ baseUrl: `http://localhost:${PORT}/dev-files` });
+images.setBackend(logoStore);
 
 const DEMO_EMAIL = 'super@automet.test';
 const DEMO_PASSWORD = 'Super-Demo-123';
@@ -54,6 +57,12 @@ const DEMO_PASSWORD = 'Super-Demo-123';
     next();
   });
   app.use(express.json());
+  app.get('/dev-files/logo/:id', (req, res) => {
+    const bytes = logoStore.read(req.params.id);
+    if (!bytes) return res.sendStatus(404);
+    const png = bytes.slice(0, 4).toString('hex') === '89504e47';
+    res.set('Content-Type', png ? 'image/png' : 'image/jpeg').send(bytes);
+  });
   app.get('/dev-files/files', (req, res) => {
     const hit = storage.read(`http://localhost:${PORT}${req.originalUrl}`);
     if (hit.status !== 200) return res.sendStatus(hit.status);

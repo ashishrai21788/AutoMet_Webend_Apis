@@ -13,6 +13,7 @@ const ops = require('../controllers/opsController');
 const platform = require('../controllers/platformController');
 const reports = require('../controllers/reportsController');
 const support = require('../controllers/supportController');
+const logo = require('../controllers/logoController');
 const { can } = require('../lib/adminPermissions');
 const { adminLoginLimiters } = require('../lib/rateLimit');
 
@@ -54,6 +55,8 @@ const pricing = [requireAdmin('pricing.manage'), withBusiness];
 router.get('/business', ...read, biz.getBusiness);
 router.get('/business/overview', ...read, biz.overview);
 router.put('/business/settings', ...manage, biz.updateSettings);
+router.post('/business/logo', ...manage, logo.parse, logo.upload);
+router.delete('/business/logo', ...manage, logo.remove);
 router.put('/business/market', ...manage, biz.setMarket);
 router.post('/business/setup/complete', ...manage, biz.completeSetup);
 

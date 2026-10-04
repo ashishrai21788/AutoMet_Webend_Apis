@@ -182,7 +182,7 @@ function createFakeDb() {
     TripDetails: fakeModel({ uniques: ['trip_id'] }),
     TripEvent: fakeModel({}),
     // support
-    DriverIssue: fakeModel({})
+    DriverIssue: fakeModel({ defaults: () => ({ _id: require('crypto').randomBytes(12).toString('hex') }) }) // ids like MongoDB's
   };
 
   /** Replaces the real model modules in require.cache. Call before requiring routes or controllers. */

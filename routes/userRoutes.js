@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const { requireAuth } = require('../lib/authMiddleware');
+const supportController = require('../controllers/supportController');
+const { createLimiter } = require('../lib/rateLimit');
 const { otpSendLimiters, otpVerifyLimiters } = require('../lib/rateLimit');
 
 const sendLimit = otpSendLimiters('user');
@@ -26,6 +28,15 @@ router.post(
 // User Profile Edit
 router.put('/profile', requireAuth({ roles: ['user'] }), userController.updateUserProfile);
 router.post('/profile', requireAuth({ roles: ['user'] }), userController.updateUserProfile);
+
+// Report a problem to support (optionally about one of the rider's trips), and read the answers
+router.post(
+  '/issues',
+  requireAuth({ roles: ['user'], enforceBodyUserIdCamelCase: true }),
+  createLimiter({ name: 'rider-issue', windowMs: 60 * 60 * 1000, max: 10, key: (r) => { const u = r.authActorId || (r.body && r.body.userId); return u ? `issue:${u}` : null; }, message: 'You have sent several reports recently. Please wait a while before sending another.' }),
+  supportController.submitRiderIssue
+);
+router.get('/issues', requireAuth({ roles: ['user'] }), supportController.myRiderIssues);
 
 // Resend OTP - users_otp
 router.post('/resend-otp', ...sendLimit, userController.resendUserOtp);

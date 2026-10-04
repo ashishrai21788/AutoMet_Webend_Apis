@@ -7,7 +7,12 @@ const mongoose = require('mongoose');
  */
 const driverIssueSchema = new mongoose.Schema({
   tenantId: { type: String, default: null, index: true },
-  driverId: { type: String, required: true, index: true },
+  /** who reported it: a driver (the original use) or a rider */
+  reporterType: { type: String, enum: ['driver', 'rider'], default: 'driver' },
+  driverId: { type: String, default: null, index: true },
+  riderId: { type: String, default: null, index: true },
+  /** the trip a rider is complaining about, when they chose one */
+  tripId: { type: String, default: null },
   issueText: { type: String, default: '' },
   imageUrls: { type: [String], default: [] },
   status: { type: String, enum: ['issue submitted', 'under process', 'complete'], default: 'issue submitted', index: true },

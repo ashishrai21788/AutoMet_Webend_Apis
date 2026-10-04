@@ -210,3 +210,14 @@ Exports are UTF-8 with a byte-order mark (so Excel reads names correctly), at mo
 | `GET /api/admin/platform/audit` | `clients.manage` | Events of every business and the platform, with `businessName`; filters as the business log plus `tenantId`. |
 
 Permissions added: `riders.manage` and `trips.manage` (client admin and operations), `support.manage` (client admin, operations, support). Trips cancelled by a driver (`CANCELLED_BY_DRIVER`, written by `POST /api/v1/trips/cancel-request`) are now counted as cancellations everywhere. Security fixes in the driver API: `GET /api/drivers/:driverId/issues` now needs the driver's own sign-in, and `PUT /api/drivers/issues/:issueId`, which let any signed-in driver change any report, now refuses.
+
+## Logo upload and rider complaints
+
+| Endpoint | Who | Notes |
+|---|---|---|
+| `POST /api/admin/business/logo` | `settings.manage` | Multipart, field `file`. JPEG, PNG or WebP only (decided by the file's own bytes, never SVG), 1 MB at most. Stored publicly in Cloudinary (`automet/logos/<appId>`, resized to fit 512 px; uploading again replaces it and returns a new versioned link). Returns `{ logoUrl }`, which the public config then serves to the apps. `503` when image storage (the `CLOUDINARY_*` variables) is not set. Audited as `business.logo_updated`. |
+| `DELETE /api/admin/business/logo` | `settings.manage` | Clears the link and deletes the stored image. Audited as `business.logo_removed`. |
+| `POST /api/users/issues` | rider sign-in | `{ issueText (5 to 2000 characters), tripId?, imageUrls? }`. `tripId` must be one of the rider's own trips; only `https` image links are kept (5 at most). The report is tagged with the rider's business. 10 reports per rider per hour. |
+| `GET /api/users/issues` | rider sign-in | The rider's own reports with `status`, `statusLabel` and `supportNote` (the latest note from support; internal notes are never sent). |
+
+Rider reports appear in the same Support inbox as drivers' reports (`reporterType: "rider"` or `"driver"`, with `reporterId` and `tripId`), and are answered the same way. A business sees only its own riders' reports. The rider app does not have a screen for this yet.
