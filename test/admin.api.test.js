@@ -1,6 +1,7 @@
 // Runs the real admin routes and controller over HTTP, with in-memory stand-ins for the Mongoose models
 // (no database needed). Run with: npm test
 process.env.JWT_SECRET = 'test-secret-for-admin-api-tests';
+process.env.RATE_LIMIT_DISABLED = '1'; // this file signs in far more often than a person would; the limits are tested in security.test.js
 
 const test = require('node:test');
 const assert = require('node:assert/strict');

@@ -2,15 +2,19 @@ const express = require('express');
 const router = express.Router();
 const otpController = require('../controllers/otpController');
 const { requireAuth } = require('../lib/authMiddleware');
+const { otpSendLimiters, otpVerifyLimiters } = require('../lib/rateLimit');
+
+const sendLimit = otpSendLimiters('driver');
+const verifyLimit = otpVerifyLimiters('driver');
 
 // Send OTP for driver verification (creates or updates existing OTP)
-router.post('/send', otpController.sendOTP);
+router.post('/send', ...sendLimit, otpController.sendOTP);
 
 // Generate OTP for driver verification (legacy endpoint)
-router.post('/generate', otpController.generateOTP);
+router.post('/generate', ...sendLimit, otpController.generateOTP);
 
 // Verify OTP and update driver verification status
-router.post('/verify', otpController.verifyOTP);
+router.post('/verify', ...verifyLimit, otpController.verifyOTP);
 
 // Update FCM token / device ID (call when token refreshes on mobile)
 router.post(
@@ -27,6 +31,6 @@ router.post(
 );
 
 // Resend OTP
-router.post('/resend', otpController.resendOTP);
+router.post('/resend', ...sendLimit, otpController.resendOTP);
 
 module.exports = router;

@@ -66,3 +66,7 @@ automet-89e4b-firebase-adminsdk-fbsvc-973c0f0fdd.json
 !package.json
 !package-lock.json
 !tsconfig.json
+
+# TLS keys must never be committed (Render terminates TLS)
+ssl/
+*.pem

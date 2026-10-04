@@ -10,6 +10,7 @@ const fleetAssign = require('../controllers/fleet/assignments');
 const fleetDocs = require('../controllers/fleet/documents');
 const fleetAvailability = require('../controllers/fleet/availability');
 const { can } = require('../lib/adminPermissions');
+const { adminLoginLimiters } = require('../lib/rateLimit');
 
 const requireAdmin = createRequireAdmin({
   loadAdmin: (adminId) => AdminUser.findOne({ adminId }),
@@ -20,7 +21,7 @@ const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.fi
 
 const router = express.Router();
 
-router.post('/auth/login', ctrl.login);
+router.post('/auth/login', ...adminLoginLimiters(), ctrl.login);
 router.get('/auth/me', requireAdmin(), ctrl.me);
 router.post('/auth/change-password', requireAdmin(), ctrl.changePassword);
 

@@ -2,15 +2,19 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const { requireAuth } = require('../lib/authMiddleware');
+const { otpSendLimiters, otpVerifyLimiters } = require('../lib/rateLimit');
+
+const sendLimit = otpSendLimiters('user');
+const verifyLimit = otpVerifyLimiters('user');
 
 // User Registration - collection: users
-router.post('/register', userController.registerUser);
+router.post('/register', ...sendLimit, userController.registerUser);
 
 // User Login - creates OTP in users_otp
-router.post('/login', userController.loginUser);
+router.post('/login', ...sendLimit, userController.loginUser);
 
 // User OTP Verification - users_otp, updates users
-router.post('/verify-otp', userController.verifyUserOtp);
+router.post('/verify-otp', ...verifyLimit, userController.verifyUserOtp);
 
 // Update FCM token / device ID (call when token refreshes on mobile)
 router.post(
@@ -24,7 +28,7 @@ router.put('/profile', requireAuth({ roles: ['user'] }), userController.updateUs
 router.post('/profile', requireAuth({ roles: ['user'] }), userController.updateUserProfile);
 
 // Resend OTP - users_otp
-router.post('/resend-otp', userController.resendUserOtp);
+router.post('/resend-otp', ...sendLimit, userController.resendUserOtp);
 
 // Get user detail by userId - users
 router.get('/detail/:userId', userController.getUserByUserId);

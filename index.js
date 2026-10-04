@@ -21,6 +21,7 @@ const dynamicRoutes = require('./routes/dynamicRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const { logHardeningConfig } = require('./lib/hardeningConfig');
 const { jsonBodyParser } = require('./lib/jsonBody');
+const { corsMiddleware } = require('./lib/cors');
 const { appTenantMiddleware } = require('./lib/appTenant');
 
 // Server health monitoring
@@ -102,6 +103,8 @@ function getLocalIP() {
 }
 
 const app = express();
+// Render puts one proxy in front of the app; without this every client looks like the same IP to the rate limiters.
+app.set('trust proxy', 1);
 
 // Request logging and health monitoring middleware
 app.use((req, res, next) => {
@@ -138,22 +141,15 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// CORS middleware for mobile compatibility and Postman
+// CORS: web pages only from the allowed dashboards; mobile apps and Postman send no Origin and are unaffected
+app.use(corsMiddleware());
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma, X-App-Id');
-  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Content-Type', 'application/json; charset=utf-8');
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.header('Pragma', 'no-cache');
   res.header('Expires', '0');
   
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
+  next();
 });
 
 // Body parsing middleware with better error handling

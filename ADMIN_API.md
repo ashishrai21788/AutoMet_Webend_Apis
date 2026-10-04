@@ -138,3 +138,13 @@ Enforced in `PUT /api/drivers/online-status` (going online only; going offline i
 
 ## Tests
 `npm test` runs the fare tests plus `test/admin.test.js` (permissions, scope, middleware, rates), `test/business.test.js` (fare formula, validation, setup status, `forTenant`), and `test/admin.api.test.js` / `test/business.api.test.js` (the real routes and controllers over HTTP, including cross-business attacks, with in-memory stand-ins for the database models from `test/helpers/fakeDb.js`). **No test has run against a real MongoDB yet**; the fake does not reproduce Mongoose defaults or validation.
+
+## Security baseline
+
+- **Rate limits** (per server instance, in memory; `lib/rateLimit.js`). Over the limit: `429`, `error: "RATE_LIMITED"`, and a `Retry-After` header in seconds.
+  - Asking for a code (`/api/users/register`, `/login`, `/resend-otp`; `/api/otp/send`, `/generate`, `/resend`; `/api/drivers/login`): 5 per person and 30 per address per 10 minutes.
+  - Checking a code (`/api/users/verify-otp`, `/api/otp/verify`): 8 per person and 60 per address per 10 minutes. "Person" is the `driverId`, `userId`, phone or email in the body, normalised.
+  - Admin sign-in (`/api/admin/auth/login`): 10 per email and 30 per address per 15 minutes, on top of the account lockout.
+  - With more than one server instance the counters need a shared store.
+- **CORS**: browsers are limited to `https://auto-met-admin.vercel.app` and local development (`http://localhost:5173`). Add more with `CORS_ALLOWED_ORIGINS` (comma separated). The mobile apps send no `Origin` header and are unaffected.
+- **`ssl/key.pem` and `cert.pem`** are no longer tracked and `ssl/` and `*.pem` are ignored. They stay in git history: treat them as exposed.

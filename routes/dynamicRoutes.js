@@ -3,9 +3,10 @@ const router = express.Router();
 const dynamicController = require('../controllers/dynamicController');
 const driverAnalyticsController = require('../controllers/driverAnalyticsController');
 const { requireAuth, blockSensitiveDynamicCrud } = require('../lib/authMiddleware');
+const { otpSendLimiters } = require('../lib/rateLimit');
 
 // Driver Login Route - MUST come before dynamic routes
-router.post('/drivers/login', dynamicController.loginDriver);
+router.post('/drivers/login', ...otpSendLimiters('driver-login'), dynamicController.loginDriver);
 
 // Driver Logout Route - MUST come before dynamic routes
 router.post(
