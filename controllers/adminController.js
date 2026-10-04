@@ -225,6 +225,57 @@ exports.setTenantStatus = async (req, res) => {
   }
 };
 
+/**
+ * DELETE /tenants/:id  { confirm: <appId> }
+ * Permanently deletes a business and everything it owns: its drivers, riders, trips, vehicles, documents, assignments,
+ * timelines, support reports, invoices, setup (regions, categories, fares, policies), admin accounts and logo. Safeguards:
+ * the platform owner only, the business must be suspended first, its App ID must be typed, and the default business (which
+ * owns the records created before businesses existed) can never be deleted. Uploaded document files in private storage are
+ * not removed: nothing points at them any more and they cannot be opened.
+ * The audit entry (platform level, no business) records what was removed and outlives the business.
+ */
+exports.deleteTenant = async (req, res) => {
+  try {
+    const tenant = await Tenant.findOne({ tenantId: req.params.id });
+    if (!tenant) return bad(res, 404, 'Client not found');
+    if (tenant.isDefault) return bad(res, 400, 'The default business cannot be deleted');
+    if (String((req.body && req.body.confirm) || '') !== tenant.tenantId) {
+      return res.status(400).json({ success: false, message: 'Type the business App ID to confirm', errors: { confirm: 'Type the business App ID to confirm' }, data: null });
+    }
+    if (tenant.status !== 'suspended') return bad(res, 409, 'Suspend the business before deleting it');
+
+    const { Vehicle, DriverDocument, VehicleDocument, DriverVehicleAssignment, EntityHistory } = require('../models/fleetModels');
+    const { PlatformInvoice } = require('../models/platformBilling');
+    const { CancellationPolicy } = require('../models/businessModels');
+    const { DriverIssue } = require('../models/supportModels');
+    const id = tenant.tenantId;
+    const Drivers = createModel('drivers');
+    const Riders = createModel('users');
+
+    const driverIds = (await Drivers.find({ tenantId: id }).select('driverId').lean()).map((d) => d.driverId).filter(Boolean);
+    const n = (r) => (r && r.deletedCount) || 0;
+    const removed = {};
+    removed.trips = n(await TripDetails.deleteMany({ tenant_id: id }));
+    removed.supportReports = n(await DriverIssue.deleteMany({ $or: [{ tenantId: id }, ...(driverIds.length ? [{ driverId: { $in: driverIds } }] : [])] }));
+    removed.driverDocuments = n(await DriverDocument.deleteMany({ tenantId: id }));
+    removed.vehicleDocuments = n(await VehicleDocument.deleteMany({ tenantId: id }));
+    removed.assignments = n(await DriverVehicleAssignment.deleteMany({ tenantId: id }));
+    removed.timelineEntries = n(await EntityHistory.deleteMany({ tenantId: id }));
+    removed.vehicles = n(await Vehicle.deleteMany({ tenantId: id }));
+    removed.drivers = n(await Drivers.deleteMany({ tenantId: id }));
+    removed.riders = n(await Riders.deleteMany({ tenantId: id }));
+    removed.invoices = n(await PlatformInvoice.deleteMany({ tenantId: id }));
+    removed.adminAccounts = n(await AdminUser.deleteMany({ tenantId: id }));
+    for (const [name, Model] of [['regions', ServiceRegion], ['categories', VehicleCategory], ['fareRules', FareRule], ['policies', CancellationPolicy], ['setup', SetupProgress]]) removed[name] = n(await Model.deleteMany({ tenantId: id }));
+    try { await require('../lib/publicImages').removeLogo({ tenantId: id }); } catch (e) { console.warn('[tenant delete] logo removal failed:', e.message); }
+    await Tenant.deleteOne({ tenantId: id });
+    await audit(req, 'tenant.deleted', { tenantId: null, targetType: 'tenant', targetId: id, meta: { name: tenant.name, ...removed } });
+    return ok(res, { deleted: id, removed });
+  } catch (e) {
+    return bad(res, 500, 'Could not delete the business');
+  }
+};
+
 // ---------- team ----------
 
 /**

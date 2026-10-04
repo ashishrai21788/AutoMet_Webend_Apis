@@ -35,6 +35,7 @@ router.get('/tenants', requireAdmin(), ctrl.listTenants);
 router.post('/tenants', requireAdmin('clients.manage'), ctrl.createTenant);
 router.patch('/tenants/:id/status', requireAdmin('clients.manage'), ctrl.setTenantStatus);
 router.patch('/tenants/:id', requireAdmin('clients.manage'), ctrl.updateTenant);
+router.delete('/tenants/:id', requireAdmin('clients.manage'), ctrl.deleteTenant);
 
 // a business's team: its own admin manages everyone; the platform owner (clients.manage) only its client_admin accounts (see the controller)
 const teamAccess = requireAdmin(['team.manage', 'clients.manage']);

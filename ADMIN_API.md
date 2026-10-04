@@ -264,3 +264,7 @@ Separate from rides: ride fares are the business's money and are never counted h
 | `GET/PUT /platform/settings` | `platform.settings` | `{ companyName, billingEmail, invoiceDueDays, defaultTrialDays, invoiceNotes }`; currency comes from `PLATFORM_CURRENCY` (default INR). |
 
 Data: `platform_plans`, `platform_invoices`, `platform_counters`, `platform_settings`; the subscription is the `subscription` object on the business (tenant) record.
+
+## Deleting a business
+
+`DELETE /tenants/:id` with `{ "confirm": "<appId>" }` (`clients.manage`, super admin only). Permanently deletes the business and everything it owns: drivers, riders, trips, vehicles, driver and vehicle documents, assignments, timelines, support reports, invoices, regions, categories, fare rules, cancellation policies, setup, admin accounts and logo. Safeguards: the business must be suspended, its App ID must be typed, and the default business (owner of pre-business records) can never be deleted. The response lists how many records of each kind were removed, and the same counts are written to the platform audit log (`tenant.deleted`). Files already uploaded to private document storage are not removed; nothing references them afterwards and they cannot be opened.

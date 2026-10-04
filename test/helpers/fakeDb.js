@@ -153,6 +153,11 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
       const i = rows.findIndex((d) => matches(d, f));
       if (i >= 0) rows.splice(i, 1);
     },
+    deleteMany: async (f) => {
+      let n = 0;
+      for (let i = rows.length - 1; i >= 0; i--) if (matches(rows[i], f)) { rows.splice(i, 1); n++; }
+      return { deletedCount: n };
+    },
     aggregate: async () => []
   };
 }
