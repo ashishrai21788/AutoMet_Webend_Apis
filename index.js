@@ -49,6 +49,9 @@ const connectWithRetry = async () => {
       await testCloudinaryConnection();
     }
     
+    // Default client + first super admin (idempotent, non-blocking)
+    require('./lib/adminBootstrap').bootstrapAdmin().catch((e) => console.warn('⚠️  Admin bootstrap failed:', e.message));
+
     // Initialize Firestore (non-blocking)
     try {
       initializeFirestore();
@@ -248,6 +251,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Routes
+app.use('/api/admin', require('./routes/adminRoutes')); // Admin dashboard API (collections: tenants, admin_users, admin_audit_logs)
 app.use('/api/users', require('./routes/userRoutes')); // User: register, login, verify-otp, profile, resend-otp, logout, notifications (collections: users, users_otp, users_notification)
 app.use('/api/user-app-analytics', require('./routes/userAppAnalyticsRoutes')); // User app analytics (collection: user_app_analytics)
 app.use('/api/driver-app-analytics', require('./routes/driverAppAnalyticsRoutes')); // Driver app analytics (collection: driver_app_analytics)

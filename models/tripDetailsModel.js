@@ -19,6 +19,8 @@ const tripDetailsSchema = new mongoose.Schema({
   request_id: { type: String, required: true, unique: true, trim: true, index: true },
   user_id: { type: String, required: true, trim: true, index: true },
   driver_id: { type: String, required: true, trim: true, index: true },
+  // Which client (white-label app) the trip belongs to. Null = the default client (records from before multi-client).
+  tenant_id: { type: String, default: null, trim: true, index: true },
 
   pickup: {
     address: { type: String, required: true, trim: true },

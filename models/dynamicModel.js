@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 
 // Driver-specific schema with all required fields and defaults
 const driverSchema = new mongoose.Schema({
+  // Which client (white-label app) the driver belongs to. Null = the default client (records from before multi-client).
+  tenantId: { type: String, default: null, index: true },
+
   // Basic Information (Mandatory for signup)
   driverId: {
     type: String,
