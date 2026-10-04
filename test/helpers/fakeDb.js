@@ -50,6 +50,8 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
     Object.defineProperty(doc, 'save', {
       value: async function save() { checkUnique(doc); return doc; }, enumerable: false, configurable: true
     });
+    // what a Mongoose document offers that the controllers use
+    Object.defineProperty(doc, 'toObject', { value: () => ({ ...doc }), enumerable: false, configurable: true });
     return doc;
   };
   const checkUnique = (candidate) => {
@@ -113,7 +115,9 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
       rows.push(doc);
       return doc;
     },
-    findOneAndUpdate: async (filter, update, options = {}) => {
+    findOneAndUpdate: async (filter, rawUpdate, options = {}) => {
+      // Mongoose treats a plain object (no $operators) as a $set
+      const update = Object.keys(rawUpdate).some((k) => k.startsWith('$')) ? rawUpdate : { $set: rawUpdate };
       let doc = rows.find((d) => matches(d, filter));
       if (!doc) {
         if (!options.upsert) return null;

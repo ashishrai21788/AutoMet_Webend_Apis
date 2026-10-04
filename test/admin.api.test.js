@@ -129,7 +129,10 @@ test('super admin creates a client with a temporary-password admin who can sign 
   assert.equal(signIn.body.data.user.tenantId, created.body.data.id);
 
   const t = signIn.body.data.token;
-  assert.equal((await call('POST', '/auth/change-password', { token: t, body: { currentPassword: 'wrong-wrong-wrong', newPassword: 'a-new-password-1' } })).status, 401);
+  const wrongCurrent = await call('POST', '/auth/change-password', { token: t, body: { currentPassword: 'wrong-wrong-wrong', newPassword: 'a-new-password-1' } });
+  assert.equal(wrongCurrent.status, 400, 'a wrong current password is a form error (a 401 would sign the person out)');
+  assert.ok(wrongCurrent.body.errors.currentPassword);
+  assert.equal((await call('GET', '/auth/me', { token: t })).status, 200, 'and the session is still valid');
   assert.equal((await call('POST', '/auth/change-password', { token: t, body: { currentPassword: initialAdmin.temporaryPassword, newPassword: 'short' } })).status, 400);
   const changed = await call('POST', '/auth/change-password', { token: t, body: { currentPassword: initialAdmin.temporaryPassword, newPassword: 'a-new-password-1' } });
   assert.equal(changed.status, 200);

@@ -26,6 +26,9 @@ const TENANT_STATUSES = ['active', 'trial', 'suspended'];
 let dummyHash;
 const getDummyHash = () => (dummyHash ||= bcrypt.hash('not-a-real-password', BCRYPT_COST));
 
+// A wrong current password is a mistake in the form, not an ended session, so it is a 400 with the field named (a 401 would
+// make the dashboard sign the person out).
+const fail400 = (res) => res.status(400).json({ success: false, message: 'Current password is incorrect', errors: { currentPassword: 'Current password is incorrect' }, data: null });
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, message: 'OK', data });
 const bad = (res, status, message) => res.status(status).json({ success: false, message, data: null });
 const newId = (prefix) => `${prefix}_${crypto.randomBytes(8).toString('hex')}`;
@@ -113,7 +116,7 @@ exports.changePassword = async (req, res) => {
     if (next === current) return bad(res, 400, 'New password must be different');
 
     const admin = await AdminUser.findOne({ adminId: req.admin.adminId }).select('+passwordHash');
-    if (!(await bcrypt.compare(current, admin.passwordHash))) return bad(res, 401, 'Current password is incorrect');
+    if (!(await bcrypt.compare(current, admin.passwordHash))) return fail400(res);
 
     admin.passwordHash = await bcrypt.hash(next, BCRYPT_COST);
     admin.mustChangePassword = false;
