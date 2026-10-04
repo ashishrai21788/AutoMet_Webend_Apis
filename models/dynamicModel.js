@@ -5,6 +5,21 @@ const driverSchema = new mongoose.Schema({
   // Which client (white-label app) the driver belongs to. Null = the default client (records from before multi-client).
   tenantId: { type: String, default: null, index: true },
 
+  // --- managed from the admin dashboard (never writable by the driver app; see SENSITIVE_FIELDS) ---
+  // account status, separate from verification and from whether the driver is currently online
+  accountStatus: { type: String, enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'], default: 'ACTIVE' },
+  // computed from the driver's submitted documents (see lib/verification.js); the legacy verification_status below is app-reported
+  driverVerificationStatus: { type: String, enum: ['INCOMPLETE', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'EXPIRED'], default: 'INCOMPLETE' },
+  // earliest expiry among the approved mandatory documents; APPROVED past this date counts as EXPIRED
+  verificationExpiresAt: { type: Date, default: null },
+  operatingRegionId: { type: String, default: null },
+  eligibleCategoryId: { type: String, default: null },
+  dateOfBirth: { type: Date, default: null },
+  address: {
+    type: new mongoose.Schema({ country: String, state: String, city: String, line: String }, { _id: false }),
+    default: null
+  },
+  createdByAdmin: { type: String, default: null },
   // Basic Information (Mandatory for signup)
   driverId: {
     type: String,

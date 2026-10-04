@@ -16,9 +16,16 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'local-dev-only-secret';
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { createFakeDb } = require('../test/helpers/fakeDb');
+const { createMemoryStorage } = require('../test/helpers/memoryStorage');
+const privateStorage = require('../lib/privateStorage');
 
 const db = createFakeDb();
 db.install();
+
+const PORT = Number(process.env.PORT) || 3000;
+// Uploaded documents live in memory and are served only through signed, expiring links, like the real storage.
+const storage = createMemoryStorage({ baseUrl: `http://localhost:${PORT}/dev-files` });
+privateStorage.setBackend(storage);
 
 const DEMO_EMAIL = 'super@automet.test';
 const DEMO_PASSWORD = 'Super-Demo-123';
@@ -38,9 +45,14 @@ const DEMO_PASSWORD = 'Super-Demo-123';
     next();
   });
   app.use(express.json());
+  app.get('/dev-files/files', (req, res) => {
+    const hit = storage.read(`http://localhost:${PORT}${req.originalUrl}`);
+    if (hit.status !== 200) return res.sendStatus(hit.status);
+    res.set('Content-Type', hit.mime).send(hit.buffer);
+  });
   app.use('/api/admin', require('../routes/adminRoutes'));
 
-  const port = Number(process.env.PORT) || 3000;
+  const port = PORT;
   app.listen(port, () => {
     console.log('==============================================================');
     console.log(' FAKE IN-MEMORY DATABASE: nothing is saved, for local use only');

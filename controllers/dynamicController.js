@@ -13,7 +13,11 @@ const ALLOWED_COLLECTIONS = ['drivers', 'users', 'admins', 'driver_faqs', 'drive
 
 // Fields that cannot be set via generic update endpoints
 // tenantId / tenant_id: which client a record belongs to is set by the server, never by a client request.
-const SENSITIVE_FIELDS = ['passwordHash', 'accessToken', 'role', 'isVerified', 'walletBalance', 'tenantId', 'tenant_id'];
+const SENSITIVE_FIELDS = [
+  'passwordHash', 'accessToken', 'role', 'isVerified', 'walletBalance', 'tenantId', 'tenant_id',
+  // set only from the admin dashboard
+  'accountStatus', 'driverVerificationStatus', 'verificationExpiresAt', 'operatingRegionId', 'eligibleCategoryId', 'createdByAdmin'
+];
 
 // Helper function to ensure all driver fields are present in response
 const ensureAllDriverFields = (driver) => {

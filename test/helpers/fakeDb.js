@@ -1,20 +1,46 @@
 /**
  * In-memory stand-ins for the Mongoose models the admin API uses, so the real routes and controllers can run without
- * MongoDB (tests, and scripts/devServer.js). It implements only what those controllers call: equality and $in
- * filters, find/findOne/exists/create/findOneAndUpdate($set, $setOnInsert, upsert)/updateMany($inc)/deleteOne/count,
- * and unique indexes (single and compound) that throw the same duplicate-key error code (11000) as MongoDB.
+ * MongoDB (tests, and scripts/devServer.js). It implements the query features those controllers call:
+ *   filters: equality (null matches missing), $in, $nin, $ne, $lt/$lte/$gt/$gte, $regex(+$options), $or, $and
+ *   queries: find / findOne / exists / countDocuments, with .select() .lean() .sort({a:1,b:-1}) .skip() .limit()
+ *   writes:  create, findOneAndUpdate($set, $setOnInsert, upsert), updateMany($inc), deleteOne
+ *   unique indexes (single and compound) throwing MongoDB's duplicate-key error (code 11000); an index may be
+ *   partial (`only: {active: true}`) so it only applies to matching documents.
  * It does NOT reproduce Mongoose schema defaults or validation, so controllers must not rely on them.
  */
 const path = require('path');
 
+const isPlainOperatorObject = (v) => v && typeof v === 'object' && !(v instanceof Date) && !(v instanceof RegExp) && !Array.isArray(v);
+const asComparable = (v) => (v instanceof Date ? v.getTime() : v);
+
+function matchesValue(actual, cond) {
+  if (cond instanceof RegExp) return typeof actual === 'string' && cond.test(actual);
+  if (!isPlainOperatorObject(cond)) {
+    if (cond === null) return actual == null;
+    if (Array.isArray(actual)) return actual.includes(cond);
+    return asComparable(actual) === asComparable(cond);
+  }
+  return Object.entries(cond).every(([op, arg]) => {
+    switch (op) {
+      case '$in': return arg.some((x) => (x === null ? actual == null : Array.isArray(actual) ? actual.includes(x) : asComparable(actual) === asComparable(x)));
+      case '$nin': return !arg.some((x) => (x === null ? actual == null : asComparable(actual) === asComparable(x)));
+      case '$ne': return !matchesValue(actual, arg);
+      case '$lt': return actual != null && asComparable(actual) < asComparable(arg);
+      case '$lte': return actual != null && asComparable(actual) <= asComparable(arg);
+      case '$gt': return actual != null && asComparable(actual) > asComparable(arg);
+      case '$gte': return actual != null && asComparable(actual) >= asComparable(arg);
+      case '$regex': return typeof actual === 'string' && new RegExp(arg, cond.$options || '').test(actual);
+      case '$options': return true;
+      default: throw new Error(`fakeDb: unsupported filter operator ${op}`);
+    }
+  });
+}
+
 function matches(doc, filter) {
   return Object.entries(filter || {}).every(([key, cond]) => {
-    const actual = doc[key];
-    if (cond && typeof cond === 'object' && !(cond instanceof Date)) {
-      if (Array.isArray(cond.$in)) return cond.$in.some((x) => (x === null ? actual == null : actual === x));
-      throw new Error(`fakeDb: unsupported filter operator on "${key}": ${JSON.stringify(cond)}`);
-    }
-    return cond === null ? actual == null : actual === cond;
+    if (key === '$or') return cond.some((f) => matches(doc, f));
+    if (key === '$and') return cond.every((f) => matches(doc, f));
+    return matchesValue(doc[key], cond);
   });
 }
 
@@ -27,22 +53,58 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
     return doc;
   };
   const checkUnique = (candidate) => {
-    for (const fields of uniques) {
-      const list = Array.isArray(fields) ? fields : [fields];
-      const clash = rows.find((r) => r !== candidate && list.every((f) => (r[f] ?? null) === (candidate[f] ?? null)));
+    for (const spec of uniques) {
+      const fields = Array.isArray(spec) ? spec : spec.fields ? spec.fields : [spec];
+      const only = spec.only;
+      if (only && !matches(candidate, only)) continue;
+      const clash = rows.find((r) => r !== candidate && (!only || matches(r, only)) && fields.every((f) => (r[f] ?? null) === (candidate[f] ?? null)));
       if (clash) throw Object.assign(new Error('E11000 duplicate key'), { code: 11000 });
     }
   };
-  const query = (value) => {
-    const p = Promise.resolve(value);
-    p.select = () => p; p.sort = () => p; p.limit = () => p; p.lean = () => p;
-    return p;
+
+  const query = (getRows) => {
+    const state = { sort: null, skip: 0, limit: null };
+    const run = () => {
+      let out = [...getRows()];
+      if (state.sort) {
+        const keys = Object.entries(state.sort);
+        out.sort((a, b) => {
+          for (const [k, dir] of keys) {
+            const x = asComparable(a[k]); const y = asComparable(b[k]);
+            if (x === y) continue;
+            if (x == null) return -dir;
+            if (y == null) return dir;
+            return (x < y ? -1 : 1) * dir;
+          }
+          return 0;
+        });
+      }
+      out = out.slice(state.skip, state.limit == null ? undefined : state.skip + state.limit);
+      return out;
+    };
+    const q = {
+      select: () => q,
+      lean: () => q,
+      sort: (s) => { state.sort = s; return q; },
+      skip: (n) => { state.skip = n; return q; },
+      limit: (n) => { state.limit = n; return q; },
+      then: (resolve, reject) => Promise.resolve().then(run).then(resolve, reject),
+      catch: (reject) => Promise.resolve().then(run).catch(reject)
+    };
+    return q;
+  };
+  const one = (f) => {
+    const q = query(() => { const hit = rows.find((d) => matches(d, f)); return hit ? [hit] : []; });
+    const base = q.then;
+    q.then = (resolve, reject) => base.call(q, (list) => resolve(list[0] || null), reject);
+    q.catch = (reject) => q.then(undefined, reject);
+    return q;
   };
 
   return {
     rows,
-    findOne: (f) => query(rows.find((d) => matches(d, f)) || null),
-    find: (f) => query(rows.filter((d) => matches(d, f))),
+    findOne: (f) => one(f),
+    find: (f) => query(() => rows.filter((d) => matches(d, f))),
     exists: async (f) => (rows.find((d) => matches(d, f)) ? { _id: 1 } : null),
     countDocuments: async (f) => rows.filter((d) => matches(d, f)).length,
     create: async (data) => {
@@ -55,7 +117,7 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
       let doc = rows.find((d) => matches(d, filter));
       if (!doc) {
         if (!options.upsert) return null;
-        const seed = Object.fromEntries(Object.entries(filter).filter(([, v]) => !(v && typeof v === 'object')));
+        const seed = Object.fromEntries(Object.entries(filter).filter(([k, v]) => !k.startsWith('$') && !isPlainOperatorObject(v)));
         doc = attach({ ...defaults(), ...seed, ...(update.$setOnInsert || {}) });
         Object.assign(doc, update.$set || {});
         checkUnique(doc);
@@ -70,6 +132,7 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
     updateMany: async (f, update) => {
       for (const d of rows.filter((r) => matches(r, f))) {
         for (const [k, n] of Object.entries(update.$inc || {})) d[k] = (d[k] || 0) + n;
+        Object.assign(d, update.$set || {});
       }
     },
     deleteOne: async (f) => {
@@ -90,7 +153,19 @@ function createFakeDb() {
     VehicleCategory: fakeModel({ uniques: ['categoryId', ['tenantId', 'nameKey']] }),
     FareRule: fakeModel({ uniques: ['ruleId', ['tenantId', 'categoryId', 'regionKey']] }),
     CancellationPolicy: fakeModel({ uniques: ['policyId', ['tenantId', 'categoryId', 'regionKey']] }),
-    SetupProgress: fakeModel({ uniques: ['tenantId'] })
+    SetupProgress: fakeModel({ uniques: ['tenantId'] }),
+    // drivers and riders (the existing collections)
+    // timestamps: true on the real schema adds createdAt and updatedAt
+    Driver: fakeModel({ uniques: ['driverId', 'email'], defaults: () => ({ createdAt: new Date(), updatedAt: new Date() }) }),
+    User: fakeModel({ uniques: ['userId'] }),
+    // fleet management
+    DriverDocument: fakeModel({ uniques: ['docId', ['tenantId', 'driverId', 'type']] }),
+    Vehicle: fakeModel({ uniques: ['vehicleId', ['tenantId', 'registrationKey']] }),
+    VehicleDocument: fakeModel({ uniques: ['docId', ['tenantId', 'vehicleId', 'type']] }),
+    DriverVehicleAssignment: fakeModel({
+      uniques: ['assignmentId', { fields: ['tenantId', 'vehicleId'], only: { active: true } }, { fields: ['tenantId', 'driverId'], only: { active: true } }]
+    }),
+    EntityHistory: fakeModel({ defaults: () => ({ at: new Date() }) })
   };
 
   /** Replaces the real model modules in require.cache. Call before requiring routes or controllers. */
@@ -105,8 +180,16 @@ function createFakeDb() {
       ServiceRegion: db.ServiceRegion, VehicleCategory: db.VehicleCategory, FareRule: db.FareRule,
       CancellationPolicy: db.CancellationPolicy, SetupProgress: db.SetupProgress
     });
+    stub('models/fleetModels.js', {
+      DriverDocument: db.DriverDocument, Vehicle: db.Vehicle, VehicleDocument: db.VehicleDocument,
+      DriverVehicleAssignment: db.DriverVehicleAssignment, EntityHistory: db.EntityHistory
+    });
     stub('models/tripDetailsModel.js', { TripDetails: fakeModel({}) });
-    stub('models/dynamicModel.js', { createModel: () => fakeModel({}) });
+    const other = fakeModel({});
+    stub('models/dynamicModel.js', {
+      createModel: (name) => (name === 'drivers' ? db.Driver : name === 'users' ? db.User : other),
+      driverSchema: {}, userSchema: {}, genericSchema: {}
+    });
   };
   return db;
 }

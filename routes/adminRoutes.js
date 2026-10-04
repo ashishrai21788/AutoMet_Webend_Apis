@@ -4,6 +4,11 @@ const { createRequireAdmin } = require('../lib/adminAuth');
 const { createBusinessContext } = require('../lib/businessContext');
 const ctrl = require('../controllers/adminController');
 const biz = require('../controllers/businessController');
+const fleetDrivers = require('../controllers/fleet/drivers');
+const fleetVehicles = require('../controllers/fleet/vehicles');
+const fleetAssign = require('../controllers/fleet/assignments');
+const fleetDocs = require('../controllers/fleet/documents');
+const { can } = require('../lib/adminPermissions');
 
 const requireAdmin = createRequireAdmin({
   loadAdmin: (adminId) => AdminUser.findOne({ adminId }),
@@ -58,5 +63,46 @@ router.post('/business/fare-preview', ...read, biz.previewFare);
 router.get('/business/cancellation-policies', ...read, biz.listPolicies);
 router.put('/business/cancellation-policies', ...pricing, biz.savePolicy);
 router.delete('/business/cancellation-policies/:id', ...pricing, biz.deletePolicy);
+
+// ---- drivers, vehicles, documents and verification ----
+// Every record is read and written through the signed-in business only (req.data / req.legacyData). Opening a
+// document needs documents.view, deciding on one needs verification.review, and both are recorded in the audit log.
+const viewDrivers = [requireAdmin('drivers.view'), withBusiness];
+const manageDrivers = [requireAdmin('drivers.manage'), withBusiness];
+const viewVehicles = [requireAdmin('vehicles.view'), withBusiness];
+const manageVehicles = [requireAdmin('vehicles.manage'), withBusiness];
+const openDocuments = [requireAdmin('documents.view'), withBusiness];
+const reviewDocuments = [requireAdmin('verification.review'), withBusiness];
+// assigning touches both a driver and a vehicle, so it needs both permissions
+const needs = (permission) => (req, res, next) => (can(req.admin, permission) ? next() : res.status(403).json({ success: false, message: 'Your role does not include this action', data: null }));
+
+router.get('/business/requirements', ...read, fleetDocs.getRequirements);
+router.put('/business/requirements', ...manage, fleetDocs.updateRequirements);
+
+router.get('/business/drivers', ...viewDrivers, fleetDrivers.list);
+router.post('/business/drivers', ...manageDrivers, fleetDrivers.create);
+router.get('/business/drivers/:id', ...viewDrivers, fleetDrivers.get);
+router.patch('/business/drivers/:id', ...manageDrivers, fleetDrivers.update);
+router.post('/business/drivers/:id/status', ...manageDrivers, fleetDrivers.setStatus);
+router.get('/business/drivers/:id/history', ...viewDrivers, fleetDrivers.history);
+router.get('/business/drivers/:id/documents', ...viewDrivers, fleetDocs.listDriverDocuments);
+router.post('/business/drivers/:id/documents', ...manageDrivers, fleetDocs.parseUpload, fleetDocs.submitDriverDocument);
+router.post('/business/drivers/:id/assign-vehicle', ...manageDrivers, needs('vehicles.manage'), fleetAssign.assignVehicleToDriver);
+router.post('/business/drivers/:id/unassign-vehicle', ...manageDrivers, needs('vehicles.manage'), fleetAssign.unassignFromDriver);
+router.get('/business/driver-documents/:docId/url', ...openDocuments, fleetDocs.driverDocumentLink);
+router.post('/business/driver-documents/:docId/review', ...reviewDocuments, fleetDocs.reviewDriverDocument);
+
+router.get('/business/vehicles', ...viewVehicles, fleetVehicles.list);
+router.post('/business/vehicles', ...manageVehicles, fleetVehicles.create);
+router.get('/business/vehicles/:id', ...viewVehicles, fleetVehicles.get);
+router.patch('/business/vehicles/:id', ...manageVehicles, fleetVehicles.update);
+router.post('/business/vehicles/:id/status', ...manageVehicles, fleetVehicles.setStatus);
+router.get('/business/vehicles/:id/history', ...viewVehicles, fleetVehicles.history);
+router.get('/business/vehicles/:id/documents', ...viewVehicles, fleetDocs.listVehicleDocuments);
+router.post('/business/vehicles/:id/documents', ...manageVehicles, fleetDocs.parseUpload, fleetDocs.submitVehicleDocument);
+router.post('/business/vehicles/:id/assign-driver', ...manageVehicles, needs('drivers.manage'), fleetAssign.assignDriverToVehicle);
+router.post('/business/vehicles/:id/unassign-driver', ...manageVehicles, needs('drivers.manage'), fleetAssign.unassignFromVehicle);
+router.get('/business/vehicle-documents/:docId/url', ...openDocuments, fleetDocs.vehicleDocumentLink);
+router.post('/business/vehicle-documents/:docId/review', ...reviewDocuments, fleetDocs.reviewVehicleDocument);
 
 module.exports = router;

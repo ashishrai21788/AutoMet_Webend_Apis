@@ -71,6 +71,45 @@ The response keeps its existing fields and adds `fare_source` (`BUSINESS_RULES` 
 - Sign-in does not check that an account's business matches the app's `X-App-Id`; ride requests do.
 - Distance and time are still an estimate (no road routing).
 
+## Drivers, vehicles, documents and verification
+
+All routes are under `/api/admin/business` and use the business named by `X-App-Id` (checked against the signed-in account). Nothing is ever deleted: deactivating keeps every record and its history.
+
+**Data.** Drivers stay in the existing `drivers` collection (new fields: `accountStatus`, `driverVerificationStatus`, `verificationExpiresAt`, `operatingRegionId`, `eligibleCategoryId`, `dateOfBirth`, `address`, `createdByAdmin`; all protected from the driver app's profile-update endpoint). New collections: `vehicles`, `driver_documents`, `vehicle_documents`, `driver_vehicle_assignments`, `entity_history` (timelines; audit entries also go to `admin_audit_logs`). Every record carries `tenantId` and every unique index includes it. Drivers that predate business tagging belong to the default business (`forTenantWithUntagged`).
+
+**Three separate things.** Account status (`ACTIVE`/`INACTIVE`/`SUSPENDED`), verification status (`INCOMPLETE`/`PENDING_REVIEW`/`APPROVED`/`REJECTED`/`EXPIRED`) and operational eligibility (never stored: `lib/eligibility.js`, pure, for the future dispatch service to reuse). A driver is eligible only with an active account, approved and unexpired verification, an active operating region, and an active assignment to a vehicle that is ACTIVE, approved, of the driver's category and in the driver's region. Creating an account or assigning a vehicle never makes a driver eligible on its own.
+
+**Verification** (`lib/verification.js`) is computed from the mandatory documents: any rejected -> REJECTED; any approved one past its expiry -> EXPIRED; any missing -> INCOMPLETE; any awaiting review -> PENDING_REVIEW; else APPROVED. Required documents per business default to driving licence + identity (driver) and registration certificate + insurance (vehicle); `PUT /requirements` can make optional ones mandatory, but the licence and the registration certificate are always mandatory. Approved means a reviewer accepted the document, not that it is authentic. Stored status is used by lists; detail screens recompute live; an APPROVED record past its earliest expiry reads as EXPIRED everywhere.
+
+| Method and path | Permission | Notes |
+|---|---|---|
+| `GET /drivers` | `drivers.view` | server-side `page`, `pageSize` (max 100), `search` (every word must match name, phone, id or email), `regionId`, `categoryId`, `verification`, `account`, `sort=oldest` |
+| `POST /drivers` | `drivers.manage` | `{fullName, phone (+E.164), email?, dateOfBirth?, address?, operatingRegionId, eligibleCategoryId}`; region and category must be this business's, active and offered together; duplicate phone/email are 409 without revealing whose |
+| `GET/PATCH /drivers/:id` | `drivers.view` / `drivers.manage` | detail includes eligibility and reasons; `accountStatus` cannot be set here |
+| `POST /drivers/:id/status` | `drivers.manage` | `{status, reason}`; a suspension needs a reason (>= 5 characters) |
+| `GET /drivers/:id/history` | `drivers.view` | timeline with actor and reason |
+| `GET /drivers/:id/documents` | `drivers.view` | requirements with the submitted document; roles without `documents.view` get the number masked and no file details |
+| `POST /drivers/:id/documents` | `drivers.manage` | multipart: `type`, `number?`, `expiryDate?`, `file`. A resubmission replaces the file and returns to review; the old file is kept in `previousFiles` |
+| `GET /driver-documents/:docId/url` | `documents.view` | a signed link valid for 5 minutes; every view is audited (the link itself is not logged) |
+| `POST /driver-documents/:docId/review` | `verification.review` | `{decision: APPROVE|REJECT, reason}`; a rejection needs a reason; an approved document can be revoked; a rejected one must be resubmitted |
+| `POST /drivers/:id/assign-vehicle`, `/unassign-vehicle` | `drivers.manage` + `vehicles.manage` | `{vehicleId, reassign?}`; refused for suspended drivers/vehicles, category or region mismatch, or an existing assignment unless `reassign` |
+| `GET/POST /vehicles`, `GET/PATCH /vehicles/:id`, `POST /vehicles/:id/status`, `GET /vehicles/:id/history` | `vehicles.view` / `vehicles.manage` | list filters: `search` (plate, make, model), `categoryId`, `regionId`, `status`, `verification`, `assignment=assigned|unassigned`. Registration is normalised (spaces and dashes ignored) and unique per business. A vehicle with an expired mandatory document cannot be set ACTIVE. Category/region edits that would break the assigned driver are 409 |
+| `GET/POST /vehicles/:id/documents`, `GET /vehicle-documents/:docId/url`, `POST /vehicle-documents/:docId/review` | as for drivers | same rules |
+| `POST /vehicles/:id/assign-driver`, `/unassign-driver` | `vehicles.manage` + `drivers.manage` | same checks as above |
+| `GET/PUT /requirements` | `dashboard.view` / `settings.manage` | `{driver: {TYPE: bool}, vehicle: {...}}` |
+
+**Roles.** `documents.view` and `verification.review`: super admin, business admin, operations. Support can see drivers and vehicles (numbers masked) but not open documents, review, or change anything. Finance has no access to the fleet.
+
+**Files.** `lib/privateStorage.js`: files are never public. In production they go to Cloudinary as `authenticated` assets (needs the `CLOUDINARY_*` variables) and are opened only through a 5-minute signed URL; without storage, uploads are refused with 503. The file's own bytes decide its type (JPEG, PNG, WebP, PDF only, 5 MB at most; the name and declared type are ignored). Only a private storage key is stored with a document, never a link.
+
+**Limits.**
+- Driver and vehicle details entered in the driver app before this (the vehicle fields on the driver record, the image arrays and the app's own `verification_status`) are untouched and shown for information only; they do not feed the dashboard's verification or eligibility.
+- A driver created without an email gets a unique placeholder address (the driver record requires one); it is never shown.
+- Changing a business's document requirements updates lists the next time a record's documents change; detail screens always use the current requirements.
+- Expiry is evaluated when records are read; there is no background job or notification yet for documents about to expire.
+- No Cloudinary upload or signed-link call has been exercised from this code against the real service yet (tests use an in-memory storage with the same signed-link behaviour).
+- Eligibility is computed and shown but not yet used by ride requests (that is the dispatch phase).
+
 ## Local development without MongoDB
 `npm run dev:fake` runs these routes on an in-memory stand-in for the database (`scripts/devServer.js`, port 3000, nothing saved, refuses to run in production). It seeds one demo super admin; the credentials are printed when it starts.
 

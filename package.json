@@ -12,7 +12,7 @@
     "health": "curl -s http://localhost:3000/health",
     "health:api": "curl -s http://localhost:3000/api/health",
     "test:health-push": "bash scripts/test-health-and-push.sh",
-    "test": "node test/fare.test.js && node --test test/admin.test.js test/admin.api.test.js test/business.test.js test/business.api.test.js test/pricing.test.js test/apptenant.api.test.js"
+    "test": "node test/fare.test.js && node --test test/admin.test.js test/admin.api.test.js test/business.test.js test/business.api.test.js test/pricing.test.js test/apptenant.api.test.js test/fleet.test.js test/fleet.api.test.js"
   },
   "keywords": [],
   "author": "",
