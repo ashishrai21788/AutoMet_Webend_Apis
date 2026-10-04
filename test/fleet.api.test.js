@@ -723,14 +723,15 @@ test('isolation: naming another business in the header is refused, and a body ca
   assert.equal((await call('GET', '/business/vehicles?search=SPOOF1234', ctx.b)).body.data.total, 0);
 });
 
-test('super admin: must name a business, then sees exactly that one', async () => {
-  assert.equal((await call('GET', '/business/drivers', { token: ctx.super })).status, 400);
-  const a = await call('GET', '/business/drivers', { token: ctx.super, appId: 'app_a' });
-  assert.equal(a.status, 200);
-  assert.ok(a.body.data.total >= 7);
-  const b = await call('GET', '/business/drivers', { token: ctx.super, appId: 'app_b' });
-  assert.deepEqual(b.body.data.items.map((x) => x.id), [ctx.dB]);
-  assert.equal((await call('GET', '/business/drivers', { token: ctx.super, appId: 'app_nobody' })).status, 404);
+test('super admin: refused on every fleet route, whichever business it names', async () => {
+  for (const appId of [undefined, 'app_a', 'app_b', 'app_nobody']) {
+    for (const path of ['/business/drivers', '/business/vehicles', '/business/drivers/' + ctx.d1 + '/documents']) {
+      assert.equal((await call('GET', path, { token: ctx.super, appId })).status, 403, path + ' ' + appId);
+    }
+  }
+  assert.equal((await call('POST', '/business/drivers', { token: ctx.super, appId: 'app_a', body: {} })).status, 403);
+  const b = await call('GET', '/business/drivers', { token: ctx.bAdmin, appId: 'app_b' });
+  assert.deepEqual(b.body.data.items.map((x) => x.id), [ctx.dB], 'the business admin sees only their own');
 });
 
 test('role permissions on the fleet screens', async () => {

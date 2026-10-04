@@ -190,7 +190,7 @@ test('permissions: who can open documents and decide on them', () => {
   const role = (r) => ({ role: r });
   for (const p of ['documents.view', 'verification.review']) {
     assert.equal(can(role('client_admin'), p), true);
-    assert.equal(can(role('super_admin'), p), true);
+    assert.equal(can(role('super_admin'), p), false, 'platform owners do not review a client\'s documents');
     assert.equal(can(role('operations'), p), true);
     assert.equal(can(role('support'), p), false, `support must not have ${p}`);
     assert.equal(can(role('finance'), p), false, `finance must not have ${p}`);

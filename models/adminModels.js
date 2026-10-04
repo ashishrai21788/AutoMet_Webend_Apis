@@ -25,6 +25,8 @@ const tenantSchema = new mongoose.Schema({
   logoUrl: { type: String, default: '', trim: true },
   /** Operating country of the business; null until the owner completes the first onboarding step. */
   market: { type: marketSchema, default: null },
+  /** This business's subscription to the platform: { planId, planName, price, cycle, setupFee, status: 'trialing' | 'active' | 'cancelled', startDate, trialEndsAt, renewalDate, notes } (see lib/revenue.js). null until a plan is assigned. */
+  subscription: { type: mongoose.Schema.Types.Mixed, default: null },
   /** Ride rules: { requireEligibleDrivers } (see lib/driverAvailability.js). */
   rideSettings: { type: mongoose.Schema.Types.Mixed, default: {} },
   /** Overrides of which optional documents are mandatory for drivers and vehicles: { driver: {TYPE: bool}, vehicle: {TYPE: bool} }. */

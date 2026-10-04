@@ -195,9 +195,9 @@ test('team: deactivating a user ends their session; cross-client and self change
 
 test('audit log records who did what, scoped by client', async () => {
   const superToken = await tokenFor('super@x.test', 'super-password-1');
-  const all = await call('GET', '/audit', { token: superToken });
+  const all = await call('GET', '/platform/audit?pageSize=100', { token: superToken });
   assert.equal(all.status, 200);
-  const actions = all.body.data.map((r) => r.action);
+  const actions = all.body.data.items.map((r) => r.action);
   assert.ok(actions.includes('tenant.created'));
   assert.ok(actions.includes('tenant.status_changed'));
   assert.ok(actions.includes('auth.login'));

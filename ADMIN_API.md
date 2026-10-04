@@ -221,3 +221,46 @@ Permissions added: `riders.manage` and `trips.manage` (client admin and operatio
 | `GET /api/users/issues` | rider sign-in | The rider's own reports with `status`, `statusLabel` and `supportNote` (the latest note from support; internal notes are never sent). |
 
 Rider reports appear in the same Support inbox as drivers' reports (`reporterType: "rider"` or `"driver"`, with `reporterId` and `tripId`), and are answered the same way. A business sees only its own riders' reports. The rider app does not have a screen for this yet.
+
+## Resetting the business setup (script)
+
+`node scripts/resetBusinessSetup.js` removes what the dashboard set up for businesses so setup can start again. It is run by a person with the database settings in `.env` or the environment; it is not an API and nothing in the server calls it.
+
+- **Dry run (default):** prints the database and cluster, how many records of each kind would be deleted, the businesses by App ID, and what is left alone. Deletes nothing.
+- **Delete:** `node scripts/resetBusinessSetup.js --execute --confirm=<DB_NAME>` (the exact database name).
+- **Deleted:** businesses, regions, vehicle categories, fare rules, cancellation policies, setup progress, team accounts (super admins are kept), the audit log, and each business's logo in Cloudinary.
+- **Never touched:** drivers, riders, trips, OTP records, support reports, vehicles, driver and vehicle documents, assignments and driver timelines. Vehicles, documents, assignments and timelines stay in the database but are tagged with business IDs that no longer exist, so the dashboard no longer shows them.
+- **Default business:** it owns every driver and rider created before businesses existed, so the script recreates it (empty, with a new App ID) straight away; the server also recreates it at start-up. `--no-default` skips that.
+- Refuses to run when no super admin exists. It cannot be undone: take a database backup first (Atlas: Backup, or `mongodump`).
+
+## Platform owner vs business admin (role separation)
+
+Two permission domains that never overlap:
+
+- **Platform** (super admin only): `clients.manage`, `platform.billing`, `platform.team`, `platform.audit`, `platform.settings`.
+- **Business** (client admin, operations, support, finance, for their own business only): `dashboard.view`, `drivers.*`, `vehicles.*`, `documents.view`, `verification.review`, `riders.*`, `trips.*`, `pricing.manage`, `payments.view`, `settings.manage`, `team.manage`, `audit.view`, `support.manage`.
+
+A super admin has no business permission, and `lib/businessContext.js` also answers every `/business/*` request from a super admin with 403 (`PLATFORM_ROLE`), so no missing permission check can open a business's operations to the platform owner. Cross-business support access is not implemented; if ever needed it must be a separate, explicit, audited workflow.
+
+Business admins reach their own business only (`X-App-Id` for another business is 403). `GET /tenants` returns the caller's own business for a business admin, all businesses for a super admin.
+
+**Team.** `GET/POST /users`, `PATCH /users/:id`, `PATCH /users/:id/active`, `POST /users/:id/reset-password`: the business admin (`team.manage`) manages their business's staff; the super admin (`clients.manage`) manages only `client_admin` accounts of any business (403 for other roles, and for role changes). Platform accounts: `GET/POST /platform/team`, `PATCH /platform/team/:id` (rename), `PATCH /platform/team/:id/active`, `POST /platform/team/:id/reset-password` (`platform.team`); never yourself, never the last active platform account. Platform audit events carry no business, so business admins never see them.
+
+## AutoMet platform revenue (what businesses pay AutoMet)
+
+Separate from rides: ride fares are the business's money and are never counted here. Revenue comes only from subscriptions and invoices recorded by the platform owner. There is no payment gateway: payments and refunds are recorded by hand.
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET/POST /platform/plans`, `PATCH /platform/plans/:id` | `platform.billing` | `{ name, description, price, cycle: monthly/yearly, setupFee, trialDays, active }`. A price change affects new subscriptions only. Retired plans cannot be assigned. |
+| `PUT /tenants/:id/subscription` | `platform.billing` | `{ planId, price?, startDate?, trial?, trialDays?, notes?, issueSetupInvoice? }`. A trial makes the business `trial`; a paid subscription makes it `active` (suspended stays suspended). The agreed price is kept even if the list price changes. |
+| `POST /tenants/:id/subscription/renew` | `platform.billing` | `{ invoice? }`. Converts a trial or starts the next period; optionally issues the invoice. |
+| `POST /tenants/:id/subscription/cancel` | `platform.billing` | `{ reason }`. Stops recurring revenue; does not suspend the business. |
+| `GET /tenants/:id/billing` | `platform.billing` | Subscription, totals (billed, collected, refunded, outstanding) and invoices of one business. |
+| `POST /tenants/:id/invoices` | `platform.billing` | `{ type: subscription/setup_fee/other, amount?, periodStart, periodEnd, dueDate?, description? }`. Numbers INV-000001... never repeat. |
+| `POST /invoices/:id/pay` / `void` / `refund` | `platform.billing` | Pay once with `{ paymentMethod, reference?, paidAt? }`; void only unpaid, with a reason; refund only paid invoices, `{ amount, reason }`, partial refunds add up to at most the amount paid. |
+| `GET /platform/revenue/summary?from&to` | `platform.billing` | `mrr`, `arr` (only active, priced subscriptions of non-suspended businesses; trials, cancelled and unplanned businesses add nothing), `billed`, `collected`, `refunded`, `netCollected` (date-ranged), `outstanding`, `overdue` (as of now), counts, upcoming renewals (30 days), by plan, by business, 12-month series, new businesses per month. |
+| `GET /platform/invoices`, `GET /platform/invoices.csv` | `platform.billing` | Filters `status`, `type`, `search`, dates. CSV is formula-injection-safe and the export is audited. |
+| `GET/PUT /platform/settings` | `platform.settings` | `{ companyName, billingEmail, invoiceDueDays, defaultTrialDays, invoiceNotes }`; currency comes from `PLATFORM_CURRENCY` (default INR). |
+
+Data: `platform_plans`, `platform_invoices`, `platform_counters`, `platform_settings`; the subscription is the `subscription` object on the business (tenant) record.

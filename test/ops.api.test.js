@@ -123,6 +123,7 @@ test.before(async () => {
   await mk('u_a_fin', 'finance@a.test', 'finance', 'app_a', 'password-a-fin1');
   await mk('u_b', 'admin@b.test', 'client_admin', 'app_b', 'password-b-admin');
   await mk('u_super', 'super@x.test', 'super_admin', null, 'password-super-1');
+  await mk('u_def', 'def@x.test', 'client_admin', 'app_def', 'password-def-1');
 
   await db.ServiceRegion.create({ tenantId: 'app_a', regionId: 'rg_a', country: 'IN', state: 'S', city: 'Pune', zoneName: 'All areas', key: 'a', active: true, center: { lat: 18.5, lng: 73.8 }, radiusKm: 20 });
   await db.VehicleCategory.create({ tenantId: 'app_a', categoryId: 'vc_a', name: 'Sedan', nameKey: 'sedan', active: true, regionIds: ['rg_a'], passengerCapacity: 4, rideType: 'economy' });
@@ -165,6 +166,7 @@ test.before(async () => {
   ctx.finance = await login('finance@a.test', 'password-a-fin1');
   ctx.b = await login('admin@b.test', 'password-b-admin');
   ctx.super = await login('super@x.test', 'password-super-1');
+  ctx.def = await login('def@x.test', 'password-def-1');
 
   const e = (action, targetType, targetId, actorEmail, tenantId, at, meta) => db.AdminAudit.create({ tenantId, actorEmail, actorId: actorEmail, action, targetType, targetId, meta, at });
   await e('driver.status_changed', 'driver', 'drv_a1', 'admin@a.test', 'app_a', ago(3600000), { reason: 'Test', password: 'leak' });
@@ -212,7 +214,8 @@ test('audit log: needs the audit permission, and another business cannot read it
   assert.equal((await get('/business/audit', { token: ctx.support })).status, 403);
   assert.equal((await get('/business/audit', { token: ctx.finance })).status, 403);
   assert.equal((await get('/business/audit', { token: ctx.b, appId: 'app_a' })).status, 403);
-  assert.equal((await get('/business/audit', { token: ctx.super })).status, 200, 'a super admin may open any business');
+  assert.equal((await get('/business/audit', { token: ctx.super })).status, 403, 'a super admin cannot open a business\'s own audit log');
+  assert.equal((await get('/business/audit', { token: ctx.super, appId: 'app_a' })).status, 403);
   assert.equal((await get('/business/audit', { token: ctx.b, appId: 'app_b' })).body.data.total, 2, 'its own sign-in and its one event');
   assert.equal((await fetch(base + '/api/admin/business/audit')).status, 401);
 });
@@ -251,7 +254,7 @@ test('statistics: live counts from this business\'s drivers, trips and riders', 
   assert.equal(s.trips.last7Days.reduce((n, d) => n + d.requested, 0), 5, 'all five trips of the week');
   assert.ok(s.notAvailable.includes('payments'));
   // the default business sees the untagged trip and nothing of A or B
-  const def = (await get('/business/stats', { token: ctx.super, appId: 'app_def' })).body.data;
+  const def = (await get('/business/stats', { token: ctx.def, appId: null })).body.data;
   assert.equal(def.revenue.today, 50);
   assert.equal(def.riders.total, 1);
 });

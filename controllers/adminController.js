@@ -227,10 +227,20 @@ exports.setTenantStatus = async (req, res) => {
 
 // ---------- team ----------
 
+/**
+ * The platform owner creates and looks after the accounts of each business's admins (the people who then run the business),
+ * but not that business's operations, supervisors or support staff: those belong to the business admin. A super admin is
+ * therefore limited to client_admin accounts here.
+ */
+const PLATFORM_BOUNDARY = "The platform owner manages a business's admin accounts. The business admin manages its own staff.";
+const crossesBoundary = (req, role) => isSuperAdmin(req.admin) && role !== 'client_admin';
+
 exports.listUsers = async (req, res) => {
   try {
     const scope = resolveTenantScope(req.admin, req.query.tenantId);
-    const users = await AdminUser.find(scope === null ? {} : { tenantId: scope }).sort({ createdAt: 1 });
+    // the platform owner sees the admin accounts of businesses (never a business's staff, and never platform accounts here)
+    const filter = isSuperAdmin(req.admin) ? { role: 'client_admin', ...(scope === null ? { tenantId: { $ne: null } } : { tenantId: scope }) } : { tenantId: scope };
+    const users = await AdminUser.find(filter).sort({ createdAt: 1 });
     return ok(res, users.map(publicAdmin));
   } catch (e) {
     return bad(res, e.status || 500, e.status ? e.message : 'Could not load the team');
@@ -245,6 +255,7 @@ exports.createUser = async (req, res) => {
     const role = String(b.role || '');
     if (!name || !EMAIL_RE.test(email)) return bad(res, 400, 'name and a valid email are required');
     if (!ROLES.includes(role) || role === 'super_admin') return bad(res, 400, 'role must be one of client_admin, operations, support, finance');
+    if (crossesBoundary(req, role)) return bad(res, 403, PLATFORM_BOUNDARY);
 
     // A client admin can only add people to their own client; the super admin names the client.
     const tenantId = resolveTenantScope(req.admin, isSuperAdmin(req.admin) ? b.tenantId : req.admin.tenantId);
@@ -273,7 +284,8 @@ exports.setUserActive = async (req, res) => {
     if (!user) return bad(res, 404, 'User not found');
     resolveTenantScope(req.admin, user.tenantId); // 403 when the user belongs to another client
     if (user.adminId === req.admin.adminId) return bad(res, 400, 'You cannot change your own access');
-    if (user.role === 'super_admin' && !isSuperAdmin(req.admin)) return bad(res, 403, 'Not allowed');
+    if (user.role === 'super_admin') return bad(res, 403, 'Platform accounts are managed from Platform Team');
+    if (crossesBoundary(req, user.role)) return bad(res, 403, PLATFORM_BOUNDARY);
     // a business must always keep at least one active client admin
     if (!active && user.role === 'client_admin' && user.active !== false) {
       const others = await AdminUser.countDocuments({ tenantId: user.tenantId, role: 'client_admin', active: true, adminId: { $ne: user.adminId } });
@@ -362,7 +374,9 @@ exports.updateUser = async (req, res) => {
     const user = await AdminUser.findOne({ adminId: req.params.id });
     if (!user) return bad(res, 404, 'User not found');
     resolveTenantScope(req.admin, user.tenantId); // 403 when the user belongs to another client
-    if (user.role === 'super_admin') return bad(res, 403, 'Not allowed');
+    if (user.role === 'super_admin') return bad(res, 403, 'Platform accounts are managed from Platform Team');
+    if (crossesBoundary(req, user.role)) return bad(res, 403, PLATFORM_BOUNDARY);
+    if (isSuperAdmin(req.admin) && 'role' in b) return bad(res, 403, PLATFORM_BOUNDARY);
     const errors = {};
     const changes = {};
     if ('name' in b) {
@@ -405,7 +419,8 @@ exports.resetUserPassword = async (req, res) => {
     if (!user) return bad(res, 404, 'User not found');
     resolveTenantScope(req.admin, user.tenantId);
     if (user.adminId === req.admin.adminId) return bad(res, 400, 'Change your own password from Admin Profile');
-    if (user.role === 'super_admin') return bad(res, 403, 'Not allowed');
+    if (user.role === 'super_admin') return bad(res, 403, 'Platform accounts are managed from Platform Team');
+    if (crossesBoundary(req, user.role)) return bad(res, 403, PLATFORM_BOUNDARY);
     const password = temporaryPassword();
     user.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
     user.mustChangePassword = true;
@@ -471,5 +486,100 @@ exports.platformAudit = async (req, res) => {
     return ok(res, { items: rows.map((r) => ({ ...shapeAudit(r), businessName: r.tenantId ? names.get(r.tenantId) || r.tenantId : 'Platform' })), total, page, pageSize });
   } catch (e) {
     return bad(res, 500, 'Could not load the platform audit log');
+  }
+};
+
+// ---------- platform team: the platform owner's own (super admin) accounts ----------
+
+/** GET /platform/team */
+exports.platformTeamList = async (req, res) => {
+  try {
+    const users = await AdminUser.find({ role: 'super_admin' }).sort({ createdAt: 1 });
+    return ok(res, users.map(publicAdmin));
+  } catch (e) {
+    return bad(res, 500, 'Could not load the platform team');
+  }
+};
+
+/** POST /platform/team { name, email }: a new platform account with a one-time password. */
+exports.platformTeamCreate = async (req, res) => {
+  try {
+    const b = req.body || {};
+    const name = String(b.name || '').trim();
+    const email = String(b.email || '').trim().toLowerCase();
+    if (name.length < 2 || name.length > 80) return res.status(400).json({ success: false, message: 'Name must be 2 to 80 characters', errors: { name: 'Name must be 2 to 80 characters' }, data: null });
+    if (!EMAIL_RE.test(email)) return res.status(400).json({ success: false, message: 'Enter a valid email address', errors: { email: 'Enter a valid email address' }, data: null });
+    if (await AdminUser.exists({ email })) return bad(res, 409, 'That email is already in use');
+    const password = temporaryPassword();
+    const user = await AdminUser.create({ adminId: newId('a'), name, email, role: 'super_admin', tenantId: null, passwordHash: await bcrypt.hash(password, BCRYPT_COST), mustChangePassword: true });
+    await audit(req, 'platform_user.created', { tenantId: null, targetType: 'admin_user', targetId: user.adminId, meta: { email } });
+    return ok(res, { ...publicAdmin(user), temporaryPassword: password }, 201);
+  } catch (e) {
+    if (e.code === 11000) return bad(res, 409, 'That email is already in use');
+    return bad(res, 500, 'Could not create the platform account');
+  }
+};
+
+async function platformTarget(req, res) {
+  const user = await AdminUser.findOne({ adminId: req.params.id });
+  if (!user || user.role !== 'super_admin') { bad(res, 404, 'Platform account not found'); return null; }
+  return user;
+}
+
+/** PATCH /platform/team/:id/active { active }: never yourself, and the platform always keeps one active account. */
+exports.platformTeamSetActive = async (req, res) => {
+  try {
+    const active = req.body && req.body.active;
+    if (typeof active !== 'boolean') return bad(res, 400, 'active must be true or false');
+    const user = await platformTarget(req, res);
+    if (!user) return;
+    if (user.adminId === req.admin.adminId) return bad(res, 400, 'You cannot change your own access');
+    if (!active && user.active !== false) {
+      const others = await AdminUser.countDocuments({ role: 'super_admin', active: true, adminId: { $ne: user.adminId } });
+      if (others === 0) return bad(res, 400, 'The platform must keep at least one active platform account');
+    }
+    user.active = active;
+    if (!active) user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    await audit(req, active ? 'platform_user.activated' : 'platform_user.deactivated', { tenantId: null, targetType: 'admin_user', targetId: user.adminId });
+    return ok(res, publicAdmin(user));
+  } catch (e) {
+    return bad(res, 500, 'Could not update the platform account');
+  }
+};
+
+/** POST /platform/team/:id/reset-password */
+exports.platformTeamResetPassword = async (req, res) => {
+  try {
+    const user = await platformTarget(req, res);
+    if (!user) return;
+    if (user.adminId === req.admin.adminId) return bad(res, 400, 'Change your own password from My Profile');
+    const password = temporaryPassword();
+    user.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
+    user.mustChangePassword = true;
+    user.failedLogins = 0;
+    user.lockUntil = null;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    await audit(req, 'platform_user.password_reset', { tenantId: null, targetType: 'admin_user', targetId: user.adminId });
+    return ok(res, { ...publicAdmin(user), temporaryPassword: password });
+  } catch (e) {
+    return bad(res, 500, 'Could not reset the password');
+  }
+};
+
+/** PATCH /platform/team/:id { name } */
+exports.platformTeamRename = async (req, res) => {
+  try {
+    const user = await platformTarget(req, res);
+    if (!user) return;
+    const name = String((req.body && req.body.name) || '').trim();
+    if (name.length < 2 || name.length > 80) return res.status(400).json({ success: false, message: 'Name must be 2 to 80 characters', errors: { name: 'Name must be 2 to 80 characters' }, data: null });
+    user.name = name;
+    await user.save();
+    await audit(req, 'platform_user.updated', { tenantId: null, targetType: 'admin_user', targetId: user.adminId, meta: { renamed: true } });
+    return ok(res, publicAdmin(user));
+  } catch (e) {
+    return bad(res, 500, 'Could not update the platform account');
   }
 };

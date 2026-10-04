@@ -14,6 +14,7 @@ const platform = require('../controllers/platformController');
 const reports = require('../controllers/reportsController');
 const support = require('../controllers/supportController');
 const logo = require('../controllers/logoController');
+const revenue = require('../controllers/revenueController');
 const { can } = require('../lib/adminPermissions');
 const { adminLoginLimiters } = require('../lib/rateLimit');
 
@@ -35,15 +36,42 @@ router.post('/tenants', requireAdmin('clients.manage'), ctrl.createTenant);
 router.patch('/tenants/:id/status', requireAdmin('clients.manage'), ctrl.setTenantStatus);
 router.patch('/tenants/:id', requireAdmin('clients.manage'), ctrl.updateTenant);
 
-router.get('/users', requireAdmin('team.manage'), ctrl.listUsers);
-router.post('/users', requireAdmin('team.manage'), ctrl.createUser);
-router.patch('/users/:id/active', requireAdmin('team.manage'), ctrl.setUserActive);
-router.patch('/users/:id', requireAdmin('team.manage'), ctrl.updateUser);
-router.post('/users/:id/reset-password', requireAdmin('team.manage'), ctrl.resetUserPassword);
+// a business's team: its own admin manages everyone; the platform owner (clients.manage) only its client_admin accounts (see the controller)
+const teamAccess = requireAdmin(['team.manage', 'clients.manage']);
+router.get('/users', teamAccess, ctrl.listUsers);
+router.post('/users', teamAccess, ctrl.createUser);
+router.patch('/users/:id/active', teamAccess, ctrl.setUserActive);
+router.patch('/users/:id', teamAccess, ctrl.updateUser);
+router.post('/users/:id/reset-password', teamAccess, ctrl.resetUserPassword);
+
+// the platform owner's own accounts
+router.get('/platform/team', requireAdmin('platform.team'), ctrl.platformTeamList);
+router.post('/platform/team', requireAdmin('platform.team'), ctrl.platformTeamCreate);
+router.patch('/platform/team/:id/active', requireAdmin('platform.team'), ctrl.platformTeamSetActive);
+router.patch('/platform/team/:id', requireAdmin('platform.team'), ctrl.platformTeamRename);
+router.post('/platform/team/:id/reset-password', requireAdmin('platform.team'), ctrl.platformTeamResetPassword);
 
 router.get('/dashboard', requireAdmin('dashboard.view'), ctrl.dashboard);
 router.get('/platform/overview', requireAdmin('clients.manage'), platform.overview);
-router.get('/platform/audit', requireAdmin('clients.manage'), ctrl.platformAudit);
+router.get('/platform/audit', requireAdmin('platform.audit'), ctrl.platformAudit);
+
+// platform revenue: what businesses pay the platform (super admin only)
+router.get('/platform/revenue/summary', requireAdmin('platform.billing'), revenue.summary);
+router.get('/platform/invoices', requireAdmin('platform.billing'), revenue.listInvoices);
+router.get('/platform/invoices.csv', requireAdmin('platform.billing'), revenue.invoicesCsv);
+router.get('/tenants/:id/billing', requireAdmin('platform.billing'), revenue.getBilling);
+router.put('/tenants/:id/subscription', requireAdmin('platform.billing'), revenue.assignSubscription);
+router.post('/tenants/:id/subscription/renew', requireAdmin('platform.billing'), revenue.renewSubscription);
+router.post('/tenants/:id/subscription/cancel', requireAdmin('platform.billing'), revenue.cancelSubscription);
+router.post('/tenants/:id/invoices', requireAdmin('platform.billing'), revenue.createInvoice);
+router.post('/invoices/:id/pay', requireAdmin('platform.billing'), revenue.payInvoice);
+router.post('/invoices/:id/void', requireAdmin('platform.billing'), revenue.voidInvoice);
+router.post('/invoices/:id/refund', requireAdmin('platform.billing'), revenue.refundInvoice);
+router.get('/platform/plans', requireAdmin('platform.billing'), revenue.listPlans);
+router.post('/platform/plans', requireAdmin('platform.billing'), revenue.createPlan);
+router.patch('/platform/plans/:id', requireAdmin('platform.billing'), revenue.updatePlan);
+router.get('/platform/settings', requireAdmin('platform.settings'), revenue.getSettings);
+router.put('/platform/settings', requireAdmin('platform.settings'), revenue.updateSettings);
 router.get('/audit', requireAdmin('audit.view'), ctrl.listAudit);
 
 // Business configuration. The business is named by the X-App-Id header and checked against the signed-in account.

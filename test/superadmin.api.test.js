@@ -91,7 +91,7 @@ test('a business always keeps an active client admin', async () => {
   assert.match(last.body.message, /only active client admin/);
   assert.equal(user('a1').active, true);
   const demote = await call('PATCH', '/users/a1', { token: ctx.super, body: { role: 'operations' } });
-  assert.equal(demote.status, 400);
+  assert.equal(demote.status, 403, 'the platform owner may only manage client admin accounts, so this is refused before the last-admin rule');
   assert.equal((await call('PATCH', '/users/a2', { body: { role: 'client_admin' } })).status, 200, 'restore a second client admin');
   assert.equal((await call('PATCH', '/users/a2/active', { body: { active: false } })).status, 200, 'now one can be deactivated');
   await call('PATCH', '/users/a2/active', { body: { active: true } });

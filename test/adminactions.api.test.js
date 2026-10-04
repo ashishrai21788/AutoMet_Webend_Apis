@@ -28,7 +28,7 @@ test('permissions: only operations and the business admin may suspend riders or 
   const as = (role) => ({ role });
   for (const p of ['riders.manage', 'trips.manage']) {
     assert.equal(can(as('client_admin'), p), true);
-    assert.equal(can(as('super_admin'), p), true);
+    assert.equal(can(as('super_admin'), p), false, 'platform owners do not run a client\'s operations');
     assert.equal(can(as('operations'), p), true);
     assert.equal(can(as('support'), p), false);
     assert.equal(can(as('finance'), p), false);

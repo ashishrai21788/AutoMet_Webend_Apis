@@ -292,14 +292,12 @@ test('isolation: two businesses can use the same names without clashing', async 
   assert.ok(aRules.body.data.every((r) => r.baseFare !== 99));
 });
 
-test('isolation: the super admin must name a business, and then sees exactly that one', async () => {
-  assert.equal((await call('GET', '/business/categories', { token: ctx.superToken })).status, 400);
-  const a = await call('GET', '/business/categories', { token: ctx.superToken, appId: ctx.A.appId });
-  assert.equal(a.status, 200);
-  assert.equal(a.body.data.length, 2);
-  assert.equal((await call('GET', '/business/categories', { token: ctx.superToken, appId: 'app_unknown' })).status, 404);
-  const b = await call('GET', '/business/categories', { token: ctx.superToken, appId: ctx.B.appId });
-  assert.equal(b.body.data.length, 1);
+test('isolation: the super admin has no way into a business\'s operations, with or without naming it', async () => {
+  for (const appId of [undefined, ctx.A.appId, ctx.B.appId, 'app_unknown']) {
+    const r = await call('GET', '/business/categories', { token: ctx.superToken, appId });
+    assert.equal(r.status, 403, String(appId));
+  }
+  assert.equal((await call('GET', '/business/categories', { token: ctx.A.token, appId: ctx.B.appId })).status, 403, 'and a business admin cannot name another business');
 });
 
 test('suspending one business does not affect another', async () => {

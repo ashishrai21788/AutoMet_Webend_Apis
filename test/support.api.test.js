@@ -27,7 +27,8 @@ const ctx = {};
 const ID = { a1: '650000000000000000000001', a2: '650000000000000000000002', a3: '650000000000000000000003', b1: '650000000000000000000009' };
 
 test('permissions: support, operations and the business admin work the inbox; finance does not', () => {
-  for (const role of ['support', 'operations', 'client_admin', 'super_admin']) assert.equal(can({ role }, 'support.manage'), true, role);
+  for (const role of ['support', 'operations', 'client_admin']) assert.equal(can({ role }, 'support.manage'), true, role);
+  assert.equal(can({ role: 'super_admin' }, 'support.manage'), false, 'the platform owner does not work a client\'s inbox');
   assert.equal(can({ role: 'finance' }, 'support.manage'), false);
 });
 

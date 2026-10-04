@@ -124,6 +124,7 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
         const seed = Object.fromEntries(Object.entries(filter).filter(([k, v]) => !k.startsWith('$') && !isPlainOperatorObject(v)));
         doc = attach({ ...defaults(), ...seed, ...(update.$setOnInsert || {}) });
         Object.assign(doc, update.$set || {});
+        for (const [k, n] of Object.entries(update.$inc || {})) doc[k] = (doc[k] || 0) + n;
         checkUnique(doc);
         rows.push(doc);
         return doc;
@@ -131,6 +132,7 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
       const before = { ...doc };
       Object.assign(doc, update.$set || {});
       for (const [k, v] of Object.entries(update.$push || {})) doc[k] = [...(doc[k] || []), v];
+      for (const [k, n] of Object.entries(update.$inc || {})) doc[k] = (doc[k] || 0) + n;
       try { checkUnique(doc); } catch (e) { Object.assign(doc, before); throw e; }
       return doc;
     },
@@ -182,6 +184,11 @@ function createFakeDb() {
     TripDetails: fakeModel({ uniques: ['trip_id'] }),
     TripEvent: fakeModel({}),
     // support
+    // platform billing
+    PlatformInvoice: fakeModel({ uniques: ['invoiceId', 'number'], defaults: () => ({ issuedAt: new Date(), refundedAmount: 0, refunds: [] }) }),
+    PlatformCounter: fakeModel({ uniques: ['key'] }),
+    PlatformPlan: fakeModel({ uniques: ['planId', 'name'], defaults: () => ({ active: true, setupFee: 0, trialDays: null }) }),
+    PlatformSettings: fakeModel({ uniques: ['key'] }),
     DriverIssue: fakeModel({ defaults: () => ({ _id: require('crypto').randomBytes(12).toString('hex') }) }) // ids like MongoDB's
   };
 
@@ -203,6 +210,7 @@ function createFakeDb() {
     });
     stub('models/tripDetailsModel.js', { TripDetails: db.TripDetails });
     stub('models/supportModels.js', { DriverIssue: db.DriverIssue });
+    stub('models/platformBilling.js', { PlatformInvoice: db.PlatformInvoice, PlatformCounter: db.PlatformCounter, PlatformPlan: db.PlatformPlan, PlatformSettings: db.PlatformSettings });
     require.cache[require.resolve(path.join(root, 'models/tripEventModel.js'))] = { id: 'tripEvent', filename: require.resolve(path.join(root, 'models/tripEventModel.js')), loaded: true, exports: db.TripEvent };
     const other = fakeModel({});
     stub('models/dynamicModel.js', {
