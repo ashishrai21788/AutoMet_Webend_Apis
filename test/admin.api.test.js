@@ -197,3 +197,13 @@ test('audit log records who did what, scoped by client', async () => {
   assert.ok(actions.includes('tenant.status_changed'));
   assert.ok(actions.includes('auth.login'));
 });
+
+test('sign-in upgrades an older, slower password hash and keeps working', async () => {
+  const row = AdminUser.rows.find((u) => u.email === 'a@x.test');
+  row.passwordHash = bcrypt.hashSync('client-password-1', 12);
+  assert.equal(bcrypt.getRounds(row.passwordHash), 12);
+  assert.equal((await login('a@x.test', 'client-password-1')).status, 200);
+  assert.equal(bcrypt.getRounds(row.passwordHash), 10);
+  assert.equal((await login('a@x.test', 'client-password-1')).status, 200, 'the upgraded hash still verifies');
+  assert.equal((await login('a@x.test', 'wrong-wrong-wrong')).status, 401);
+});

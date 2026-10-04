@@ -11,7 +11,9 @@ const { publicTenant, publicAdmin } = require('../lib/adminShapes');
 const { ServiceRegion, VehicleCategory, FareRule, SetupProgress } = require('../models/businessModels');
 const { computeSetup } = require('../lib/businessSetup');
 
-const BCRYPT_COST = 12;
+// Cost 10 keeps a sign-in under about a second on a small server while staying within current guidance for bcrypt.
+// Existing hashes made at a higher cost are upgraded to this one when their owner next signs in.
+const BCRYPT_COST = 10;
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
 const MIN_PASSWORD_LENGTH = 10;
@@ -19,10 +21,10 @@ const PACKAGE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PLANS = ['trial', 'standard', 'enterprise'];
 const TENANT_STATUSES = ['active', 'trial', 'suspended'];
-// Compared against when the email is unknown, so a miss takes as long as a wrong password. Built on first use so
-// server start-up is not slowed by a bcrypt round.
+// Compared against when the email is unknown, so a miss takes as long as a wrong password. Built on first use with the
+// async hash, which yields to the event loop, so it never stalls other requests (the rider and driver apps share this server).
 let dummyHash;
-const getDummyHash = () => (dummyHash ||= bcrypt.hashSync('not-a-real-password', BCRYPT_COST));
+const getDummyHash = () => (dummyHash ||= bcrypt.hash('not-a-real-password', BCRYPT_COST));
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, message: 'OK', data });
 const bad = (res, status, message) => res.status(status).json({ success: false, message, data: null });
@@ -69,7 +71,7 @@ exports.login = async (req, res) => {
       return bad(res, 429, 'Too many failed attempts. Try again in a few minutes.');
     }
 
-    const match = await bcrypt.compare(password, admin ? admin.passwordHash : getDummyHash());
+    const match = await bcrypt.compare(password, admin ? admin.passwordHash : await getDummyHash());
     if (!admin || !match || !admin.active) {
       if (admin && !match) {
         admin.failedLogins = (admin.failedLogins || 0) + 1;
@@ -91,6 +93,7 @@ exports.login = async (req, res) => {
     admin.failedLogins = 0;
     admin.lockUntil = null;
     admin.lastLoginAt = new Date();
+    if (bcrypt.getRounds(admin.passwordHash) > BCRYPT_COST) admin.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
     await admin.save();
     await audit(req, 'auth.login', { tenantId: admin.tenantId, actor: admin });
     return ok(res, { token: signAdminToken(admin), user: publicAdmin(admin) });
