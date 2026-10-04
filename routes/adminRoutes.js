@@ -8,6 +8,7 @@ const fleetDrivers = require('../controllers/fleet/drivers');
 const fleetVehicles = require('../controllers/fleet/vehicles');
 const fleetAssign = require('../controllers/fleet/assignments');
 const fleetDocs = require('../controllers/fleet/documents');
+const fleetAvailability = require('../controllers/fleet/availability');
 const { can } = require('../lib/adminPermissions');
 
 const requireAdmin = createRequireAdmin({
@@ -78,6 +79,10 @@ const needs = (permission) => (req, res, next) => (can(req.admin, permission) ? 
 
 router.get('/business/requirements', ...read, fleetDocs.getRequirements);
 router.put('/business/requirements', ...manage, fleetDocs.updateRequirements);
+
+router.get('/business/ride-settings', ...read, fleetAvailability.getSettings);
+router.put('/business/ride-settings', ...manage, fleetAvailability.updateSettings);
+router.get('/business/availability', ...viewDrivers, fleetAvailability.summary);
 
 router.get('/business/drivers', ...viewDrivers, fleetDrivers.list);
 router.post('/business/drivers', ...manageDrivers, fleetDrivers.create);

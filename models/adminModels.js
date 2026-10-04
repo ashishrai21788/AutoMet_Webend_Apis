@@ -23,6 +23,8 @@ const tenantSchema = new mongoose.Schema({
   supportPhone: { type: String, default: '', trim: true },
   /** Operating country of the business; null until the owner completes the first onboarding step. */
   market: { type: marketSchema, default: null },
+  /** Ride rules: { requireEligibleDrivers } (see lib/driverAvailability.js). */
+  rideSettings: { type: mongoose.Schema.Types.Mixed, default: {} },
   /** Overrides of which optional documents are mandatory for drivers and vehicles: { driver: {TYPE: bool}, vehicle: {TYPE: bool} }. */
   verificationRequirements: { type: mongoose.Schema.Types.Mixed, default: {} },
   /** The client that owns records created before multi-client support (they carry no tenant tag). */

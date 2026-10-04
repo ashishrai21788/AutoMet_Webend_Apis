@@ -252,7 +252,10 @@ exports.setStatus = c.handle(async (req, res) => {
   const current = d.accountStatus || 'ACTIVE';
   if (current === value.status) return c.fail(res, 409, `The driver is already ${value.status.toLowerCase()}`);
 
-  await req.legacyData.update(Driver(), { driverId: d.driverId }, { accountStatus: value.status, updatedAt: new Date() });
+  // a suspended or inactive driver is taken offline immediately; going back online is up to the driver once reactivated
+  const patch = { accountStatus: value.status, updatedAt: new Date() };
+  if (value.status !== 'ACTIVE') patch.isOnline = false;
+  await req.legacyData.update(Driver(), { driverId: d.driverId }, patch);
   await c.record(req, { subjectType: 'driver', subjectId: d.driverId, kind: 'ACCOUNT_STATUS', action: 'ACCOUNT_STATUS_CHANGED', from: current, to: value.status, reason: value.reason });
   return c.ok(res, { id: d.driverId, accountStatus: value.status });
 });

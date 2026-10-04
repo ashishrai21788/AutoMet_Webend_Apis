@@ -759,6 +759,25 @@ exports.updateOnlineStatus = async (req, res) => {
       });
     }
 
+    // Going online is checked against the account status and, when the business requires it, full eligibility.
+    // Going offline is always allowed.
+    if (isOnline === true) {
+      const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
+      const { effectiveTenantId } = require('../lib/appTenant');
+      const existing = await createModel('drivers').findOne({ driverId }).lean();
+      if (existing) {
+        // an app that names its business (X-App-Id) can only take that business's drivers online
+        if (req.headers['x-app-id'] && req.appTenant && (await effectiveTenantId(existing)) !== req.appTenant.tenantId) {
+          return res.status(403).json({ success: false, message: 'This account belongs to another app.', error: 'WRONG_APP', data: { code: 'WRONG_APP' } });
+        }
+        const gate = await checkDriverAvailable(existing);
+        if (!gate.available) {
+          const r = refusal(gate);
+          return res.status(r.status).json(r.body);
+        }
+      }
+    }
+
     // Prepare update data
     const updateData = {
       lastActive: new Date()

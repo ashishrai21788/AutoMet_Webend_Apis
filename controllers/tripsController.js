@@ -8,6 +8,7 @@ const { isDriverReachable, getDriverFcmInfo, sendRideRequestPushWithRetry } = re
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { priceTrip, loadPricingConfig } = require('../lib/tripPricing');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
+const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
 
 const DRIVER_RESPONSE_TIMEOUT_MS = (Number(process.env.TRIP_DRIVER_RESPONSE_TIMEOUT_SECONDS) || 60) * 1000;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -200,6 +201,10 @@ exports.createRequest = async (req, res) => {
     // A rider can only request a driver of the same business, and the fare comes from that business's own rules.
     if (!(await sameBusiness(user, driver))) {
       return res.status(403).json({ success: false, message: 'This driver is not available for your app.', data: { driver_id: driverId } });
+    }
+    const gate = await checkDriverAvailable(driver);
+    if (!gate.available) {
+      return res.status(409).json({ success: false, message: 'This driver is not available for rides right now.', error: gate.code, data: { driver_id: driverId, code: gate.code } });
     }
     const tenant = await tenantForAccount(user);
     const pricing = priceTrip(await loadPricingConfig(tenant), {

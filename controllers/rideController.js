@@ -202,6 +202,18 @@ exports.createRideRequest = async (req, res) => {
         data: { driver_id: driverId }
       });
     }
+    // same rules as /api/v1/trips: one business at a time, and only drivers who are available
+    {
+      const { sameBusiness } = require('../lib/appTenant');
+      const { checkDriverAvailable } = require('../lib/driverAvailability');
+      if (!(await sameBusiness(user, driver))) {
+        return res.status(403).json({ success: false, message: 'This driver is not available for your app.', data: { driver_id: driverId } });
+      }
+      const gate = await checkDriverAvailable(driver);
+      if (!gate.available) {
+        return res.status(409).json({ success: false, message: 'This driver is not available for rides right now.', error: gate.code, data: { driver_id: driverId, code: gate.code } });
+      }
+    }
 
     const duplicateDetails = await TripDetails.findOne({
       user_id: userId,

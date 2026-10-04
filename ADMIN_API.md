@@ -110,6 +110,20 @@ All routes are under `/api/admin/business` and use the business named by `X-App-
 - No Cloudinary upload or signed-link call has been exercised from this code against the real service yet (tests use an in-memory storage with the same signed-link behaviour).
 - Eligibility is computed and shown but not yet used by ride requests (that is the dispatch phase).
 
+## Driver availability and ride settings
+
+Who may go online and receive rides (`lib/driverAvailability.js`):
+1. **Always:** the account must be `ACTIVE`. A suspended or inactive driver is refused when going online (`403`, error `DRIVER_ACCOUNT_NOT_ACTIVE`) and when a rider requests them (`409`), and suspending or deactivating a driver sets `isOnline: false` in the same update.
+2. **Per business, off by default:** `rideSettings.requireEligibleDrivers`. When on, a driver must also be fully eligible (verified and unexpired, active region, an approved active vehicle of the right category and region). A refusal is `403` with error `DRIVER_NOT_ELIGIBLE`, a plain-language `message` ("You cannot go online yet: ...") and `data.reasons`. It is off by default so existing drivers, who were never verified, keep working until a business has onboarded its fleet.
+
+Enforced in `PUT /api/drivers/online-status` (going online only; going offline is always allowed), `POST /api/v1/trips/create-request`, and the legacy `POST /api/v1/rides/request` (which also now has the same-business check). An app that sends `X-App-Id` can only take that business's drivers online (`403`, `WRONG_APP`).
+
+| Method and path | Permission | Notes |
+|---|---|---|
+| `GET /business/ride-settings` | `dashboard.view` | `{requireEligibleDrivers}` |
+| `PUT /business/ride-settings` | `settings.manage` | `{requireEligibleDrivers: boolean}`; audited |
+| `GET /business/availability` | `drivers.view` | counts of drivers, eligible, online (as reported by the driver app), online and eligible, and why active drivers would be blocked; reads up to 10,000 drivers and says if partial |
+
 ## Local development without MongoDB
 `npm run dev:fake` runs these routes on an in-memory stand-in for the database (`scripts/devServer.js`, port 3000, nothing saved, refuses to run in production). It seeds one demo super admin; the credentials are printed when it starts.
 
