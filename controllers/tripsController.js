@@ -198,6 +198,9 @@ exports.createRequest = async (req, res) => {
       });
     }
 
+    if (user && user.accountStatus === 'SUSPENDED') {
+      return res.status(403).json({ success: false, message: 'Your account is suspended. Please contact support.', error: 'ACCOUNT_SUSPENDED', data: null });
+    }
     // A rider can only request a driver of the same business, and the fare comes from that business's own rules.
     if (!(await sameBusiness(user, driver))) {
       return res.status(403).json({ success: false, message: 'This driver is not available for your app.', data: { driver_id: driverId } });

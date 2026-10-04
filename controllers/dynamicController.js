@@ -2458,6 +2458,7 @@ exports.submitDriverIssue = async (req, res) => {
       issueText: issueText.trim(),
       imageUrls: validImageUrls,
       status: 'issue submitted', // Default status
+      tenantId: driver.tenantId || null,
       createdAt: new Date(),
       updatedAt: new Date(),
       // Additional useful fields

@@ -190,6 +190,9 @@ exports.loginUser = async (req, res) => {
         data: { phoneNumber }
       });
     }
+    if (user.accountStatus === 'SUSPENDED') {
+      return res.status(403).json({ success: false, message: 'Your account is suspended. Please contact support.', error: 'ACCOUNT_SUSPENDED', data: null });
+    }
 
     const otp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -267,6 +270,9 @@ exports.verifyUserOtp = async (req, res) => {
         message: 'User not found',
         data: { userId }
       });
+    }
+    if (user.accountStatus === 'SUSPENDED') {
+      return res.status(403).json({ success: false, message: 'Your account is suspended. Please contact support.', error: 'ACCOUNT_SUSPENDED', data: null });
     }
 
     otpRecord.isUsed = true;

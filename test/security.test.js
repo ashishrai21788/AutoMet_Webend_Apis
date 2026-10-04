@@ -108,6 +108,7 @@ test('CORS: an allowed dashboard origin is echoed back, others get no Allow-Orig
   const dash = await get('https://auto-met-admin.vercel.app');
   assert.equal(dash.headers.get('access-control-allow-origin'), 'https://auto-met-admin.vercel.app');
   assert.equal(dash.headers.get('access-control-allow-credentials'), 'true');
+  assert.match(dash.headers.get('access-control-expose-headers'), /Content-Disposition.*X-Row-Count/, 'the dashboard can read the download name and row count');
 
   const extra = await get('https://other-dashboard.example');
   assert.equal(extra.headers.get('access-control-allow-origin'), 'https://other-dashboard.example', 'trailing slash in the env value is ignored');

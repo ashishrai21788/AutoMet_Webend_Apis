@@ -130,6 +130,7 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
       }
       const before = { ...doc };
       Object.assign(doc, update.$set || {});
+      for (const [k, v] of Object.entries(update.$push || {})) doc[k] = [...(doc[k] || []), v];
       try { checkUnique(doc); } catch (e) { Object.assign(doc, before); throw e; }
       return doc;
     },
@@ -179,7 +180,9 @@ function createFakeDb() {
     EntityHistory: fakeModel({ defaults: () => ({ at: new Date() }) }),
     // trips
     TripDetails: fakeModel({ uniques: ['trip_id'] }),
-    TripEvent: fakeModel({})
+    TripEvent: fakeModel({}),
+    // support
+    DriverIssue: fakeModel({})
   };
 
   /** Replaces the real model modules in require.cache. Call before requiring routes or controllers. */
@@ -199,6 +202,7 @@ function createFakeDb() {
       DriverVehicleAssignment: db.DriverVehicleAssignment, EntityHistory: db.EntityHistory
     });
     stub('models/tripDetailsModel.js', { TripDetails: db.TripDetails });
+    stub('models/supportModels.js', { DriverIssue: db.DriverIssue });
     require.cache[require.resolve(path.join(root, 'models/tripEventModel.js'))] = { id: 'tripEvent', filename: require.resolve(path.join(root, 'models/tripEventModel.js')), loaded: true, exports: db.TripEvent };
     const other = fakeModel({});
     stub('models/dynamicModel.js', {

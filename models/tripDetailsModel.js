@@ -11,7 +11,8 @@ const TRIP_DETAIL_STATUSES = [
   'REJECTED_WITH_REASON',
   'NO_RESPONSE',
   'CANCELLED_BY_USER',
-  'CANCELLED_BY_USER_AFTER_ACCEPTANCE'
+  'CANCELLED_BY_USER_AFTER_ACCEPTANCE',
+  'CANCELLED_BY_DRIVER' // written by POST /api/v1/trips/cancel-request when the driver cancels
 ];
 
 const tripDetailsSchema = new mongoose.Schema({
@@ -61,7 +62,7 @@ const tripDetailsSchema = new mongoose.Schema({
   cancellation_reason: { type: String, default: null, trim: true },
   cancelled_at: { type: Date, default: null },
   cancel_stage: { type: String, default: null, enum: ['before_accept', 'after_accept', null], trim: true },
-  cancelled_by: { type: String, default: null, enum: ['USER', 'DRIVER', null], trim: true },
+  cancelled_by: { type: String, default: null, enum: ['USER', 'DRIVER', 'ADMIN', null], trim: true },
 
   requested_at: { type: Date, required: true, default: Date.now },
   responded_at: { type: Date, default: null },

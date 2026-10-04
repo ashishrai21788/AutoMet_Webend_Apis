@@ -485,6 +485,10 @@ driverSchema.virtual('fullName').get(function() {
 const userSchema = new mongoose.Schema({
   // Which business (App ID) this rider signed up under. Null = the default business (accounts from before multi-business).
   tenantId: { type: String, default: null, index: true },
+  // A suspended rider cannot sign in or request rides (set from the admin dashboard, with a reason).
+  accountStatus: { type: String, enum: ['ACTIVE', 'SUSPENDED'], default: 'ACTIVE' },
+  suspendedAt: { type: Date, default: null },
+  suspendedReason: { type: String, default: null },
   userId: {
     type: String,
     unique: true,

@@ -11,6 +11,8 @@ const fleetDocs = require('../controllers/fleet/documents');
 const fleetAvailability = require('../controllers/fleet/availability');
 const ops = require('../controllers/opsController');
 const platform = require('../controllers/platformController');
+const reports = require('../controllers/reportsController');
+const support = require('../controllers/supportController');
 const { can } = require('../lib/adminPermissions');
 const { adminLoginLimiters } = require('../lib/rateLimit');
 
@@ -30,13 +32,17 @@ router.post('/auth/change-password', requireAdmin(), ctrl.changePassword);
 router.get('/tenants', requireAdmin(), ctrl.listTenants);
 router.post('/tenants', requireAdmin('clients.manage'), ctrl.createTenant);
 router.patch('/tenants/:id/status', requireAdmin('clients.manage'), ctrl.setTenantStatus);
+router.patch('/tenants/:id', requireAdmin('clients.manage'), ctrl.updateTenant);
 
 router.get('/users', requireAdmin('team.manage'), ctrl.listUsers);
 router.post('/users', requireAdmin('team.manage'), ctrl.createUser);
 router.patch('/users/:id/active', requireAdmin('team.manage'), ctrl.setUserActive);
+router.patch('/users/:id', requireAdmin('team.manage'), ctrl.updateUser);
+router.post('/users/:id/reset-password', requireAdmin('team.manage'), ctrl.resetUserPassword);
 
 router.get('/dashboard', requireAdmin('dashboard.view'), ctrl.dashboard);
 router.get('/platform/overview', requireAdmin('clients.manage'), platform.overview);
+router.get('/platform/audit', requireAdmin('clients.manage'), ctrl.platformAudit);
 router.get('/audit', requireAdmin('audit.view'), ctrl.listAudit);
 
 // Business configuration. The business is named by the X-App-Id header and checked against the signed-in account.
@@ -90,13 +96,23 @@ router.get('/business/availability', ...viewDrivers, fleetAvailability.summary);
 
 // ---- operations: audit log, alerts, statistics, riders, trips (read only) ----
 router.get('/business/audit', requireAdmin('audit.view'), withBusiness, ops.audit);
+router.get('/business/audit.csv', requireAdmin('audit.view'), withBusiness, ops.auditCsv);
+router.get('/business/support/issues', requireAdmin('support.manage'), withBusiness, support.list);
+router.get('/business/support/issues/:id', requireAdmin('support.manage'), withBusiness, support.get);
+router.post('/business/support/issues/:id', requireAdmin('support.manage'), withBusiness, support.update);
 router.get('/business/alerts', ...read, ops.alerts);
+router.get('/business/reports/summary', requireAdmin('trips.view'), withBusiness, reports.summary);
+router.get('/business/export/trips.csv', requireAdmin('trips.view'), withBusiness, reports.tripsCsv);
+router.get('/business/export/riders.csv', requireAdmin('riders.view'), withBusiness, reports.ridersCsv);
+router.get('/business/export/drivers.csv', requireAdmin('drivers.view'), withBusiness, reports.driversCsv);
 router.get('/business/stats', ...read, ops.stats);
 router.get('/business/live-map', requireAdmin('dashboard.view'), withBusiness, ops.liveMap);
 router.get('/business/riders', requireAdmin('riders.view'), withBusiness, ops.riders);
 router.get('/business/riders/:id', requireAdmin('riders.view'), withBusiness, ops.rider);
+router.post('/business/riders/:id/status', requireAdmin('riders.manage'), withBusiness, ops.setRiderStatus);
 router.get('/business/trips', requireAdmin('trips.view'), withBusiness, ops.trips);
 router.get('/business/trips/:id', requireAdmin('trips.view'), withBusiness, ops.trip);
+router.post('/business/trips/:id/cancel', requireAdmin('trips.manage'), withBusiness, ops.cancelTrip);
 
 router.get('/business/drivers', ...viewDrivers, fleetDrivers.list);
 router.post('/business/drivers', ...manageDrivers, fleetDrivers.create);

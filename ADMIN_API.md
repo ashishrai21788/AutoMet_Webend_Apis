@@ -182,3 +182,31 @@ All use the business named by `X-App-Id` and the signed-in account, like the oth
 - **Indexes:** the driver model declares a 2dsphere index on `lastLocation` and one on `isOnline, locationUpdatedAt`. Mongoose creates them when the server starts (auto-index is not disabled).
 
 `GET /api/admin/business/live-map` (`dashboard.view`): online drivers that have a position (`presence`, `ageSeconds`, `eligible` and reasons, vehicle, `currentTripId`), active trips (searching and in progress), the business's drawn service areas, `counts` (live, stale, noSignal, eligibleLive, online, activeTrips, searching) and the freshness settings. Drivers with no position are only counted. The driver list and detail now include `online`, `presence`, `lastSeenAt`, `lastLocationAt`, `position` and `currentTripId`; statistics add `onlineLive`, `onlineStale`, `onlineNoSignal`.
+
+## Reports and exports
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/admin/business/reports/summary` | `trips.view` | `from` and `to` are calendar days (`YYYY-MM-DD`, both included) in the business's time zone; default is the last 30 days; at most 92 days. Filters: `regionId`, `categoryId`, `driverId`. Returns ride outcomes and rates (completion, cancellation by riders and by drivers, no driver), average response, trip time, distance and fare; money from completed trips (gross fares, booking fees, taxes, by payment mode, and whether the fares are estimates or final); a series per day; breakdowns by category, region and driver (what each driver did with the requests they could answer). `finance.unavailable` lists what is not recorded: payments received, commission, earnings, refunds. Covers at most the 20,000 most recent trips of the range (`partial: true` beyond that). |
+| `GET /api/admin/business/export/trips.csv` | `trips.view` | Same range and filters, plus `statusGroup`. |
+| `GET /api/admin/business/export/riders.csv` | `riders.view` | All riders with all-time trip counts. |
+| `GET /api/admin/business/export/drivers.csv` | `drivers.view` | All drivers with status, verification, region, category, last seen. |
+| `GET /api/admin/business/audit.csv` | `audit.view` | The audit log with the same filters as the screen. |
+
+Exports are UTF-8 with a byte-order mark (so Excel reads names correctly), at most 20,000 rows (`X-Truncated: true` when cut), carry `X-Row-Count` and `Content-Disposition`, are `no-store`, neutralise cells that begin with `= + - @` (spreadsheet formula injection), and each export is written to the audit log (`export.trips`, `export.riders`, `export.drivers`, `export.audit`). The CORS configuration exposes `Content-Disposition`, `X-Row-Count` and `X-Truncated` to the dashboard.
+
+## Admin actions
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `POST /api/admin/business/riders/:id/status` | `riders.manage` | `{ status: "ACTIVE" \| "SUSPENDED", reason }` (a reason of 5 or more characters is required to suspend). A suspended rider is signed out at once, cannot sign in (`ACCOUNT_SUSPENDED`, 403), their token stops working, and they cannot request a ride. Audited as `rider.status_changed`. |
+| `POST /api/admin/business/trips/:id/cancel` | `trips.manage` | `{ reason }` (5 or more characters). Only open trips (searching, accepted, on the way, arrived, in progress). Decided in one atomic update, so two admins cannot both succeed (`409` for a trip that is no longer open). Stored with the status the apps already understand (`CANCELLED_BY_USER` before a driver accepted, `CANCELLED_BY_USER_AFTER_ACCEPTANCE` after) and `cancelled_by: "ADMIN"`; the rider's and driver's apps get a cancellation event. Audited as `trip.cancelled_by_admin`. |
+| `GET /api/admin/business/support/issues` | `support.manage` | Problems this business's drivers reported from the driver app (collection `driver_issues_reports`). Filters `status` (`issue submitted`, `under process`, `complete`), `q`. Returns `open`, the number not yet resolved. |
+| `GET /api/admin/business/support/issues/:id` | `support.manage` | One report with its notes. Only `https` image links are returned. |
+| `POST /api/admin/business/support/issues/:id` | `support.manage` | `{ status?, note? }`: at least one. Keeps an internal history, sets the resolved time, and the latest note is what the driver app shows. Audited as `support.issue_updated`. |
+| `PATCH /api/admin/users/:id` | `team.manage` | `{ name?, role? }`. Cannot change your own role, a super admin, or another business's person; a business must keep one active client admin. A role change ends that person's sessions. |
+| `POST /api/admin/users/:id/reset-password` | `team.manage` | A new one-time password (shown once, never stored in the audit log); the person must change it at the next sign-in; their sessions end and any lockout is cleared. |
+| `PATCH /api/admin/tenants/:id` | `clients.manage` | `{ name?, appName?, city?, plan? }`. The App ID and package name never change. Moving to a paid plan ends the trial and back to `trial` makes it a trial again (a suspended business stays suspended). |
+| `GET /api/admin/platform/audit` | `clients.manage` | Events of every business and the platform, with `businessName`; filters as the business log plus `tenantId`. |
+
+Permissions added: `riders.manage` and `trips.manage` (client admin and operations), `support.manage` (client admin, operations, support). Trips cancelled by a driver (`CANCELLED_BY_DRIVER`, written by `POST /api/v1/trips/cancel-request`) are now counted as cancellations everywhere. Security fixes in the driver API: `GET /api/drivers/:driverId/issues` now needs the driver's own sign-in, and `PUT /api/drivers/issues/:issueId`, which let any signed-in driver change any report, now refuses.

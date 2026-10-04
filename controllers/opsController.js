@@ -16,6 +16,8 @@ const { computeSummary } = require('./fleet/availability');
 const { driverEligibility } = require('../lib/eligibility');
 const { presenceOf, positionOf, config: locationConfig } = require('../lib/driverLocation');
 const { startOfDay, dateKey } = require('../lib/timeZone');
+const { buildAuditFilter, shapeAudit, safeMeta } = require('../lib/auditQuery');
+const { toCsv, sendCsv } = require('../lib/csv');
 const c = require('./fleet/common');
 
 const Driver = () => createModel('drivers');
@@ -27,61 +29,41 @@ const tripScope = (req) => tenantMatch(req.business, 'tenant_id');
 const fullName = (u) => [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.name || '';
 const validDate = (v) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d; };
 
-/** Trip statuses grouped the way an operator thinks about them. */
-const STATUS_GROUPS = {
-  searching: ['REQUESTED'],
-  active: ONGOING,
-  completed: ['COMPLETED'],
-  cancelled: CANCELLED,
-  unanswered: ['REJECTED', 'REJECTED_WITH_REASON', 'NO_RESPONSE']
-};
-const groupOf = (status) => Object.keys(STATUS_GROUPS).find((g) => STATUS_GROUPS[g].includes(status)) || 'other';
+const { STATUS_GROUPS, groupOf, OPEN_STATUSES } = require('../lib/tripStatus');
 
 // ---------------------------------------------------------------- audit log
 
-const SECRET_KEY = /pass(word)?|token|secret|authorization|url|link|key|number|otp/i;
-/** What the log shows of an event's details: never secrets, document numbers or links. */
-function safeMeta(meta) {
-  if (!meta || typeof meta !== 'object') return null;
-  const out = {};
-  for (const [k, v] of Object.entries(meta)) {
-    if (SECRET_KEY.test(k) || v === undefined || v === null || v === '') continue;
-    out[k] = typeof v === 'object' ? JSON.stringify(v).slice(0, 200) : String(v).slice(0, 200);
-  }
-  return Object.keys(out).length ? out : null;
-}
-
 exports.audit = c.handle(async (req, res) => {
   const { page, pageSize, skip } = c.pageParams(req.query);
-  const filter = { tenantId: req.business.tenantId };
-  const q = String(req.query.q || '').trim().slice(0, 80);
-  if (q) filter.$or = [{ actorEmail: { $regex: c.escapeRegex(q), $options: 'i' } }, { targetId: { $regex: c.escapeRegex(q), $options: 'i' } }, { action: { $regex: c.escapeRegex(q), $options: 'i' } }];
-  const action = String(req.query.action || '').trim();
-  if (action) filter.action = { $regex: `^${c.escapeRegex(action)}`, $options: 'i' };
-  const targetType = String(req.query.targetType || '').trim();
-  if (targetType) filter.targetType = targetType;
-  const actor = String(req.query.actor || '').trim().toLowerCase();
-  if (actor) filter.actorEmail = actor;
-  const from = req.query.from ? validDate(req.query.from) : null;
-  const to = req.query.to ? validDate(req.query.to) : null;
-  if (req.query.from && !from) return c.invalid(res, { from: 'Enter a valid date' });
-  if (req.query.to && !to) return c.invalid(res, { to: 'Enter a valid date' });
-  if (from || to) filter.at = { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) };
-
+  const { filter, errors } = buildAuditFilter(req.query, req.business.tenantId);
+  if (errors) return c.invalid(res, errors);
   const [rows, total, recent] = await Promise.all([
     AdminAudit.find(filter).sort({ at: -1 }).skip(skip).limit(pageSize).lean(),
     AdminAudit.countDocuments(filter),
     AdminAudit.find({ tenantId: req.business.tenantId }).sort({ at: -1 }).limit(500).lean()
   ]);
-  const items = rows.map((r) => ({
-    id: String(r._id || `${r.at && new Date(r.at).getTime()}-${r.action}-${r.targetId}`), at: r.at, action: r.action, actorEmail: r.actorEmail || null,
-    targetType: r.targetType || null, targetId: r.targetId || null, details: safeMeta(r.meta)
-  }));
   return c.ok(res, {
-    items, total, page, pageSize,
+    items: rows.map(shapeAudit), total, page, pageSize,
     // choices for the filters, taken from the most recent events
     facets: { actions: [...new Set(recent.map((r) => r.action))].sort(), targetTypes: [...new Set(recent.map((r) => r.targetType).filter(Boolean))].sort(), actors: [...new Set(recent.map((r) => r.actorEmail).filter(Boolean))].sort() }
   });
+});
+
+exports.auditCsv = c.handle(async (req, res) => {
+  const { filter, errors } = buildAuditFilter(req.query, req.business.tenantId);
+  if (errors) return c.invalid(res, errors);
+  const rows = await AdminAudit.find(filter).sort({ at: -1 }).limit(20001).lean();
+  const partial = rows.length > 20000;
+  const kept = (partial ? rows.slice(0, 20000) : rows).map(shapeAudit);
+  const csv = toCsv(kept, [
+    { header: 'When (UTC)', value: (e) => e.at }, { header: 'Who', value: (e) => e.actorEmail }, { header: 'Action', value: (e) => e.action },
+    { header: 'Target type', value: (e) => e.targetType }, { header: 'Target', value: (e) => e.targetId }, { header: 'Details', value: (e) => (e.details ? Object.entries(e.details).map(([k, v]) => k + ': ' + v).join('; ') : '') }
+  ]);
+  try {
+    await AdminAudit.create({ tenantId: req.business.tenantId, actorId: req.admin.adminId, actorEmail: req.admin.email, action: 'export.audit', targetType: 'export', targetId: null, meta: { rows: kept.length }, ip: req.ip || null });
+  } catch (e) { console.warn('[ops] audit write failed:', e.message); }
+  res.set({ 'X-Row-Count': String(kept.length), 'X-Truncated': String(partial) });
+  return sendCsv(res, 'audit-log.csv', csv);
 });
 
 // ---------------------------------------------------------------- alerts
@@ -219,12 +201,13 @@ exports.liveMap = c.handle(async (req, res) => {
 
 // ---------------------------------------------------------------- riders
 
-const RIDER_FIELDS = 'userId firstName lastName phone email isPhoneVerified accountStatus status createdAt lastLogin lastActive';
+const RIDER_FIELDS = 'userId firstName lastName phone email isPhoneVerified accountStatus suspendedAt suspendedReason status createdAt lastLogin lastActive';
 
 function riderItem(u, trips) {
   return {
     id: u.userId, name: fullName(u) || u.phone, phone: u.phone, email: u.email || '',
     phoneVerified: !!u.isPhoneVerified, accountStatus: u.accountStatus || u.status || 'ACTIVE',
+    suspendedAt: u.suspendedAt || null, suspendedReason: u.suspendedReason || null,
     registeredAt: u.createdAt || null, lastActiveAt: u.lastActive || u.lastLogin || null, trips: trips || { total: 0, completed: 0, cancelled: 0 }
   };
 }
@@ -361,5 +344,84 @@ exports.trip = c.handle(async (req, res) => {
     rating: null
   });
 });
+
+// ---------------------------------------------------------------- admin actions: rider status and trip cancellation
+
+async function auditAction(req, action, targetType, targetId, meta) {
+  try {
+    await AdminAudit.create({ tenantId: req.business.tenantId, actorId: req.admin.adminId, actorEmail: req.admin.email, action, targetType, targetId, meta, ip: req.ip || null });
+  } catch (e) {
+    console.warn('[ops] audit write failed:', e.message);
+  }
+}
+
+const cleanReason = (v) => String(v || '').trim().replace(/\s+/g, ' ');
+
+/** POST /business/riders/:id/status  { status: 'ACTIVE' | 'SUSPENDED', reason } (a reason is required to suspend) */
+exports.setRiderStatus = c.handle(async (req, res) => {
+  const status = String((req.body && req.body.status) || '').toUpperCase();
+  const reason = cleanReason(req.body && req.body.reason);
+  const errors = {};
+  if (!['ACTIVE', 'SUSPENDED'].includes(status)) errors.status = 'Choose Active or Suspended';
+  if (status === 'SUSPENDED' && reason.length < 5) errors.reason = 'Give a reason of at least 5 characters';
+  if (reason.length > 300) errors.reason = 'Keep the reason under 300 characters';
+  if (Object.keys(errors).length) return c.invalid(res, errors);
+
+  const rider = await req.legacyData.findOne(User(), { userId: String(req.params.id) }).lean();
+  if (!rider) return c.fail(res, 404, 'Rider not found');
+  const from = rider.accountStatus || 'ACTIVE';
+  if (from === status) return c.fail(res, 409, `This rider is already ${status.toLowerCase()}`);
+
+  const now = new Date();
+  await req.legacyData.update(User(), { userId: rider.userId }, status === 'SUSPENDED'
+    ? { accountStatus: 'SUSPENDED', suspendedAt: now, suspendedReason: reason, isLoggedin: false, accessToken: null } // signing the rider out at once
+    : { accountStatus: 'ACTIVE', suspendedAt: null, suspendedReason: null });
+  await auditAction(req, 'rider.status_changed', 'rider', rider.userId, { from, to: status, reason: reason || undefined });
+  return c.ok(res, { id: rider.userId, accountStatus: status });
+});
+
+/**
+ * POST /business/trips/:id/cancel  { reason }
+ * Ends a trip that is stuck or was requested by mistake. Only trips that are still open can be cancelled, decided in one
+ * atomic update so two admins (or the rider and an admin) cannot both succeed. The rider's and driver's apps receive
+ * the usual cancellation events with a note that support cancelled it.
+ */
+exports.cancelTrip = c.handle(async (req, res) => {
+  const reason = cleanReason(req.body && req.body.reason);
+  if (reason.length < 5) return c.invalid(res, { reason: 'Give a reason of at least 5 characters' });
+  if (reason.length > 300) return c.invalid(res, { reason: 'Keep the reason under 300 characters' });
+
+  const scope = tripScope(req);
+  const id = String(req.params.id);
+  const existing = await TripDetails.findOne({ ...scope, trip_id: id }).lean();
+  if (!existing) return c.fail(res, 404, 'Trip not found');
+
+  const fromStatus = existing.status;
+  const beforeAccept = fromStatus === 'REQUESTED';
+  const now = new Date();
+  const updated = await TripDetails.findOneAndUpdate(
+    { ...scope, trip_id: id, status: { $in: OPEN_STATUSES } },
+    { $set: { status: beforeAccept ? 'CANCELLED_BY_USER' : 'CANCELLED_BY_USER_AFTER_ACCEPTANCE', cancelled_by: 'ADMIN', cancel_stage: beforeAccept ? 'before_accept' : 'after_accept', cancellation_reason: `Cancelled by support: ${reason}`, cancelled_at: now, updated_at: now } },
+    { new: true }
+  );
+  if (!updated) {
+    const current = await TripDetails.findOne({ ...scope, trip_id: id }).select('status').lean();
+    return c.fail(res, 409, `This trip can no longer be cancelled (it is ${tripStatusText(current ? current.status : fromStatus)}).`);
+  }
+
+  try {
+    await TripEvent.create({ trip_id: id, event: 'ride_cancelled_by_admin', payload: { by: req.admin.email, reason }, created_at: now });
+  } catch (e) { console.warn('[ops] trip event write failed:', e.message); }
+  try {
+    const { emitToDriver, emitToUser } = require('../config/socket');
+    const payload = { trip_id: id, request_id: existing.request_id, status: updated.status, message: 'This ride was cancelled by support' };
+    if (existing.driver_id) emitToDriver(existing.driver_id, 'ride_cancelled_by_user', payload);
+    if (existing.user_id) emitToUser(existing.user_id, 'ride_cancelled_by_admin', payload);
+  } catch (e) { console.warn('[ops] could not notify the apps:', e.message); }
+  await auditAction(req, 'trip.cancelled_by_admin', 'trip', id, { from: fromStatus, reason });
+  return c.ok(res, { id, status: updated.status });
+});
+
+const tripStatusText = (s) => String(s || '').toLowerCase().replace(/_/g, ' ');
 
 exports.helpers = { safeMeta, STATUS_GROUPS, groupOf };

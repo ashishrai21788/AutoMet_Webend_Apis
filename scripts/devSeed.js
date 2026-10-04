@@ -73,6 +73,11 @@ async function seedDemo(db) {
   await db.TripEvent.create({ trip_id: 'TRIP-1001', event: 'ride_request_received', created_at: ago(25 * 60000) });
   await db.TripEvent.create({ trip_id: 'TRIP-1001', event: 'ride_request_accepted', created_at: ago(23 * 60000) });
 
+  // problems reported from the driver app, for the Support inbox
+  await db.DriverIssue.create({ _id: '650000000000000000000001', driverId: 'drv_demo1', issueText: 'The app closes when I tap Accept on a ride request.', imageUrls: [], status: 'issue submitted', createdAt: ago(3 * 3600000), updatedAt: ago(3 * 3600000) });
+  await db.DriverIssue.create({ _id: '650000000000000000000002', driverId: 'drv_demo2', issueText: 'My last trip fare shows less than the rider paid.\nPlease check trip TRIP-1004.', status: 'under process', adminNotes: 'Checking the fare with the rider', notes: [{ at: ago(3600000), by: DEMO_ADMIN.email, text: 'Checking the fare with the rider', status: 'under process' }], createdAt: ago(26 * 3600000), updatedAt: ago(3600000) });
+  await db.DriverIssue.create({ _id: '650000000000000000000003', driverId: 'drv_demo4', issueText: 'Could not upload my insurance document.', status: 'complete', resolvedAt: ago(2 * DAY), createdAt: ago(4 * DAY), updatedAt: ago(2 * DAY) });
+
   const e = (action, targetType, targetId, actorEmail, at, meta) => db.AdminAudit.create({ tenantId: t, actorEmail, actorId: actorEmail, action, targetType, targetId, meta, at });
   await e('driver.created', 'driver', 'drv_demo1', DEMO_ADMIN.email, ago(10 * DAY));
   await e('document.reviewed', 'driver_document', 'dd_demo1', DEMO_ADMIN.email, ago(9 * DAY), { decision: 'APPROVED', number: 'KA0120250001' });

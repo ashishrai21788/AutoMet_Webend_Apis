@@ -274,6 +274,11 @@ exports.setUserActive = async (req, res) => {
     resolveTenantScope(req.admin, user.tenantId); // 403 when the user belongs to another client
     if (user.adminId === req.admin.adminId) return bad(res, 400, 'You cannot change your own access');
     if (user.role === 'super_admin' && !isSuperAdmin(req.admin)) return bad(res, 403, 'Not allowed');
+    // a business must always keep at least one active client admin
+    if (!active && user.role === 'client_admin' && user.active !== false) {
+      const others = await AdminUser.countDocuments({ tenantId: user.tenantId, role: 'client_admin', active: true, adminId: { $ne: user.adminId } });
+      if (others === 0) return bad(res, 400, 'This is the only active client admin. Make someone else a client admin first.');
+    }
 
     user.active = active;
     if (!active) user.tokenVersion = (user.tokenVersion || 0) + 1;
@@ -343,5 +348,128 @@ exports.listAudit = async (req, res) => {
     })));
   } catch (e) {
     return bad(res, e.status || 500, e.status ? e.message : 'Could not load the audit log');
+  }
+};
+
+// ---------- team: edit, reset password; business: edit; platform audit ----------
+
+const EDITABLE_ROLES = ROLES.filter((r) => r !== 'super_admin');
+
+/** PATCH /users/:id  { name?, role? } */
+exports.updateUser = async (req, res) => {
+  try {
+    const b = req.body || {};
+    const user = await AdminUser.findOne({ adminId: req.params.id });
+    if (!user) return bad(res, 404, 'User not found');
+    resolveTenantScope(req.admin, user.tenantId); // 403 when the user belongs to another client
+    if (user.role === 'super_admin') return bad(res, 403, 'Not allowed');
+    const errors = {};
+    const changes = {};
+    if ('name' in b) {
+      const name = String(b.name || '').trim();
+      if (name.length < 2 || name.length > 80) errors.name = 'Name must be 2 to 80 characters';
+      else if (name !== user.name) changes.name = name;
+    }
+    if ('role' in b) {
+      const role = String(b.role || '');
+      if (!EDITABLE_ROLES.includes(role)) errors.role = `Role must be one of ${EDITABLE_ROLES.join(', ')}`;
+      else if (role !== user.role) {
+        if (user.adminId === req.admin.adminId) errors.role = 'You cannot change your own role';
+        else changes.role = role;
+      }
+    }
+    if (Object.keys(errors).length) return res.status(400).json({ success: false, message: Object.values(errors)[0], errors, data: null });
+    if (Object.keys(changes).length === 0) return bad(res, 400, 'Nothing to change');
+
+    // a business must always keep at least one active client admin
+    if (changes.role && user.role === 'client_admin' && user.active !== false) {
+      const others = await AdminUser.countDocuments({ tenantId: user.tenantId, role: 'client_admin', active: true, adminId: { $ne: user.adminId } });
+      if (others === 0) return bad(res, 400, 'This is the only active client admin. Make someone else a client admin first.');
+    }
+    const previousRole = user.role;
+    Object.assign(user, changes);
+    // a changed role changes what the person may do, so any session they have is ended and they sign in again
+    if (changes.role) user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    await audit(req, 'user.updated', { tenantId: user.tenantId, targetType: 'admin_user', targetId: user.adminId, meta: { from: changes.role ? previousRole : undefined, to: changes.role, renamed: changes.name ? true : undefined } });
+    return ok(res, publicAdmin(user));
+  } catch (e) {
+    return bad(res, e.status || 500, e.status ? e.message : 'Could not update the user');
+  }
+};
+
+/** POST /users/:id/reset-password: a new one-time password, shown once; the person must change it at the next sign-in. */
+exports.resetUserPassword = async (req, res) => {
+  try {
+    const user = await AdminUser.findOne({ adminId: req.params.id });
+    if (!user) return bad(res, 404, 'User not found');
+    resolveTenantScope(req.admin, user.tenantId);
+    if (user.adminId === req.admin.adminId) return bad(res, 400, 'Change your own password from Admin Profile');
+    if (user.role === 'super_admin') return bad(res, 403, 'Not allowed');
+    const password = temporaryPassword();
+    user.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
+    user.mustChangePassword = true;
+    user.failedLogins = 0;
+    user.lockUntil = null;
+    user.tokenVersion = (user.tokenVersion || 0) + 1; // every session this person has ends
+    await user.save();
+    await audit(req, 'user.password_reset', { tenantId: user.tenantId, targetType: 'admin_user', targetId: user.adminId, meta: { email: user.email } });
+    return ok(res, { ...publicAdmin(user), temporaryPassword: password });
+  } catch (e) {
+    return bad(res, e.status || 500, e.status ? e.message : 'Could not reset the password');
+  }
+};
+
+/** PATCH /tenants/:id  { name?, appName?, plan?, city? }: the platform owner edits a business's details. The App ID and package name never change. */
+exports.updateTenant = async (req, res) => {
+  try {
+    const b = req.body || {};
+    const tenant = await Tenant.findOne({ tenantId: req.params.id });
+    if (!tenant) return bad(res, 404, 'Client not found');
+    const errors = {};
+    const changes = {};
+    const take = (field, min, max, label) => {
+      if (!(field in b)) return;
+      const v = String(b[field] || '').trim();
+      if (v.length < min || v.length > max) errors[field] = `${label} must be ${min} to ${max} characters`;
+      else if (v !== tenant[field]) changes[field] = v;
+    };
+    take('name', 2, 80, 'Business name');
+    take('appName', 2, 40, 'App name');
+    if ('city' in b) { const v = String(b.city || '').trim(); if (v.length > 80) errors.city = 'City must be under 80 characters'; else if (v !== (tenant.city || '')) changes.city = v; }
+    if ('plan' in b) { if (!PLANS.includes(String(b.plan))) errors.plan = `Plan must be one of ${PLANS.join(', ')}`; else if (b.plan !== tenant.plan) changes.plan = String(b.plan); }
+    if ('packageName' in b || 'appId' in b || 'tenantId' in b) errors.packageName = 'The App ID and package name cannot be changed';
+    if (Object.keys(errors).length) return res.status(400).json({ success: false, message: Object.values(errors)[0], errors, data: null });
+    if (Object.keys(changes).length === 0) return bad(res, 400, 'Nothing to change');
+    const previousPlan = tenant.plan;
+    // moving to a paid plan ends the trial, and back to the trial plan makes it a trial again (a suspended business stays suspended)
+    if (changes.plan && tenant.status !== 'suspended') changes.status = changes.plan === 'trial' ? 'trial' : 'active';
+    Object.assign(tenant, changes);
+    await tenant.save();
+    await audit(req, 'tenant.updated', { tenantId: tenant.tenantId, targetType: 'tenant', targetId: tenant.tenantId, meta: { fields: Object.keys(changes).join(','), plan: changes.plan ? `${previousPlan} -> ${changes.plan}` : undefined } });
+    return ok(res, publicTenant(tenant));
+  } catch (e) {
+    if (e.code === 11000) return bad(res, 409, 'Another business already uses that name');
+    return bad(res, e.status || 500, e.status ? e.message : 'Could not update the business');
+  }
+};
+
+/** GET /platform/audit: events of every business and of the platform itself, for the platform owner. */
+exports.platformAudit = async (req, res) => {
+  try {
+    const { buildAuditFilter, shapeAudit } = require('../lib/auditQuery');
+    const { filter, errors } = buildAuditFilter(req.query, null);
+    if (errors) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields', errors, data: null });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 25));
+    const [rows, total, tenants] = await Promise.all([
+      AdminAudit.find(filter).sort({ at: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean(),
+      AdminAudit.countDocuments(filter),
+      Tenant.find({}).select('tenantId name').lean()
+    ]);
+    const names = new Map(tenants.map((t) => [t.tenantId, t.name]));
+    return ok(res, { items: rows.map((r) => ({ ...shapeAudit(r), businessName: r.tenantId ? names.get(r.tenantId) || r.tenantId : 'Platform' })), total, page, pageSize });
+  } catch (e) {
+    return bad(res, 500, 'Could not load the platform audit log');
   }
 };

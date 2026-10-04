@@ -49,6 +49,7 @@ const DEMO_PASSWORD = 'Super-Demo-123';
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-App-Id');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Expose-Headers', 'Content-Disposition, X-Row-Count, X-Truncated, Retry-After');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
   });

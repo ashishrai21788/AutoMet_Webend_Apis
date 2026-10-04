@@ -79,12 +79,21 @@ router.post(
   requireAuth({ roles: ['driver'], enforceBodyDriverIdCamelCase: true }),
   dynamicController.submitDriverIssue
 );
-router.get('/drivers/:driverId/issues', dynamicController.getDriverIssues);
-router.put(
-  '/drivers/issues/:issueId',
+// A driver reads only their own reports. (This route used to need no sign-in at all.)
+router.get(
+  '/drivers/:driverId/issues',
   requireAuth({ roles: ['driver'] }),
-  dynamicController.updateIssueStatus
+  (req, res, next) => {
+    if (req.authActorId && req.authActorId !== String(req.params.driverId)) {
+      return res.status(403).json({ success: false, message: 'You can only read your own reports', data: null });
+    }
+    next();
+  },
+  dynamicController.getDriverIssues
 );
+// Changing a report's status or notes is the business's job and lives in the admin dashboard (Support). This route used to
+// let any signed-in driver change any report, so it now refuses.
+router.put('/drivers/issues/:issueId', (req, res) => res.status(403).json({ success: false, message: 'Issue status is managed by support, not from the app', data: null }));
 
 // Driver Notifications Routes - MUST come before dynamic routes
 router.get(
