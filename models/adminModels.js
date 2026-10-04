@@ -21,6 +21,8 @@ const tenantSchema = new mongoose.Schema({
   brandColor: { type: String, default: '#f5a300', trim: true },
   supportEmail: { type: String, default: '', trim: true },
   supportPhone: { type: String, default: '', trim: true },
+  /** https link to the business's logo, shown in its apps. */
+  logoUrl: { type: String, default: '', trim: true },
   /** Operating country of the business; null until the owner completes the first onboarding step. */
   market: { type: marketSchema, default: null },
   /** Ride rules: { requireEligibleDrivers } (see lib/driverAvailability.js). */

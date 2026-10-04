@@ -248,6 +248,7 @@ app.use('/api/otp', otpRoutes); // OTP routes for driver verification (collectio
 app.use('/api/images', require('./routes/imageRoutes')); // Image upload/delete routes
 app.use('/api/v1/rides', require('./routes/rideRoutes')); // Ride request, accept, reject, status, timeline, check-timeouts
 app.use('/api/v1/ride-actions', require('./routes/rideActionRoutes')); // Ride actions: request, accept, reject, cancel (atomic, idempotent)
+app.use('/api/v1/public', require('./routes/publicRoutes')); // Public business config for the rider/driver apps (X-App-Id), no sign-in
 app.use('/api/v1/trips', require('./routes/tripRoutes')); // Trip create-request (30s wait), driver-response, check-timeouts
 
 // JSON Syntax Error Handler - must come before general error handler

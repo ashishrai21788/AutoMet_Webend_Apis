@@ -148,3 +148,26 @@ Enforced in `PUT /api/drivers/online-status` (going online only; going offline i
   - With more than one server instance the counters need a shared store.
 - **CORS**: browsers are limited to `https://auto-met-admin.vercel.app` and local development (`http://localhost:5173`). Add more with `CORS_ALLOWED_ORIGINS` (comma separated). The mobile apps send no `Origin` header and are unaffected.
 - **`ssl/key.pem` and `cert.pem`** are no longer tracked and `ssl/` and `*.pem` are ignored. They stay in git history: treat them as exposed.
+
+## Operations endpoints (read only)
+
+All use the business named by `X-App-Id` and the signed-in account, like the other `/api/admin/business/*` routes. Lists are paged with `page` and `pageSize` (default 20, at most 100) and return `{ items, total, page, pageSize }`.
+
+| Endpoint | Permission | Notes |
+|---|---|---|
+| `GET /api/admin/business/audit` | `audit.view` | Filters: `q` (who, action or target), `action` (prefix, such as `driver.`), `targetType`, `actor` (email), `from`, `to`. Newest first. `details` never contains passwords, tokens, links or document numbers. Also returns `facets` for the filter lists. |
+| `GET /api/admin/business/alerts` | `dashboard.view` | Worked out from live records: no active region, regions without a centre and radius, categories without a price or without an active region, expired and expiring (30 days) driver and vehicle documents, documents awaiting review (warning after 48 h), suspended drivers, verified drivers without a vehicle. Each alert has `severity` (`critical`, `warning`, `info`), up to 10 `items`, `more`, and a dashboard `link`. Dispatch and payment failures are not reported because they are not recorded. |
+| `GET /api/admin/business/stats` | `dashboard.view` | Drivers (total, online, eligible), trips (active, searching, today, 7-day series, acceptance and cancellation rate), fares completed today, riders. "Today" is the business's own calendar day (its market time zone). `notAvailable` lists what is not recorded (payments, ratings, driver last-seen). |
+| `GET /api/admin/business/riders` | `riders.view` | `q` searches name, phone, email and ID. Includes trip counts. No credentials or tokens are returned. |
+| `GET /api/admin/business/riders/:id` | `riders.view` | The rider with their 20 most recent trips. `404` for a rider of another business. |
+| `GET /api/admin/business/trips` | `trips.view` | Filters: `statusGroup` (`searching`, `active`, `completed`, `cancelled`, `unanswered`), `status`, `riderId`, `driverId`, `regionId`, `categoryId`, `q` (trip ID), `from`, `to`. |
+| `GET /api/admin/business/trips/:id` | `trips.view` | Route, fare breakdown and its source, cancellation details, timeline and system events. `payment` and `rating` say they are not available yet. `404` for another business's trip. |
+| `GET /api/admin/platform/overview` | `clients.manage` (super admin) | One row per business with driver, rider, trip and admin counts and setup progress, platform totals, and integration status (configured yes/no only, never values). Counts only; no personal data. |
+
+## Public business config (rider and driver apps)
+
+`GET /api/v1/public/business/config` needs no sign-in. The business is the one named in `X-App-Id`; with no header the default business is returned and `resolvedBy` is `"default"`. An unknown App ID gets `400 Unknown app`, a suspended business `403`. The response holds the business name, app name, brand colour, logo link, support contacts, market (country, currency, time zone), active regions (centre and radius), active vehicle categories (`bookable` is false until a price is set and a region is active), `serviceAvailable`, one public ride setting, and a `version`. It is sent with an `ETag` and `Cache-Control: max-age=60`; a matching `If-None-Match` returns `304`. No fare amounts, requirements, package name or internal tags are included. Limited to 120 requests per address per 10 minutes.
+
+## Local demo data
+
+`DEMO_DATA=1 npm run dev:fake` also loads a demo business with sample drivers, riders, trips, documents and audit events (`scripts/devSeed.js`; local test sign-in printed in the console).

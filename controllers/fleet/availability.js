@@ -25,7 +25,7 @@ exports.updateSettings = c.handle(async (req, res) => {
  * How many drivers are available, and how many would be blocked if eligibility were required. Computed from the records:
  * "online" is what the driver app reports (the backend does not receive live locations yet).
  */
-exports.summary = c.handle(async (req, res) => {
+async function computeSummary(req) {
   const [drivers, assignments, vehicles, regions] = await Promise.all([
     req.legacyData.find(dh.Driver(), {}).select('driverId accountStatus driverVerificationStatus verificationExpiresAt operatingRegionId eligibleCategoryId isOnline lastActive').limit(MAX_DRIVERS + 1).lean(),
     req.data.find(DriverVehicleAssignment, { active: true }),
@@ -51,5 +51,8 @@ exports.summary = c.handle(async (req, res) => {
     // for active drivers, why they would be blocked once eligibility is required
     if (active && !e.eligible) for (const r of e.reasons) if (r.code !== 'ACCOUNT_NOT_ACTIVE') out.blockedBy[r.code] = (out.blockedBy[r.code] || 0) + 1;
   }
-  return c.ok(res, { ...out, truncated, settings: rideSettingsOf(req.business) });
-});
+  return { ...out, truncated, settings: rideSettingsOf(req.business) };
+}
+
+exports.computeSummary = computeSummary;
+exports.summary = c.handle(async (req, res) => c.ok(res, await computeSummary(req)));

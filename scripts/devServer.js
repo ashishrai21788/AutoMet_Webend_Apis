@@ -36,6 +36,13 @@ const DEMO_PASSWORD = 'Super-Demo-123';
     passwordHash: bcrypt.hashSync(DEMO_PASSWORD, 10)
   });
 
+  let demo = null;
+  if (process.env.DEMO_DATA === '1') {
+    const { seedDemo, DEMO_ADMIN } = require('./devSeed');
+    await seedDemo(db);
+    demo = DEMO_ADMIN;
+  }
+
   const app = express();
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -58,6 +65,7 @@ const DEMO_PASSWORD = 'Super-Demo-123';
     console.log(' FAKE IN-MEMORY DATABASE: nothing is saved, for local use only');
     console.log(` Admin API: http://localhost:${port}/api/admin`);
     console.log(` Demo super admin: ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
+    if (demo) console.log(` Demo business admin: ${demo.email} / ${demo.password} (Demo Rides, with sample drivers, riders and trips)`);
     console.log('==============================================================');
   });
 })();

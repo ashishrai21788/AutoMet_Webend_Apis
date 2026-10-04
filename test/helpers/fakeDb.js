@@ -169,7 +169,10 @@ function createFakeDb() {
     DriverVehicleAssignment: fakeModel({
       uniques: ['assignmentId', { fields: ['tenantId', 'vehicleId'], only: { active: true } }, { fields: ['tenantId', 'driverId'], only: { active: true } }]
     }),
-    EntityHistory: fakeModel({ defaults: () => ({ at: new Date() }) })
+    EntityHistory: fakeModel({ defaults: () => ({ at: new Date() }) }),
+    // trips
+    TripDetails: fakeModel({ uniques: ['trip_id'] }),
+    TripEvent: fakeModel({})
   };
 
   /** Replaces the real model modules in require.cache. Call before requiring routes or controllers. */
@@ -188,7 +191,8 @@ function createFakeDb() {
       DriverDocument: db.DriverDocument, Vehicle: db.Vehicle, VehicleDocument: db.VehicleDocument,
       DriverVehicleAssignment: db.DriverVehicleAssignment, EntityHistory: db.EntityHistory
     });
-    stub('models/tripDetailsModel.js', { TripDetails: fakeModel({}) });
+    stub('models/tripDetailsModel.js', { TripDetails: db.TripDetails });
+    require.cache[require.resolve(path.join(root, 'models/tripEventModel.js'))] = { id: 'tripEvent', filename: require.resolve(path.join(root, 'models/tripEventModel.js')), loaded: true, exports: db.TripEvent };
     const other = fakeModel({});
     stub('models/dynamicModel.js', {
       createModel: (name) => (name === 'drivers' ? db.Driver : name === 'users' ? db.User : other),

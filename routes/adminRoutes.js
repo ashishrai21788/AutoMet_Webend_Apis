@@ -9,6 +9,8 @@ const fleetVehicles = require('../controllers/fleet/vehicles');
 const fleetAssign = require('../controllers/fleet/assignments');
 const fleetDocs = require('../controllers/fleet/documents');
 const fleetAvailability = require('../controllers/fleet/availability');
+const ops = require('../controllers/opsController');
+const platform = require('../controllers/platformController');
 const { can } = require('../lib/adminPermissions');
 const { adminLoginLimiters } = require('../lib/rateLimit');
 
@@ -34,6 +36,7 @@ router.post('/users', requireAdmin('team.manage'), ctrl.createUser);
 router.patch('/users/:id/active', requireAdmin('team.manage'), ctrl.setUserActive);
 
 router.get('/dashboard', requireAdmin('dashboard.view'), ctrl.dashboard);
+router.get('/platform/overview', requireAdmin('clients.manage'), platform.overview);
 router.get('/audit', requireAdmin('audit.view'), ctrl.listAudit);
 
 // Business configuration. The business is named by the X-App-Id header and checked against the signed-in account.
@@ -84,6 +87,15 @@ router.put('/business/requirements', ...manage, fleetDocs.updateRequirements);
 router.get('/business/ride-settings', ...read, fleetAvailability.getSettings);
 router.put('/business/ride-settings', ...manage, fleetAvailability.updateSettings);
 router.get('/business/availability', ...viewDrivers, fleetAvailability.summary);
+
+// ---- operations: audit log, alerts, statistics, riders, trips (read only) ----
+router.get('/business/audit', requireAdmin('audit.view'), withBusiness, ops.audit);
+router.get('/business/alerts', ...read, ops.alerts);
+router.get('/business/stats', ...read, ops.stats);
+router.get('/business/riders', requireAdmin('riders.view'), withBusiness, ops.riders);
+router.get('/business/riders/:id', requireAdmin('riders.view'), withBusiness, ops.rider);
+router.get('/business/trips', requireAdmin('trips.view'), withBusiness, ops.trips);
+router.get('/business/trips/:id', requireAdmin('trips.view'), withBusiness, ops.trip);
 
 router.get('/business/drivers', ...viewDrivers, fleetDrivers.list);
 router.post('/business/drivers', ...manageDrivers, fleetDrivers.create);
