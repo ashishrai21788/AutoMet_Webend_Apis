@@ -5,6 +5,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const bcrypt = require('bcryptjs');
 const express = require('express');
+const { jsonBodyParser } = require('../lib/jsonBody');
 const { createFakeDb } = require('./helpers/fakeDb');
 
 const db = createFakeDb();
@@ -19,7 +20,7 @@ test.before(async () => {
   const mk = (adminId, email, role, tenantId, pw) => db.AdminUser.create({ adminId, name: adminId, email, role, tenantId, passwordHash: hash(pw) });
   await mk('a_super', 'super@x.test', 'super_admin', null, 'super-password-1');
   const app = express();
-  app.use(express.json());
+  app.use(jsonBodyParser()); // the same parser index.js uses
   app.use('/api/admin', adminRoutes);
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   base = `http://127.0.0.1:${server.address().port}/api/admin`;
@@ -331,3 +332,21 @@ async function resetAlpha() {
   row.lockUntil = null;
   return { password: 'alpha-known-password' };
 }
+
+test('a POST with a JSON header and no body works (confirming setup), but malformed JSON is still rejected', async () => {
+  const raw = async (body) => {
+    const res = await fetch(base + '/business/setup/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ctx.A.token, 'X-App-Id': ctx.A.appId },
+      body
+    });
+    return { status: res.status, text: await res.text() };
+  };
+  const empty = await raw(undefined);
+  assert.notEqual(empty.status, 400, 'an empty body must not be treated as invalid JSON: ' + empty.text);
+  assert.notEqual((await raw('')).status, 400);
+  assert.notEqual((await raw('{}')).status, 400);
+  const broken = await raw('{"broken":');
+  // the parser library reports a failed check as 403; this test only cares that it is still refused
+  assert.ok(broken.status >= 400, 'a body that is present but broken is still rejected (got ' + broken.status + ')');
+});

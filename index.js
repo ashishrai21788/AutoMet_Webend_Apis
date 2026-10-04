@@ -20,6 +20,7 @@ try {
 const dynamicRoutes = require('./routes/dynamicRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const { logHardeningConfig } = require('./lib/hardeningConfig');
+const { jsonBodyParser } = require('./lib/jsonBody');
 
 // Server health monitoring
 let serverHealth = {
@@ -155,19 +156,7 @@ app.use((req, res, next) => {
 });
 
 // Body parsing middleware with better error handling
-app.use(express.json({ 
-  limit: '10mb',
-  strict: true,
-  verify: (req, res, buf, encoding) => {
-    try {
-      JSON.parse(buf.toString('utf8'));
-    } catch (e) {
-      console.error('JSON parse error:', e.message);
-      console.error('Invalid JSON at position:', e.message.match(/position (\d+)/)?.[1] || 'unknown');
-      throw new Error(`Invalid JSON: ${e.message}`);
-    }
-  }
-}));
+app.use(jsonBodyParser());
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Custom JSON error handler

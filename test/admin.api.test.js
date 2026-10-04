@@ -6,6 +6,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const bcrypt = require('bcryptjs');
 const express = require('express');
+const { jsonBodyParser } = require('../lib/jsonBody');
 
 const { createFakeDb } = require('./helpers/fakeDb');
 const db = createFakeDb();
@@ -29,7 +30,7 @@ test.before(async () => {
   await mk('a_lock', 'lock@x.test', 'client_admin', 't_a', 'lock-password-1');
 
   const app = express();
-  app.use(express.json());
+  app.use(jsonBodyParser()); // the same parser index.js uses
   app.use('/api/admin', adminRoutes);
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   base = `http://127.0.0.1:${server.address().port}/api/admin`;
