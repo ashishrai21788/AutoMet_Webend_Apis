@@ -377,6 +377,8 @@ const createDriver = async (req, res, DriverModel) => {
     // Create driver with ALL fields explicitly set to ensure complete data
     const driverData = {
       driverId,
+      // the business whose driver app this driver signed up in (default business when the app sends no App ID)
+      tenantId: req.appTenant ? req.appTenant.tenantId : null,
       firstName,
       lastName,
       email: email.toLowerCase(),

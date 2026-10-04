@@ -5,6 +5,7 @@ const shapes = require('../lib/adminShapes');
 const v = require('../lib/businessValidation');
 const { validateFareRuleInput, calculateFare, MAX_MONEY } = require('../lib/fareRules');
 const { computeSetup } = require('../lib/businessSetup');
+const { matchRegion, hasGeofence } = require('../lib/regionMatch');
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, message: 'OK', data });
 const fail = (res, status, message, errors) => res.status(status).json({ success: false, message, errors: errors || undefined, data: null });
@@ -116,12 +117,13 @@ exports.createRegions = handle(async (req, res) => {
 
   const created = [];
   const skipped = [];
-  for (const city of value.cities) {
+  for (const { name: city, center } of value.cities) {
     const key = v.normalizeKey(value.state, city, value.zoneName);
     if (await req.data.exists(ServiceRegion, { key })) { skipped.push(city); continue; }
     try {
       const row = await req.data.create(ServiceRegion, {
         regionId: newId('rg'), country: market.country, state: value.state, city, zoneName: value.zoneName, key,
+        center: center || null, radiusKm: center ? value.radiusKm : null,
         active: true, createdAt: new Date(), updatedAt: new Date()
       });
       created.push(row);
@@ -154,6 +156,20 @@ exports.updateRegion = handle(async (req, res) => {
     if (DUP(e)) return fail(res, 409, 'That zone already exists for this city', { zoneName: 'Already exists' });
     throw e;
   }
+});
+
+/** Which of this business's regions contains a point (the same matching rides use). */
+exports.locate = handle(async (req, res) => {
+  const center = v.parseCenter({ lat: req.body && req.body.lat, lng: req.body && req.body.lng });
+  if (!center) return invalid(res, { lat: 'Enter a latitude from -90 to 90 and a longitude from -180 to 180' });
+  const regions = await req.data.find(ServiceRegion);
+  const match = matchRegion(regions, center);
+  return ok(res, {
+    serviceAreasSet: hasGeofence(regions),
+    inside: !!match,
+    region: match ? shapes.publicRegion(match.region) : null,
+    distanceKm: match ? match.distanceKm : null
+  });
 });
 
 // ---------- vehicle categories ----------

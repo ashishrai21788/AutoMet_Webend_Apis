@@ -43,6 +43,7 @@ router.post('/business/setup/complete', ...manage, biz.completeSetup);
 
 router.get('/business/regions', ...read, biz.listRegions);
 router.post('/business/regions', ...manage, biz.createRegions);
+router.post('/business/regions/locate', ...read, biz.locate);
 router.patch('/business/regions/:id', ...manage, biz.updateRegion);
 
 router.get('/business/categories', ...read, biz.listCategories);

@@ -118,7 +118,9 @@ exports.registerUser = async (req, res) => {
       fcmToken: null,
       deviceId: null,
       lastActive: new Date(),
-      role: 'user'
+      role: 'user',
+      // the business whose app the rider signed up in (default business when the app sends no App ID)
+      tenantId: req.appTenant ? req.appTenant.tenantId : null
     };
 
     const user = new UserModel(userData);

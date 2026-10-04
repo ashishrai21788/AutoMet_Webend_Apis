@@ -38,7 +38,8 @@ Reads need `dashboard.view`; regions, categories, settings and setup need `setti
 | `PUT /business/settings` | name, appName, brandColor, supportEmail, supportPhone. The appId and package name cannot be changed |
 | `PUT /business/market` | `{country, currency, timezone}`. Country locked once regions or pricing exist; currency locked once pricing exists |
 | `POST /business/setup/complete` | only when steps 1-3 are done |
-| `GET/POST /business/regions`, `PATCH /business/regions/:id` | POST `{state, cities[], zoneName?}` adds several at once and skips duplicates; PATCH edits the zone or sets `active` (no delete) |
+| `GET/POST /business/regions`, `PATCH /business/regions/:id` | POST `{state, cities[], zoneName?, radiusKm?}` adds several at once and skips duplicates (a city may be `{name, lat, lng}` to give its centre); PATCH edits the zone, `active`, or the area (`center` + `radiusKm`, or `center: null` to clear); no delete |
+| `POST /business/regions/locate` | `{lat, lng}` -> which region serves that point |
 | `GET/POST /business/categories`, `PATCH /business/categories/:id` | duplicate names (case-insensitive) are 409; at least one region; deactivate with `active:false` |
 | `GET/PUT /business/fare-rules`, `DELETE /business/fare-rules/:id` | PUT upserts one rule per category and region (`regionId: null` = default for the category) |
 | `POST /business/fare-preview` | `{rule, trip}` returns the fare breakdown; same formula as documented in `lib/fareRules.js` |
@@ -47,6 +48,28 @@ Reads need `dashboard.view`; regions, categories, settings and setup need `setti
 New collections: `service_regions`, `vehicle_categories`, `fare_rules`, `cancellation_policies`, `business_setup_progress`. The business's appId is `tenants.tenantId` (generated as `app_` + 10 characters, immutable in the schema).
 
 **Not connected yet:** the live rider fare (`lib/fare.js`, `FARE_CONFIG`) does not read these rules, and trips/drivers are not yet tagged per business by the apps.
+
+## Rider and driver apps: businesses, regions and pricing
+
+**Which business a request belongs to.** Each business's app sends its App ID in the `X-App-Id` header. A request without the header belongs to the default business, so the apps that exist today keep working unchanged (`lib/appTenant.js`, mounted on `/api` after the admin routes). An unknown App ID is 400; a suspended business is 403 (its apps stop, other businesses are unaffected). If the default business cannot be looked up (database trouble), the request carries on with no business rather than being blocked.
+
+**Tagging.** Riders (`users.tenantId`), drivers (`drivers.tenantId`) and trips (`trip_details.tenant_id`) are tagged with the business at creation. Untagged records are the default business. A trip can only be requested between a rider and a driver of the same business (403 otherwise).
+
+**Service areas.** A region may have a centre point and radius (`center {lat,lng}`, `radiusKm`, 0.5 to 200 km). The Regions screen fills the centre from the city list and defaults the radius to 15 km; edit either on the region. `POST /business/regions/locate {lat,lng}` shows which region serves a point. A point belongs to the active regions whose circle contains it; where circles overlap the smallest radius wins (an airport zone inside a city), then the nearest centre (`lib/regionMatch.js`).
+
+**Pricing a trip** (`lib/tripPricing.js`, used by `POST /api/v1/trips/estimate` and trip creation):
+1. A business with no active fare rule keeps the legacy tariff (`lib/fare.js`, `FARE_CONFIG`): nothing changes for it. The default business is in this state until it configures pricing.
+2. Otherwise, if any active region has an area, the pickup must be inside one (422 `OUTSIDE_SERVICE_AREA`). The driver's vehicle type (or the request's `category_id`) must match an active category by name, ignoring case and punctuation (422 `CATEGORY_NOT_OFFERED`), offered in that region (422 `CATEGORY_UNAVAILABLE_IN_REGION`), and a fare rule must exist for it: the region's own, else the category default (422 `PRICING_NOT_CONFIGURED`).
+3. The fare is the rule's calculation (`lib/fareRules.js`) over the estimated distance and time (straight line x road factor, as before), in the business currency. Surge is not applied.
+
+The response keeps its existing fields and adds `fare_source` (`BUSINESS_RULES` or `LEGACY_TARIFF`), `region_id`, `category_id` and, for business rules, `breakdown`. Trips store `fare_source`, `fare_breakdown`, `region_id`, `category_id`.
+
+**Limits.**
+- The Android apps do not send `X-App-Id` yet, so every rider and driver is the default business until the white-label flavors add it.
+- A driver is matched to a category by comparing its `vehicleType` text with category names. A proper driver-to-category link comes with driver and vehicle management.
+- Phone numbers and emails are unique across all businesses today (existing behaviour), so the same person cannot register in two businesses.
+- Sign-in does not check that an account's business matches the app's `X-App-Id`; ride requests do.
+- Distance and time are still an estimate (no road routing).
 
 ## Local development without MongoDB
 `npm run dev:fake` runs these routes on an in-memory stand-in for the database (`scripts/devServer.js`, port 3000, nothing saved, refuses to run in production). It seeds one demo super admin; the credentials are printed when it starts.

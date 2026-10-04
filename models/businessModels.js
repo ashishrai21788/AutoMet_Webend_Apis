@@ -15,6 +15,9 @@ const serviceRegionSchema = new mongoose.Schema({
   zoneName: { type: String, required: true, trim: true },
   /** lower-cased state|city|zone, used to stop duplicates inside one business */
   key: { type: String, required: true },
+  /** The area this region covers: every point within radiusKm of the centre belongs to it. Null until set. */
+  center: { type: new mongoose.Schema({ lat: Number, lng: Number }, { _id: false }), default: null },
+  radiusKm: { type: Number, default: null },
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

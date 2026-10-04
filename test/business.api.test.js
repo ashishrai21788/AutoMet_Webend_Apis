@@ -350,3 +350,52 @@ test('a POST with a JSON header and no body works (confirming setup), but malfor
   // the parser library reports a failed check as 403; this test only cares that it is still refused
   assert.ok(broken.status >= 400, 'a body that is present but broken is still rejected (got ' + broken.status + ')');
 });
+
+// ------------------------- region areas (centre point and radius) -------------------------
+
+test('regions can carry a centre point and radius; the location checker finds the right one', async () => {
+  const { password } = await resetAlpha();
+  const a = { token: await signIn('alpha@x.test', password), appId: ctx.A.appId };
+
+  const surat = await call('POST', '/business/regions', { ...a, body: { state: 'Gujarat', cities: [{ name: 'Surat', lat: 21.17, lng: 72.83 }, 'Vapi'], zoneName: 'Central', radiusKm: 25 } });
+  assert.equal(surat.status, 201);
+  const [withArea, withoutArea] = surat.body.data.created;
+  assert.deepEqual(withArea.center, { lat: 21.17, lng: 72.83 });
+  assert.equal(withArea.radiusKm, 25);
+  assert.equal(withoutArea.center, null, 'a city typed without coordinates has no area yet');
+  assert.equal(withoutArea.radiusKm, null);
+
+  const overview = await call('GET', '/business/overview', a);
+  assert.ok(overview.body.data.setup.warnings.some((w) => w.code === 'region_no_area' && w.message.includes('Vapi')), 'a region without an area is flagged');
+
+  const inside = await call('POST', '/business/regions/locate', { ...a, body: { lat: 21.18, lng: 72.84 } });
+  assert.equal(inside.status, 200);
+  assert.equal(inside.body.data.inside, true);
+  assert.equal(inside.body.data.region.city, 'Surat');
+  assert.ok(inside.body.data.distanceKm < 3);
+  const outside = await call('POST', '/business/regions/locate', { ...a, body: { lat: 28.6, lng: 77.2 } });
+  assert.equal(outside.body.data.inside, false);
+  assert.equal(outside.body.data.serviceAreasSet, true);
+  assert.equal((await call('POST', '/business/regions/locate', { ...a, body: { lat: 'x', lng: 1 } })).status, 400);
+
+  // give Vapi an area, reject bad values, then clear it
+  const setArea = await call('PATCH', `/business/regions/${withoutArea.id}`, { ...a, body: { center: { lat: 20.37, lng: 72.9 }, radiusKm: 10 } });
+  assert.equal(setArea.status, 200);
+  assert.deepEqual(setArea.body.data.center, { lat: 20.37, lng: 72.9 });
+  const badRadius = await call('PATCH', `/business/regions/${withoutArea.id}`, { ...a, body: { center: { lat: 20.37, lng: 72.9 }, radiusKm: 0 } });
+  assert.equal(badRadius.status, 400);
+  assert.ok(badRadius.body.errors.radiusKm);
+  assert.equal((await call('PATCH', `/business/regions/${withoutArea.id}`, { ...a, body: { center: { lat: 200, lng: 72.9 }, radiusKm: 5 } })).status, 400);
+  assert.equal((await call('PATCH', `/business/regions/${withoutArea.id}`, { ...a, body: { center: { lat: 20.37, lng: 72.9 } } })).status, 400, 'a centre needs a radius');
+  const cleared = await call('PATCH', `/business/regions/${withoutArea.id}`, { ...a, body: { center: null } });
+  assert.equal(cleared.body.data.center, null);
+  assert.equal(cleared.body.data.radiusKm, null);
+});
+
+test('isolation: the location checker only sees the caller\'s own regions', async () => {
+  const b = { token: ctx.B.token, appId: ctx.B.appId };
+  const r = await call('POST', '/business/regions/locate', { ...b, body: { lat: 21.18, lng: 72.84 } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.inside, false, 'business B has no region there even though business A does');
+  assert.equal((await call('POST', '/business/regions/locate', { token: ctx.B.token, appId: ctx.A.appId, body: { lat: 21.18, lng: 72.84 } })).status, 403);
+});

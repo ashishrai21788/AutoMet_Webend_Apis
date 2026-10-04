@@ -112,7 +112,7 @@ test('region keys ignore case and spacing', () => {
 
 test('setup status: steps, next step and warnings come from the data', () => {
   const market = { country: 'IN', currency: 'INR', timezone: 'Asia/Kolkata' };
-  const region = { regionId: 'r1', active: true, city: 'Pune', zoneName: 'All areas' };
+  const region = { regionId: 'r1', active: true, city: 'Pune', zoneName: 'All areas', center: { lat: 18.52, lng: 73.86 }, radiusKm: 20 };
   const cat = { categoryId: 'c1', name: 'Sedan', active: true, regionIds: ['r1'] };
   const empty = computeSetup({ market: null, regions: [], categories: [], fareRules: [], completedAt: null });
   assert.equal(empty.nextStep.key, 'regions');
@@ -135,6 +135,9 @@ test('setup status: steps, next step and warnings come from the data', () => {
   assert.equal(done.complete, true);
   assert.equal(done.percent, 100);
   assert.deepEqual(done.warnings, []);
+
+  const noArea = computeSetup({ market, regions: [{ ...region, center: null, radiusKm: null }], categories: [cat], fareRules: [rule], completedAt: null });
+  assert.ok(noArea.warnings.some((w) => w.code === 'region_no_area'), 'a region without a centre and radius is flagged');
 
   const regressed = computeSetup({ market, regions: [{ ...region, active: false }], categories: [cat], fareRules: [rule], completedAt: new Date() });
   assert.equal(regressed.complete, false);

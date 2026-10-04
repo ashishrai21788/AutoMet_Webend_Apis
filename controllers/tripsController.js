@@ -6,7 +6,8 @@ const { emitToDriver, emitToUser } = require('../config/socket');
 const { buildImmediateCreateResponse } = require('../lib/createRequestMode');
 const { isDriverReachable, getDriverFcmInfo, sendRideRequestPushWithRetry } = require('../lib/fcmTripPush');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
-const { estimateTrip } = require('../lib/fare');
+const { priceTrip, loadPricingConfig } = require('../lib/tripPricing');
+const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 
 const DRIVER_RESPONSE_TIMEOUT_MS = (Number(process.env.TRIP_DRIVER_RESPONSE_TIMEOUT_SECONDS) || 60) * 1000;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -196,6 +197,21 @@ exports.createRequest = async (req, res) => {
       });
     }
 
+    // A rider can only request a driver of the same business, and the fare comes from that business's own rules.
+    if (!(await sameBusiness(user, driver))) {
+      return res.status(403).json({ success: false, message: 'This driver is not available for your app.', data: { driver_id: driverId } });
+    }
+    const tenant = await tenantForAccount(user);
+    const pricing = priceTrip(await loadPricingConfig(tenant), {
+      pickup: { lat: pickupLat, lng: pickupLng },
+      drop: { lat: dropLat, lng: dropLng },
+      vehicleType: driver.vehicleType
+    });
+    if (!pricing.ok) {
+      return res.status(pricing.status).json({ success: false, message: pricing.message, error: pricing.code, data: { driver_id: driverId } });
+    }
+    const estimate = pricing.estimate;
+
     const duplicate = await TripDetails.findOne({
       user_id: userId,
       driver_id: driverId,
@@ -241,14 +257,6 @@ exports.createRequest = async (req, res) => {
     const tripId = await getNextTripId();
     const timeoutAt = new Date(now.getTime() + DRIVER_RESPONSE_TIMEOUT_MS);
 
-    // Distance, duration and fare are computed here (not on the phones) so the rider, the driver and the receipt
-    // always agree. Based on the driver's vehicle type; see lib/fare.js for the tariff and its limits.
-    const estimate = estimateTrip({
-      pickup: { lat: pickupLat, lng: pickupLng },
-      drop: { lat: dropLat, lng: dropLng },
-      vehicleType: driver.vehicleType
-    });
-
     // Create trip in DB BEFORE sending push so driver-response finds it
     const trip = await TripDetails.create({
       trip_id: tripId,
@@ -263,6 +271,11 @@ exports.createRequest = async (req, res) => {
       distance_km: estimate.distance_km,
       estimated_duration_min: estimate.duration_min,
       fare_basis: estimate.fare_basis,
+      fare_source: estimate.fare_source,
+      fare_breakdown: estimate.breakdown || null,
+      region_id: estimate.region_id || null,
+      category_id: estimate.category_id || null,
+      tenant_id: tenant ? tenant.tenantId : null,
       payment_mode: 'CASH',
       status: 'REQUESTED',
       requested_at: now,
@@ -371,11 +384,19 @@ exports.estimate = async (req, res) => {
       if (driver && driver.vehicleType) vehicleType = driver.vehicleType;
     }
 
-    const estimate = estimateTrip({
+    // the business is the signed-in rider's, else the one named by the app (X-App-Id), else the default business
+    const tenant = req.user ? await tenantForAccount(req.user) : req.appTenant || null;
+    const categoryId = body.category_id != null ? String(body.category_id).trim() : '';
+    const pricing = priceTrip(await loadPricingConfig(tenant), {
       pickup: { lat: pickupLat, lng: pickupLng },
       drop: { lat: dropLat, lng: dropLng },
-      vehicleType
+      vehicleType,
+      categoryId: categoryId || undefined
     });
+    if (!pricing.ok) {
+      return res.status(pricing.status).json({ success: false, message: pricing.message, error: pricing.code });
+    }
+    const estimate = pricing.estimate;
     return res.status(200).json({
       success: true,
       message: 'Fare estimate',
@@ -385,7 +406,11 @@ exports.estimate = async (req, res) => {
         distance_km: estimate.distance_km,
         estimated_duration_min: estimate.duration_min,
         fare_basis: estimate.fare_basis,
+        fare_source: estimate.fare_source,
         vehicle_type: estimate.vehicle_type,
+        region_id: estimate.region_id || null,
+        category_id: estimate.category_id || null,
+        breakdown: estimate.fare_source === 'BUSINESS_RULES' ? estimate.breakdown : undefined,
         payment_mode: 'CASH'
       }
     });

@@ -453,6 +453,8 @@ driverSchema.virtual('fullName').get(function() {
 
 // User-specific schema for "users" collection (login, signup, profile)
 const userSchema = new mongoose.Schema({
+  // Which business (App ID) this rider signed up under. Null = the default business (accounts from before multi-business).
+  tenantId: { type: String, default: null, index: true },
   userId: {
     type: String,
     unique: true,

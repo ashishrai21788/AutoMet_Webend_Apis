@@ -43,6 +43,11 @@ const tripDetailsSchema = new mongoose.Schema({
   estimated_duration_min: { type: Number, default: null },
   fare_basis: { type: String, default: null, enum: ['ESTIMATE', 'ACTUAL', null] },
   payment_mode: { type: String, default: 'CASH', trim: true },
+  // Where the fare came from: the business's own fare rules, or the legacy built-in tariff (see lib/tripPricing.js).
+  fare_source: { type: String, default: null, enum: ['BUSINESS_RULES', 'LEGACY_TARIFF', null] },
+  fare_breakdown: { type: mongoose.Schema.Types.Mixed, default: null },
+  region_id: { type: String, default: null },
+  category_id: { type: String, default: null },
 
   status: {
     type: String,

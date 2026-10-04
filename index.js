@@ -21,6 +21,7 @@ const dynamicRoutes = require('./routes/dynamicRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const { logHardeningConfig } = require('./lib/hardeningConfig');
 const { jsonBodyParser } = require('./lib/jsonBody');
+const { appTenantMiddleware } = require('./lib/appTenant');
 
 // Server health monitoring
 let serverHealth = {
@@ -240,7 +241,9 @@ app.get('/api/health', (req, res) => {
 });
 
 // Routes
-app.use('/api/admin', require('./routes/adminRoutes')); // Admin dashboard API (collections: tenants, admin_users, admin_audit_logs)
+app.use('/api/admin', require('./routes/adminRoutes'));
+// Which business a rider/driver request belongs to (X-App-Id header, default business when absent). Admin routes above do not use it.
+app.use('/api', appTenantMiddleware); // Admin dashboard API (collections: tenants, admin_users, admin_audit_logs)
 app.use('/api/users', require('./routes/userRoutes')); // User: register, login, verify-otp, profile, resend-otp, logout, notifications (collections: users, users_otp, users_notification)
 app.use('/api/user-app-analytics', require('./routes/userAppAnalyticsRoutes')); // User app analytics (collection: user_app_analytics)
 app.use('/api/driver-app-analytics', require('./routes/driverAppAnalyticsRoutes')); // Driver app analytics (collection: driver_app_analytics)
