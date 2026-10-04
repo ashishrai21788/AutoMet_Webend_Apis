@@ -5,6 +5,10 @@ const { ServiceRegion, VehicleCategory } = require('../../models/businessModels'
 const { DriverDocument, Vehicle, DriverVehicleAssignment, EntityHistory } = require('../../models/fleetModels');
 const { can } = require('../../lib/adminPermissions');
 const { driverEligibility } = require('../../lib/eligibility');
+const { presenceFields } = require('../../lib/driverPresenceShape');
+const { TripDetails } = require('../../models/tripDetailsModel');
+const { tenantMatch } = require('../../lib/tenantScope');
+const { ONGOING } = require('../../lib/adminDashboard');
 const { effectiveStoredStatus, computeVerification } = require('../../lib/verification');
 const v = require('../../lib/fleetValidation');
 const c = require('./common');
@@ -60,8 +64,9 @@ async function loadContext(req, driver) {
 
 const vehicleBrief = (vh) => (vh ? { id: vh.vehicleId, registrationNumber: vh.registrationNumber, make: vh.make, model: vh.model, categoryId: vh.categoryId, status: vh.status } : null);
 
-function listItem(d, { vehicle, photoDoc, eligibility }) {
+function listItem(d, { vehicle, photoDoc, eligibility, currentTripId = null }) {
   return {
+    ...presenceFields(d, { currentTripId }),
     id: d.driverId,
     name: c.driverName(d),
     phone: d.phone,
@@ -119,11 +124,15 @@ exports.list = c.handle(async (req, res) => {
   const photoByDriver = new Map(photos.map((p) => [p.driverId, p]));
   const regionById = new Map(regions.map((r) => [r.regionId, r]));
 
+  // the trip each driver on this page is on right now
+  const active = ids.length ? await TripDetails.find({ ...tenantMatch(req.business, 'tenant_id'), driver_id: { $in: ids }, status: { $in: ONGOING } }).select('trip_id driver_id').lean() : [];
+  const tripByDriver = new Map(active.map((t) => [t.driver_id, t.trip_id]));
+
   const items = rows.map((d) => {
     const a = assignmentByDriver.get(d.driverId);
     const vehicle = a ? vehicleById.get(a.vehicleId) || null : null;
     const region = d.operatingRegionId ? regionById.get(d.operatingRegionId) || null : null;
-    return listItem(d, { vehicle, photoDoc: photoByDriver.get(d.driverId), eligibility: driverEligibility({ driver: d, vehicle, region }) });
+    return listItem(d, { vehicle, photoDoc: photoByDriver.get(d.driverId), eligibility: driverEligibility({ driver: d, vehicle, region }), currentTripId: tripByDriver.get(d.driverId) || null });
   });
   return c.ok(res, { items, total, page, pageSize });
 });
@@ -174,6 +183,7 @@ exports.get = c.handle(async (req, res) => {
   const verification = computeVerification(docs, requirements);
   const category = d.eligibleCategoryId ? await req.data.findOne(VehicleCategory, { categoryId: d.eligibleCategoryId }) : null;
   const photoDoc = docs.find((x) => x.type === 'PROFILE_PHOTO');
+  const currentTrip = await TripDetails.findOne({ ...tenantMatch(req.business, 'tenant_id'), driver_id: d.driverId, status: { $in: ONGOING } }).select('trip_id').lean();
 
   return c.ok(res, {
     id: d.driverId,
@@ -191,6 +201,7 @@ exports.get = c.handle(async (req, res) => {
     verificationStatus: verification.status,
     verification: { missing: verification.missing, rejected: verification.rejected, expired: verification.expired, pending: verification.pending },
     eligibility: ctx.eligibility,
+    ...presenceFields(d, { currentTripId: currentTrip ? currentTrip.trip_id : null }),
     vehicle: vehicleBrief(ctx.vehicle),
     assignedAt: ctx.assignment ? ctx.assignment.assignedAt : null,
     // what exists about the driver's activity today; no ride history, earnings or ratings are shown because none are recorded for the dashboard

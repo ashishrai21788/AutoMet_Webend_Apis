@@ -38,8 +38,9 @@ const DEMO_PASSWORD = 'Super-Demo-123';
 
   let demo = null;
   if (process.env.DEMO_DATA === '1') {
-    const { seedDemo, DEMO_ADMIN } = require('./devSeed');
+    const { seedDemo, startDemoMovement, DEMO_ADMIN } = require('./devSeed');
     await seedDemo(db);
+    startDemoMovement(db);
     demo = DEMO_ADMIN;
   }
 

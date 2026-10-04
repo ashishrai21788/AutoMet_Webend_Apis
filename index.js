@@ -489,6 +489,7 @@ setInterval(() => {
 
 // Start HTTP server
 httpServer.listen(PORT, HOST, () => {
+  require('./services/driverPresenceSweeper').startDriverPresenceSweeper(); // takes drivers offline when their location goes quiet
   console.log(`🚀 HTTP Server running on http://${HOST}:${PORT}`);
   logHardeningConfig();
   console.log(`📍 Local HTTP access: http://localhost:${PORT}`);

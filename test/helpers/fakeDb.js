@@ -139,6 +139,13 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
         Object.assign(d, update.$set || {});
       }
     },
+    updateOne: async (f, update) => {
+      const d = rows.find((r) => matches(r, f));
+      if (!d) return { matchedCount: 0 };
+      for (const [k, n] of Object.entries(update.$inc || {})) d[k] = (d[k] || 0) + n;
+      Object.assign(d, update.$set || {});
+      return { matchedCount: 1 };
+    },
     deleteOne: async (f) => {
       const i = rows.findIndex((d) => matches(d, f));
       if (i >= 0) rows.splice(i, 1);

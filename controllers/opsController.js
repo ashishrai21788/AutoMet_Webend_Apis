@@ -13,6 +13,8 @@ const { tenantMatch } = require('../lib/tenantScope');
 const { ONGOING, CANCELLED, computeRates } = require('../lib/adminDashboard');
 const { computeAlerts, summarize } = require('../lib/alerts');
 const { computeSummary } = require('./fleet/availability');
+const { driverEligibility } = require('../lib/eligibility');
+const { presenceOf, positionOf, config: locationConfig } = require('../lib/driverLocation');
 const { startOfDay, dateKey } = require('../lib/timeZone');
 const c = require('./fleet/common');
 
@@ -87,7 +89,7 @@ exports.audit = c.handle(async (req, res) => {
 exports.alerts = c.handle(async (req, res) => {
   const [regions, categories, fareRules, drivers, vehicles, assignments, driverDocs, vehicleDocs] = await Promise.all([
     req.data.find(ServiceRegion).lean(), req.data.find(VehicleCategory).lean(), req.data.find(FareRule, { active: true }).lean(),
-    req.legacyData.find(Driver(), {}).select('driverId firstName lastName name phone accountStatus driverVerificationStatus').limit(MAX_ROWS).lean(),
+    req.legacyData.find(Driver(), {}).select('driverId firstName lastName name phone accountStatus driverVerificationStatus isOnline lastLocation locationUpdatedAt').limit(MAX_ROWS).lean(),
     req.data.find(Vehicle).select('vehicleId registrationNumber status').limit(MAX_ROWS).lean(),
     req.data.find(DriverVehicleAssignment, { active: true }).lean(),
     req.data.find(DriverDocument).select('docId driverId type expiryDate status submittedAt').limit(MAX_ROWS).lean(),
@@ -139,13 +141,79 @@ exports.stats = c.handle(async (req, res) => {
   return c.ok(res, {
     drivers: {
       total: availability.totalDrivers, activeAccounts: availability.activeAccounts, eligible: availability.eligible,
-      online: availability.online, onlineEligible: availability.onlineEligible, onlineNotEligible: availability.onlineNotEligible, partial: !!availability.truncated
+      online: availability.online, onlineEligible: availability.onlineEligible, onlineNotEligible: availability.onlineNotEligible,
+      onlineLive: availability.onlineLive, onlineStale: availability.onlineStale, onlineNoSignal: availability.onlineNoSignal, partial: !!availability.truncated
     },
     trips: { active, searching, requestedToday, completedToday, cancelledToday, ...computeRates(counts), last7Days: days, partial: weekRows.length >= MAX_ROWS },
     revenue: { today: Math.round(revenueToday * 100) / 100, currency: (req.business.market && req.business.market.currency) || null, basis: 'completed trip fares today (estimates until the final fare is recorded)', partial: completedRows.length >= MAX_ROWS },
     riders: { total: riders, newThisWeek: newRiders },
     // honest about what the platform does not record yet
-    notAvailable: ['payments', 'ratings', 'driver last-seen']
+    notAvailable: ['payments', 'ratings']
+  });
+});
+
+// ---------------------------------------------------------------- live map
+
+const MAX_MAP_DRIVERS = 2000;
+const MAP_TRIP_STATUSES = [...ONGOING, ...STATUS_GROUPS.searching];
+
+/**
+ * The picture for the live map: this business's online drivers with their last position and how fresh it is, its
+ * active trips, and its service areas. Drivers that are online but have never sent a position (an older app version)
+ * cannot be placed on a map; they are only counted.
+ */
+exports.liveMap = c.handle(async (req, res) => {
+  const now = new Date();
+  const cfg = locationConfig();
+  const [drivers, assignments, vehicles, regions, trips] = await Promise.all([
+    req.legacyData.find(Driver(), { isOnline: true })
+      .select('driverId firstName lastName name phone accountStatus driverVerificationStatus verificationExpiresAt operatingRegionId eligibleCategoryId isOnline lastActive lastLocation locationUpdatedAt locationHeading locationSpeedKph locationRegionId')
+      .limit(MAX_MAP_DRIVERS + 1).lean(),
+    req.data.find(DriverVehicleAssignment, { active: true }).lean(),
+    req.data.find(Vehicle).select('vehicleId registrationNumber make model categoryId status verificationStatus verificationExpiresAt operatingRegionId').lean(),
+    req.data.find(ServiceRegion).lean(),
+    TripDetails.find({ ...tripScope(req), status: { $in: MAP_TRIP_STATUSES } }).sort({ requested_at: -1 }).limit(500).lean()
+  ]);
+  const truncated = drivers.length > MAX_MAP_DRIVERS;
+  const rows = truncated ? drivers.slice(0, MAX_MAP_DRIVERS) : drivers;
+  const vehicleById = new Map(vehicles.map((v) => [v.vehicleId, v]));
+  const vehicleByDriver = new Map(assignments.map((a) => [a.driverId, vehicleById.get(a.vehicleId) || null]));
+  const regionById = new Map(regions.map((r) => [r.regionId, r]));
+  const tripByDriver = new Map(trips.filter((t) => ONGOING.includes(t.status)).map((t) => [t.driver_id, t.trip_id]));
+
+  const counts = { live: 0, stale: 0, noSignal: 0, eligibleLive: 0 };
+  const mapped = [];
+  for (const d of rows) {
+    const p = presenceOf(d, now, cfg);
+    const e = driverEligibility({ driver: d, vehicle: vehicleByDriver.get(d.driverId) || null, region: d.operatingRegionId ? regionById.get(d.operatingRegionId) || null : null });
+    if (p.state === 'NO_SIGNAL') { counts.noSignal++; continue; }
+    if (p.state === 'LIVE') { counts.live++; if (e.eligible) counts.eligibleLive++; } else counts.stale++;
+    const pos = positionOf(d);
+    const vehicle = vehicleByDriver.get(d.driverId) || null;
+    const region = d.locationRegionId ? regionById.get(d.locationRegionId) : null;
+    mapped.push({
+      id: d.driverId, name: c.driverName(d), phone: d.phone || null, lat: pos.lat, lng: pos.lng, heading: d.locationHeading ?? null, speedKph: d.locationSpeedKph ?? null,
+      presence: p.state, ageSeconds: p.ageSeconds, updatedAt: d.locationUpdatedAt, eligible: e.eligible, eligibilityReasons: e.reasons.map((r) => r.code),
+      accountStatus: d.accountStatus || 'ACTIVE', categoryId: d.eligibleCategoryId || null, regionId: d.locationRegionId || null,
+      regionName: region ? region.city : null,
+      vehicle: vehicle ? { plate: vehicle.registrationNumber, label: [vehicle.make, vehicle.model].filter(Boolean).join(' ') } : null,
+      currentTripId: tripByDriver.get(d.driverId) || null
+    });
+  }
+
+  const activeTrips = trips.map((t) => ({
+    id: t.trip_id, status: t.status, statusGroup: groupOf(t.status), requestedAt: t.requested_at, driverId: t.driver_id, riderId: t.user_id,
+    pickup: t.pickup ? { address: t.pickup.address, lat: t.pickup.lat, lng: t.pickup.lng } : null,
+    drop: t.drop ? { address: t.drop.address, lat: t.drop.lat, lng: t.drop.lng } : null,
+    fare: t.fare ?? null, currency: t.currency || null
+  }));
+
+  return c.ok(res, {
+    generatedAt: now.toISOString(), freshSeconds: cfg.freshSeconds, staleOfflineSeconds: cfg.staleOfflineSeconds, refreshSeconds: cfg.nextHeartbeatSeconds,
+    drivers: mapped, trips: activeTrips,
+    regions: regions.filter((r) => r.active && r.center && Number.isFinite(r.radiusKm)).map((r) => ({ id: r.regionId, name: `${r.city}${r.zoneName && r.zoneName !== 'All areas' ? ` · ${r.zoneName}` : ''}`, center: { lat: r.center.lat, lng: r.center.lng }, radiusKm: r.radiusKm })),
+    counts: { ...counts, online: rows.length, activeTrips: trips.filter((t) => ONGOING.includes(t.status)).length, searching: trips.filter((t) => t.status === 'REQUESTED').length },
+    partial: truncated
   });
 });
 

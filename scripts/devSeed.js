@@ -27,8 +27,8 @@ async function seedDemo(db) {
   await db.FareRule.create({ tenantId: t, ruleId: 'fr_sedan', categoryId: 'vc_sedan', regionId: null, regionKey: 'default', currency: 'INR', baseFare: 40, perKm: 12, perMinute: 1.5, minimumFare: 60, bookingFee: 5, waitingFreeMinutes: 3, waitingPerMinute: 1, active: true });
 
   const drivers = [
-    ['drv_demo1', 'Asha', 'Verma', { isOnline: true, accountStatus: 'ACTIVE', driverVerificationStatus: 'APPROVED', verificationExpiresAt: ahead(120) }],
-    ['drv_demo2', 'Ravi', 'Kumar', { isOnline: true, accountStatus: 'ACTIVE', driverVerificationStatus: 'PENDING_REVIEW' }],
+    ['drv_demo1', 'Asha', 'Verma', { isOnline: true, accountStatus: 'ACTIVE', driverVerificationStatus: 'APPROVED', verificationExpiresAt: ahead(120), lastLocation: { type: 'Point', coordinates: [77.606, 12.975] }, locationUpdatedAt: ago(4000), locationRegionId: 'rg_blr' }],
+    ['drv_demo2', 'Ravi', 'Kumar', { isOnline: true, accountStatus: 'ACTIVE', driverVerificationStatus: 'PENDING_REVIEW', lastLocation: { type: 'Point', coordinates: [77.64, 12.978] }, locationUpdatedAt: ago(4000), locationRegionId: 'rg_blr' }],
     ['drv_demo3', 'Meena', 'Iyer', { isOnline: false, accountStatus: 'SUSPENDED', driverVerificationStatus: 'APPROVED', verificationExpiresAt: ahead(60) }],
     ['drv_demo4', 'Imran', 'Shaikh', { isOnline: false, accountStatus: 'ACTIVE', driverVerificationStatus: 'APPROVED', verificationExpiresAt: ahead(90) }]
   ];
@@ -80,4 +80,20 @@ async function seedDemo(db) {
   await e('business.ride_settings_updated', 'business', t, DEMO_ADMIN.email, ago(1 * DAY), { requireEligibleDrivers: false });
 }
 
-module.exports = { seedDemo, DEMO_ADMIN };
+/**
+ * Pretends the demo drivers' phones are sending heartbeats: the first driver moves every few seconds, the second one
+ * keeps sending until the "stale" test and then goes quiet, so the live map can be watched changing.
+ */
+function startDemoMovement(db, { intervalMs = 5000 } = {}) {
+  const start = Date.now();
+  const timer = setInterval(() => {
+    const t = (Date.now() - start) / 1000;
+    const a = db.Driver.rows.find((d) => d.driverId === 'drv_demo1');
+    if (a) { a.lastLocation = { type: 'Point', coordinates: [77.606 + 0.01 * Math.sin(t / 20), 12.975 + 0.01 * Math.cos(t / 20)] }; a.locationUpdatedAt = new Date(); a.locationHeading = Math.round((t * 6) % 360); a.locationSpeedKph = 28; }
+    const b = db.Driver.rows.find((d) => d.driverId === 'drv_demo2');
+    if (b && t < 90) { b.lastLocation = { type: 'Point', coordinates: [77.64 + 0.004 * Math.cos(t / 15), 12.978 + 0.004 * Math.sin(t / 15)] }; b.locationUpdatedAt = new Date(); } // after 90 seconds this driver's location goes stale
+  }, intervalMs);
+  if (timer.unref) timer.unref();
+}
+
+module.exports = { seedDemo, startDemoMovement, DEMO_ADMIN };

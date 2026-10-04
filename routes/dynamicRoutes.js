@@ -3,7 +3,8 @@ const router = express.Router();
 const dynamicController = require('../controllers/dynamicController');
 const driverAnalyticsController = require('../controllers/driverAnalyticsController');
 const { requireAuth, blockSensitiveDynamicCrud } = require('../lib/authMiddleware');
-const { otpSendLimiters } = require('../lib/rateLimit');
+const { otpSendLimiters, createLimiter, clientIp } = require('../lib/rateLimit');
+const driverLocationController = require('../controllers/driverLocationController');
 
 // Driver Login Route - MUST come before dynamic routes
 router.post('/drivers/login', ...otpSendLimiters('driver-login'), dynamicController.loginDriver);
@@ -20,6 +21,15 @@ router.put(
   '/drivers/online-status',
   requireAuth({ roles: ['driver'], enforceBodyDriverIdCamelCase: true }),
   dynamicController.updateOnlineStatus
+);
+
+// Driver location heartbeat (every few seconds while online) - MUST come before dynamic routes
+router.post(
+  '/drivers/location',
+  requireAuth({ roles: ['driver'], enforceBodyDriverIdCamelCase: true }),
+  createLimiter({ name: 'driver-location-ip', windowMs: 60 * 1000, max: 1200, key: (r) => `loc:ip:${clientIp(r)}` }),
+  createLimiter({ name: 'driver-location-driver', windowMs: 60 * 1000, max: 60, key: (r) => { const d = r.authActorId || (r.body && r.body.driverId); return d ? `loc:drv:${d}` : null; } }),
+  driverLocationController.heartbeat
 );
 
 // Driver Current Status Route - MUST come before dynamic routes

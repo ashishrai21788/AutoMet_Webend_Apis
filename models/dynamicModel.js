@@ -449,17 +449,32 @@ const driverSchema = new mongoose.Schema({
     min: 0
   },
 
+  // Live location heartbeat (see lib/driverLocation.js). lastLocation is a GeoJSON Point { type, coordinates: [lng, lat] };
+  // it is Mixed with no default so a driver who never sent one has no value at all (a default would put them at 0,0).
+  lastLocation: { type: mongoose.Schema.Types.Mixed, default: undefined },
+  locationUpdatedAt: { type: Date, default: null },
+  locationAccuracyM: { type: Number, default: null },
+  locationHeading: { type: Number, default: null },
+  locationSpeedKph: { type: Number, default: null },
+  locationRegionId: { type: String, default: null },
+  wentOfflineAt: { type: Date, default: null },
+  wentOfflineReason: { type: String, default: null },
+
   // Role for identification
   role: {
     type: String,
     default: 'driver',
     enum: ['driver', 'user', 'admin']
   }
-}, { 
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
+
+// Nearby-driver searches (dispatch, live map) and the stale-driver sweeper
+driverSchema.index({ lastLocation: '2dsphere' });
+driverSchema.index({ isOnline: 1, locationUpdatedAt: 1 });
 
 // Virtual for full name
 driverSchema.virtual('fullName').get(function() {

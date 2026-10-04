@@ -171,3 +171,14 @@ All use the business named by `X-App-Id` and the signed-in account, like the oth
 ## Local demo data
 
 `DEMO_DATA=1 npm run dev:fake` also loads a demo business with sample drivers, riders, trips, documents and audit events (`scripts/devSeed.js`; local test sign-in printed in the console).
+
+## Driver location heartbeat (driver app)
+
+`POST /api/drivers/location` (driver sign-in; `X-App-Id` like every driver request). Body: `lat`, `lng` (required), `accuracy` (metres), `heading` (degrees), `speedMps`. The server keeps the last position (GeoJSON, 2dsphere index) with its own receive time, and works out the service region. Response: `serverTime`, `nextHeartbeatSeconds` (10), `freshSeconds` (60), `isOnline`, `region`, `inServiceArea` (`null` when the business has drawn no service area) and `available`.
+
+- `400` invalid coordinates (including exactly 0,0, which is a phone with no GPS fix yet); `422 LOCATION_TOO_INACCURATE` for an accuracy worse than 1000 m (keep sending, nothing is stored); `403 WRONG_APP` for another business's driver; `403 DRIVER_ACCOUNT_NOT_ACTIVE` with `shouldGoOffline: true` for a suspended or inactive driver (they are taken offline and no position is stored). Limit: 60 per driver per minute.
+- **Presence** (`LIVE`, `STALE`, `NO_SIGNAL`, `OFFLINE`): an online driver is `LIVE` while a position is at most `DRIVER_LOCATION_FRESH_SECONDS` (60) old, `STALE` after that, and `NO_SIGNAL` when the app has never sent one (apps from before heartbeats).
+- **Sweeper:** every 30 seconds, a driver who has sent heartbeats before and has been silent for more than `DRIVER_STALE_OFFLINE_SECONDS` (180) is taken offline, with a `PRESENCE` entry on the driver's timeline. `NO_SIGNAL` drivers are never forced offline, so older apps keep working. Turn it off with `DRIVER_STALE_SWEEP=off`. Other settings: `DRIVER_HEARTBEAT_SECONDS`, `DRIVER_MAX_ACCURACY_METERS`.
+- **Indexes:** the driver model declares a 2dsphere index on `lastLocation` and one on `isOnline, locationUpdatedAt`. Mongoose creates them when the server starts (auto-index is not disabled).
+
+`GET /api/admin/business/live-map` (`dashboard.view`): online drivers that have a position (`presence`, `ageSeconds`, `eligible` and reasons, vehicle, `currentTripId`), active trips (searching and in progress), the business's drawn service areas, `counts` (live, stale, noSignal, eligibleLive, online, activeTrips, searching) and the freshness settings. Drivers with no position are only counted. The driver list and detail now include `online`, `presence`, `lastSeenAt`, `lastLocationAt`, `position` and `currentTripId`; statistics add `onlineLive`, `onlineStale`, `onlineNoSignal`.

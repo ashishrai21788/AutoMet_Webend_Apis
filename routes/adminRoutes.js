@@ -92,6 +92,7 @@ router.get('/business/availability', ...viewDrivers, fleetAvailability.summary);
 router.get('/business/audit', requireAdmin('audit.view'), withBusiness, ops.audit);
 router.get('/business/alerts', ...read, ops.alerts);
 router.get('/business/stats', ...read, ops.stats);
+router.get('/business/live-map', requireAdmin('dashboard.view'), withBusiness, ops.liveMap);
 router.get('/business/riders', requireAdmin('riders.view'), withBusiness, ops.riders);
 router.get('/business/riders/:id', requireAdmin('riders.view'), withBusiness, ops.rider);
 router.get('/business/trips', requireAdmin('trips.view'), withBusiness, ops.trips);
