@@ -108,3 +108,34 @@ The Postgres engine must reproduce these exactly; fixing them is a separate deci
 5. A wrong OTP is echoed back in the error response (`data: { userId, otp }`).
 6. OTP codes are stored in plain text in `users_otp` / `drivers_otp`.
 7. Driver self sign-up is closed (`POST /api/drivers` answers 403); drivers exist only when created from the dashboard.
+
+## 8. Status of the Postgres engine (built so far)
+
+`lib/db/postgres/`: `client.js` (pg pool, or PGlite in-process for tests), `table.js` (tables and indexes from the Mongoose
+schemas, including sparse and partial unique indexes), `filter.js` (Mongo filter -> SQL, unsupported operators raise), `model.js`
+(Mongoose models over rows), `plain.js` (raw collections), `aggregate.js` (the pipelines the code uses), `rows.js`, `codec.js`.
+
+Design decisions that matter:
+
+* Models are real Mongoose models on a private, never-connected Mongoose instance: defaults, casting, validation messages,
+  virtuals and `toJSON` are Mongoose's own. Only storage is replaced.
+* `save()` writes only the modified columns, and documents loaded without a `select:false` field (a password hash) are
+  hydrated with that projection, so saving them neither validates nor erases the field (as in Mongoose).
+* Updates take a row lock (`SELECT ... FOR UPDATE`), apply `$set/$inc/$push/$setOnInsert` in memory and write back in one
+  transaction; the filter (for example `status: 'REQUESTED'`) is re-checked after the lock, so transitions are race-safe.
+  Concurrent upserts on one key end with one row (the loser retries once).
+* Free-form values (Mixed, arrays, sub-documents, undeclared fields) are `json`, not `jsonb`, because jsonb re-orders keys
+  and Mongo keeps insertion order (one CSV export showed it). Filters cast to jsonb.
+* Dates and ObjectIds inside free-form documents are stored tagged (`{$date}` / `{$oid}`) and revived on read.
+* Unique violations surface as `code 11000` with `keyPattern`; Mongo's `__v`, timestamps and `_id` (24-hex text) are kept.
+
+Verification (all green):
+
+* `npm test` 315/315 in Mongo mode; `npm run test:parity` runs 19 model-layer expectations on Postgres AND on real MongoDB
+  (the same checks, the same results);
+* `npm run contract` (Mongo) and `npm run contract:postgres`: all five scenarios, 396 steps including the push messages,
+  match the Mongo snapshots exactly on Postgres.
+
+Not done yet: the 315 unit tests on Postgres (they run on a Mongo stand-in), a real Postgres server (the driver path was
+exercised against PGlite over a socket, not against Supabase), upload/legacy-route contract, RLS, query-plan indexes,
+paise money columns, backups, load test.

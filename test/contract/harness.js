@@ -35,7 +35,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const JWT = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
 const LONGHEX = /^[0-9a-f]{32,}$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'temporaryPassword', 'memoryUsage', 'durationMs']);
+const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'temporaryPassword', 'memoryUsage', 'locationAgeSeconds', 'totalRequests', 'durationMs']);
 
 function makeNormaliser() {
   const ids = new Map();
@@ -72,11 +72,34 @@ function makeNormaliser() {
 
 // ---------------------------------------------------------------- the server under test
 
+/** PGlite (Postgres in WebAssembly) behind a real socket, so the server under test uses the real `pg` driver against it. */
+async function startPostgres() {
+  const { PGlite } = require('@electric-sql/pglite');
+  const { PGLiteSocketServer } = require('@electric-sql/pglite-socket');
+  const db = new PGlite();
+  await db.waitReady;
+  const port = await freePort();
+  const server = new PGLiteSocketServer({ db, port, host: '127.0.0.1' });
+  await server.start();
+  const url = `postgres://postgres:postgres@127.0.0.1:${port}/postgres?sslmode=disable`;
+  return {
+    url,
+    // the database lives in this process, so the harness reads and writes it directly (no second connection)
+    query: (text, params) => db.query(text, params),
+    stop: async () => { await server.stop(); await db.close(); }
+  };
+}
+
 async function start({ engine = 'mongo', env: extra = {} } = {}) {
-  if (engine !== 'mongo') throw new Error(`engine "${engine}" is not available in the harness yet`);
-  const { MongoMemoryReplSet } = require('mongodb-memory-server');
-  const repl = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
-  const uri = repl.getUri('contract');
+  if (engine !== 'mongo' && engine !== 'postgres') throw new Error(`engine "${engine}" is not available in the harness`);
+  let repl = null; let uri = ''; let pg = null;
+  if (engine === 'mongo') {
+    const { MongoMemoryReplSet } = require('mongodb-memory-server');
+    repl = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
+    uri = repl.getUri('contract');
+  } else {
+    pg = await startPostgres();
+  }
   const port = await freePort();
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'automet-contract-'));
 
@@ -87,6 +110,7 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
     // production behaviour, as Render runs it (the project's .env, which the test server never reads, sets AUTH_ENFORCEMENT=strict)
     NODE_ENV: 'production', AUTH_ENFORCEMENT: 'strict', SCHEDULER_SECRET: 'contract-scheduler-secret', JWT_SECRET: 'contract-test-secret-not-for-real-use',
     DB_ENGINE: engine, DB_USE_URI: '1', MONGODB_URI: uri, DB_NAME: 'contract', RATE_LIMIT_DISABLED: '1',
+    ...(pg ? { DATABASE_URL: pg.url, PG_POOL_MAX: '1' } : {}),
     ADMIN_BOOTSTRAP_EMAIL: 'owner@contract.test', ADMIN_BOOTSTRAP_PASSWORD: 'Contract-Owner-Pass-1', REQUIRE_PLATFORM_2FA: '0',
     ...extra
   };
@@ -123,9 +147,10 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
   }
   if (!ready) throw new Error(`the bootstrap owner account was never created:\n${log.join('').slice(-1500)}`);
 
-  const mongo = require('mongodb');
+  const mongo = engine === 'mongo' ? require('mongodb') : null;
   let client = null;
   const database = async () => { if (!client) client = await mongo.MongoClient.connect(uri); return client.db('contract'); };
+  const qi = (n) => `"${String(n).replace(/"/g, '""')}"`;
 
   return {
     base, engine, log: () => log.join(''),
@@ -133,16 +158,41 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
     pushes: () => { try { return fs.readFileSync(pushLog, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } },
     clearPushes: () => { try { fs.writeFileSync(pushLog, ''); } catch { /* none yet */ } },
     /** Direct, read-only peeks at the database, for the few values the API never returns (for example an OTP). */
-    peek: async (collection, filter = {}, sort = { _id: -1 }) => (await database()).collection(collection).findOne(filter, { sort }),
+    peek: async (collection, filter = {}, sort = { _id: -1 }) => {
+      if (pg) {
+        const keys = Object.keys(filter);
+        const r = await pg.query(`SELECT * FROM ${qi(collection)}${keys.length ? ` WHERE ${keys.map((k, i) => `${qi(k)} = $${i + 1}`).join(' AND ')}` : ''} ORDER BY "_id" DESC LIMIT 1`, keys.map((k) => filter[k]));
+        return r.rows[0] || null;
+      }
+      return (await database()).collection(collection).findOne(filter, { sort });
+    },
     /** Puts a document straight into a collection, for data the API itself never creates without an outside event. */
-    seed: async (collection, doc) => (await database()).collection(collection).insertOne(doc),
+    seed: async (collection, doc) => {
+      if (pg) {
+        // a free-form collection, in the shape the Postgres engine uses for collections without a model
+        const { ObjectId } = require('mongodb');
+        const { dump } = require('../../lib/db/postgres/codec');
+        const id = new ObjectId();
+        await pg.query(`CREATE TABLE IF NOT EXISTS ${qi(collection)} ("_id" text PRIMARY KEY, "__v" integer NOT NULL DEFAULT 0, "__extra" json)`);
+        await pg.query(`INSERT INTO ${qi(collection)} ("_id", "__extra") VALUES ($1, $2::json)`, [String(id), dump(doc)]);
+        return { acknowledged: true, insertedId: id };
+      }
+      return (await database()).collection(collection).insertOne(doc);
+    },
     /** Sets fields on the matching documents (for example verification statuses, which need uploaded documents in real life). */
-    patch: async (collection, filter, set) => (await database()).collection(collection).updateMany(filter, { $set: set }),
+    patch: async (collection, filter, set) => {
+      if (pg) {
+        const sk = Object.keys(set); const fk = Object.keys(filter);
+        return pg.query(`UPDATE ${qi(collection)} SET ${sk.map((k, i) => `${qi(k)} = $${i + 1}`).join(', ')} WHERE ${fk.map((k, i) => `${qi(k)} = $${sk.length + i + 1}`).join(' AND ')}`, [...sk.map((k) => set[k]), ...fk.map((k) => filter[k])]);
+      }
+      return (await database()).collection(collection).updateMany(filter, { $set: set });
+    },
     async stop() {
       if (client) await client.close();
-      child.kill();
-      await repl.stop();
-      fs.rmSync(cwd, { recursive: true, force: true });
+      if (exited === null) { child.kill(); await new Promise((r) => { child.once('exit', r); setTimeout(r, 5000); }); }
+      if (repl) await repl.stop();
+      if (pg) await pg.stop();
+      try { fs.rmSync(cwd, { recursive: true, force: true }); } catch (e) { /* a Windows handle may linger; the folder is in the temp directory */ }
     }
   };
 }

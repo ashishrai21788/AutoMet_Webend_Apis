@@ -14,7 +14,8 @@
     "test:health-push": "bash scripts/test-health-and-push.sh",
     "test": "node test/fare.test.js && node --test test/admin.test.js test/admin.api.test.js test/business.test.js test/business.api.test.js test/pricing.test.js test/apptenant.api.test.js test/fleet.test.js test/fleet.api.test.js test/availability.test.js test/security.test.js test/public.api.test.js test/ops.api.test.js test/platform.api.test.js test/driverLocation.test.js test/livemap.api.test.js test/reports.api.test.js test/adminactions.api.test.js test/support.api.test.js test/superadmin.api.test.js test/logo.api.test.js test/riderissues.api.test.js test/reset.test.js test/revenue.api.test.js test/roleboundary.api.test.js test/tenantdelete.api.test.js test/passwordreset.api.test.js test/twofactor.api.test.js test/gst.test.js test/dbengine.test.js test/billing.gst.api.test.js",
     "test:parity": "node --test test/pgmodel.test.js && PARITY_ENGINE=mongo node --test test/pgmodel.test.js",
-    "contract": "node test/contract/run.js"
+    "contract": "node test/contract/run.js",
+    "contract:postgres": "DB_ENGINE=postgres node test/contract/run.js"
   },
   "keywords": [],
   "author": "",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "mongodb-memory-server": "^11.3.0",
     "nodemon": "^3.1.10"
   }

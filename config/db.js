@@ -1,9 +1,16 @@
 const mongoose = require('../lib/db/mongoose');
+const { isPostgres } = require('../lib/db/engine');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const connectDB = async () => {
   try {
+    // DB_ENGINE=postgres: the same entry point, backed by PostgreSQL (see docs/POSTGRES_ENGINE.md)
+    if (isPostgres) {
+      await mongoose.connect(process.env.DATABASE_URL);
+      console.log('✅ PostgreSQL connected');
+      return;
+    }
     // Build MongoDB URI from environment variables
     const username = process.env.MONGODB_USERNAME;
     const password = process.env.MONGODB_PASSWORD;

@@ -24,11 +24,22 @@ const scenarios = require('./scenarios');
     try {
       const r = await runScenario(server, name, fn);
       if (r.recorded) console.log(`recorded  ${name} (${r.steps} steps)`);
-      else if (r.diff) { failed += 1; console.log(`DIFFERS   ${name}: ${r.diff}`); }
+      else if (r.diff) {
+        failed += 1;
+        console.log(`DIFFERS   ${name}: ${r.diff}`);
+        const at = /\$\.steps\.(\d+)/.exec(r.diff);
+        if (at && process.env.CONTRACT_LOG) {
+          const step = r.actual.steps[Number(at[1])];
+          console.log(`  step "${step.step}"\n  actual   ${JSON.stringify(step.response).slice(0, 500)}\n  expected ${JSON.stringify(r.expected.steps[Number(at[1])].response).slice(0, 500)}`);
+        }
+        if (process.env.CONTRACT_LOG) console.log(server.log().split('\n').filter((l) => /rror|^\s+at /.test(l)).slice(-14).join('\n'));
+      }
       else console.log(`matches   ${name} (${r.steps} steps)`);
     } catch (e) {
       failed += 1;
       console.log(`ERROR     ${name}: ${e.message}`);
+      if (process.env.CONTRACT_LOG) console.log(e.stack);
+      if (process.env.CONTRACT_LOG) console.log(server.log().slice(-3000));
     } finally {
       await server.stop();
     }

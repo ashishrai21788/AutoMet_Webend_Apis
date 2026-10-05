@@ -201,3 +201,99 @@ test('deleteOne / deleteMany / findByIdAndDelete', async () => {
   assert.equal(await Thing.findById(id), null);
   assert.equal(await Thing.findByIdAndDelete(id), null);
 });
+
+test('raw collections (no model): insert, find with sort/limit/projection, update operators, delete, count; Dates and ObjectIds survive', async () => {
+  const col = mongoose.connection.db.collection('pg_raw_things');
+  const when = new Date('2026-10-01T10:00:00Z');
+  const a = await col.insertOne({ userId: 'u1', title: 'One', n: 1, when, nested: { x: 1 } });
+  await col.insertOne({ userId: 'u1', title: 'Two', n: 2, when: new Date('2026-10-02T10:00:00Z') });
+  await col.insertOne({ userId: 'u2', title: 'Three', n: 3, when });
+  assert.match(String(a.insertedId), /^[0-9a-f]{24}$/);
+  const got = await col.findOne({ _id: a.insertedId });
+  assert.equal(got.title, 'One');
+  assert.ok(got.when instanceof Date && got.when.getTime() === when.getTime());
+  assert.equal(String(got._id), String(a.insertedId));
+  assert.deepEqual((await col.find({ userId: 'u1' }).sort({ n: -1 }).toArray()).map((x) => x.title), ['Two', 'One']);
+  assert.deepEqual((await col.find({ when: { $gte: new Date('2026-10-02T00:00:00Z') } }).toArray()).map((x) => x.title), ['Two']);
+  assert.deepEqual((await col.find({ _id: { $in: [a.insertedId] } }).toArray()).map((x) => x.title), ['One']);
+  assert.deepEqual(Object.keys(await col.findOne({ title: 'One' }, { projection: { title: 1 } })).sort(), ['_id', 'title']);
+  assert.equal(await col.countDocuments({ userId: 'u1' }), 2);
+  const up = await col.updateMany({ userId: 'u1' }, { $set: { seen: true, 'nested.y': 2 }, $inc: { n: 10 } });
+  assert.equal(up.matchedCount, 2);
+  assert.equal((await col.findOne({ title: 'One' })).n, 11);
+  assert.deepEqual((await col.findOne({ title: 'One' })).nested, { x: 1, y: 2 });
+  assert.equal((await col.updateOne({ userId: 'nobody' }, { $set: { a: 1 } })).matchedCount, 0);
+  assert.equal((await col.deleteOne({ title: 'Two' })).deletedCount, 1);
+  assert.equal((await col.deleteMany({ userId: { $in: ['u1', 'u2'] } })).deletedCount, 2);
+  assert.equal(await col.countDocuments({}), 0);
+});
+
+test('a raw collection and a model on the same collection see the same rows', async () => {
+  const col = mongoose.connection.db.collection('pg_things');
+  const t = await Thing.create({ code: 'SHARED', name: 'Via model', address: { city: 'Goa' } });
+  const raw = await col.findOne({ code: 'SHARED' });
+  assert.equal(raw.name, 'Via model');
+  assert.equal(raw.address.city, 'Goa');
+  await col.updateOne({ code: 'SHARED' }, { $set: { name: 'Via raw', 'address.city': 'Kochi', extraField: 7 } });
+  const back = await Thing.findOne({ code: 'SHARED' }).lean();
+  assert.equal(back.name, 'Via raw');
+  assert.equal(back.address.city, 'Kochi');
+  const ins = await col.insertOne({ code: 'RAWIN', name: 'raw insert', status: 'OPEN', score: 4 });
+  assert.equal((await Thing.findById(ins.insertedId).lean()).score, 4);
+  await Thing.deleteMany({ code: { $in: ['SHARED', 'RAWIN'] } });
+  assert.ok(t);
+});
+
+test('saving a document loaded without a select:false field neither validates nor erases it (the passwordHash case)', async () => {
+  const strict = new mongoose.Schema({ key: { type: String, unique: true }, hash: { type: String, required: true, select: false }, label: String }, { collection: 'pg_secrets' });
+  const Secret = mongoose.model('Secret', strict);
+  if (ENGINE === 'mongo') await Secret.init(); else await Secret.$ensureTable?.();
+  await Secret.create({ key: 'k1', hash: 'HASH', label: 'a' });
+  const loaded = await Secret.findOne({ key: 'k1' });
+  assert.equal(loaded.hash, undefined);
+  loaded.label = 'b';
+  await loaded.save();
+  assert.equal((await Secret.findOne({ key: 'k1' }).select('+hash').lean()).hash, 'HASH');
+  assert.equal((await Secret.findOne({ key: 'k1' }).lean()).label, 'b');
+});
+
+test('aggregation: $match/$unwind/$addFields/$facet/$count/$group/$project over arrays of events, and counts that return no row', async () => {
+  const col = mongoose.connection.db.collection('pg_events');
+  const t0 = new Date('2026-10-01T10:00:00Z');
+  await col.insertOne({ sessionId: 's1', events: [
+    { eventName: 'Map-Opened', clientTimestamp: t0, params: { driver_ids: ['d1', 'd2'] } },
+    { eventName: 'driver_call_tapped', clientTimestamp: new Date('2026-10-01T10:05:00Z'), params: { driver_id: 'd1' } }
+  ] });
+  await col.insertOne({ sessionId: 's2', events: [{ eventName: 'driver_call_tapped', clientTimestamp: new Date('2026-10-02T10:00:00Z'), params: { driver_id: 'd2' } }] });
+  const pre = [{ $unwind: '$events' }, { $addFields: { name: { $toLower: { $replaceAll: { input: { $ifNull: ['$events.eventName', ''] }, find: '-', replacement: '_' } } } } }];
+  const window = { 'events.clientTimestamp': { $gte: new Date('2026-09-30T00:00:00Z'), $lte: new Date('2026-10-03T00:00:00Z'), $ne: null } };
+  const res = await col.aggregate([...pre, { $match: window }, { $facet: {
+    opened: [{ $match: { name: 'map_opened', 'events.params.driver_ids': 'd1' } }, { $count: 'total' }],
+    calls: [{ $match: { name: 'driver_call_tapped', $or: [{ 'events.params.driver_id': 'd1' }, { 'events.params.driverId': 'd1' }] } }, { $count: 'total' }],
+    none: [{ $match: { name: 'nothing' } }, { $count: 'total' }]
+  } }]).toArray();
+  assert.deepEqual(res[0].opened, [{ total: 1 }]);
+  assert.deepEqual(res[0].calls, [{ total: 1 }]);
+  assert.deepEqual(res[0].none, []);
+  const dur = await col.aggregate([...pre, { $match: { name: { $in: ['map_opened', 'driver_call_tapped'] }, 'events.params.driver_ids': 'd1' } },
+    { $group: { _id: '$sessionId', first: { $min: '$events.clientTimestamp' }, last: { $max: '$events.clientTimestamp' } } },
+    { $project: { ms: { $subtract: ['$last', '$first'] } } }, { $group: { _id: null, total: { $sum: '$ms' } } }]).toArray();
+  assert.deepEqual(dur, [{ _id: null, total: 0 }]); // only the first event of s1 names d1 in driver_ids
+  const byStatus = await Thing.aggregate([{ $match: { status: { $in: ['NEW', 'OPEN', 'DONE'] } } }, { $group: { _id: '$status', n: { $sum: 1 }, score: { $sum: { $ifNull: ['$score', 0] } } } }]);
+  assert.ok(byStatus.every((r) => typeof r.n === 'number' && typeof r.score === 'number'));
+  assert.equal(byStatus.reduce((s, r) => s + r.n, 0), await Thing.countDocuments({ status: { $in: ['NEW', 'OPEN', 'DONE'] } }));
+  await col.deleteMany({});
+});
+
+test('a partial unique index only guards the rows its filter matches (one ACTIVE assignment, any number ended)', async () => {
+  const s = new mongoose.Schema({ who: String, what: String, active: Boolean }, { collection: 'pg_assign' });
+  s.index({ who: 1 }, { unique: true, partialFilterExpression: { active: true } });
+  const A = mongoose.model('Assign', s);
+  if (ENGINE === 'mongo') await A.init();
+  await A.create({ who: 'w1', what: 'a', active: true });
+  await A.create({ who: 'w1', what: 'b', active: false });
+  await A.create({ who: 'w1', what: 'c', active: false });
+  await assert.rejects(A.create({ who: 'w1', what: 'd', active: true }), (e) => e.code === 11000);
+  await A.updateOne({ what: 'a' }, { $set: { active: false } });
+  await A.create({ who: 'w1', what: 'e', active: true });
+});
