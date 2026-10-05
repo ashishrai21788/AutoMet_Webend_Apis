@@ -212,3 +212,11 @@ test('sign-in upgrades an older, slower password hash and keeps working', async 
   assert.equal((await login('a@x.test', 'client-password-1')).status, 200, 'the upgraded hash still verifies');
   assert.equal((await login('a@x.test', 'wrong-wrong-wrong')).status, 401);
 });
+
+test('a malformed JSON body is the caller\'s mistake (400), not a server error', async () => {
+  const token = await tokenFor('super@x.test', 'super-password-1');
+  const res = await fetch(base + '/tenants', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: '{bad json' });
+  assert.equal(res.status, 400);
+  const empty = await fetch(base + '/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '' });
+  assert.notEqual(empty.status, 500, 'an empty body is still handled');
+});

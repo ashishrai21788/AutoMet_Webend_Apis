@@ -103,6 +103,15 @@ function getLocalIP() {
 }
 
 const app = express();
+app.disable('x-powered-by'); // do not announce the server software
+app.use((req, res, next) => {
+  // baseline response headers for an API: no sniffing, no framing, no referrer, https only
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  next();
+});
 // Render puts one proxy in front of the app; without this every client looks like the same IP to the rate limiters.
 app.set('trust proxy', 1);
 

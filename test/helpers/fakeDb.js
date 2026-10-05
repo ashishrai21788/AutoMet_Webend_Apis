@@ -65,7 +65,7 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
   };
 
   const query = (getRows) => {
-    const state = { sort: null, skip: 0, limit: null };
+    const state = { sort: null, skip: 0, limit: null, fields: null };
     const run = () => {
       let out = [...getRows()];
       if (state.sort) {
@@ -82,10 +82,16 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
         });
       }
       out = out.slice(state.skip, state.limit == null ? undefined : state.skip + state.limit);
+      // like the real database, a plain field list returns only those fields (so code that forgets one finds out here, not in production)
+      if (state.fields) out = out.map((r) => Object.fromEntries(state.fields.filter((k) => k in r).map((k) => [k, r[k]])));
       return out;
     };
     const q = {
-      select: () => q,
+      select: (spec) => {
+        const parts = typeof spec === 'string' ? spec.split(/\s+/).filter(Boolean) : [];
+        if (parts.length && parts.every((p) => /^[A-Za-z_][\w.]*$/.test(p))) state.fields = parts;
+        return q;
+      },
       lean: () => q,
       sort: (s) => { state.sort = s; return q; },
       skip: (n) => { state.skip = n; return q; },

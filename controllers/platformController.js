@@ -26,7 +26,7 @@ exports.overview = c.handle(async (req, res) => {
   const inList = { tenantId: { $in: ids } };
 
   const [regions, categories, fareRules, progress, admins, drivers, riders, trips] = await Promise.all([
-    ServiceRegion.find(inList).select('tenantId active center radiusKm').lean(), VehicleCategory.find(inList).select('tenantId active').lean(),
+    ServiceRegion.find(inList).select('tenantId active center radiusKm').lean(), VehicleCategory.find(inList).select('tenantId categoryId active').lean(),
     FareRule.find(inList).select('tenantId categoryId active').lean(), SetupProgress.find(inList).lean(),
     AdminUser.find({ tenantId: { $in: ids }, active: true }).select('tenantId').lean(),
     createModel('drivers').find({}).select('tenantId isOnline accountStatus').limit(MAX_ROWS).lean(),
