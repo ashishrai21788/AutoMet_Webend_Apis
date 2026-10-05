@@ -83,12 +83,18 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
   // a clean, explicit environment: nothing from the developer's shell or from the project's .env
   const env = {
     PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, TEMP: process.env.TEMP, TMP: process.env.TMP, HOME: cwd,
-    PORT: String(port), HOST: '127.0.0.1', NODE_ENV: 'test', JWT_SECRET: 'contract-test-secret-not-for-real-use',
+    PORT: String(port), HOST: '127.0.0.1',
+    // production behaviour, as Render runs it (the project's .env, which the test server never reads, sets AUTH_ENFORCEMENT=strict)
+    NODE_ENV: 'production', AUTH_ENFORCEMENT: 'strict', SCHEDULER_SECRET: 'contract-scheduler-secret', JWT_SECRET: 'contract-test-secret-not-for-real-use',
     DB_ENGINE: engine, DB_USE_URI: '1', MONGODB_URI: uri, DB_NAME: 'contract', RATE_LIMIT_DISABLED: '1',
     ADMIN_BOOTSTRAP_EMAIL: 'owner@contract.test', ADMIN_BOOTSTRAP_PASSWORD: 'Contract-Owner-Pass-1', REQUIRE_PLATFORM_2FA: '0',
     ...extra
   };
-  const child = spawn(process.execPath, [path.join(root, 'index.js')], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const pushLog = path.join(cwd, 'pushes.jsonl');
+  env.CONTRACT_PUSH_LOG = pushLog;
+  // a syntactically valid but fake key: the test server replaces firebase-admin (see preload.js), so nothing is ever sent to Google
+  env.FIREBASE_SERVICE_ACCOUNT_KEY = JSON.stringify({ type: 'service_account', project_id: 'contract-project', client_email: 'contract@contract-project.iam.gserviceaccount.com', private_key: '-----BEGIN PRIVATE KEY-----\nQ09OVFJBQ1Q=\n-----END PRIVATE KEY-----\n' });
+  const child = spawn(process.execPath, ['-r', path.join(__dirname, 'preload.js'), path.join(root, 'index.js')], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
   const log = [];
   child.stdout.on('data', (d) => log.push(String(d)));
   child.stderr.on('data', (d) => log.push(String(d)));
@@ -115,6 +121,9 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
 
   return {
     base, engine, log: () => log.join(''),
+    /** The pushes the server tried to send since the last call (read from the recorder in preload.js). */
+    pushes: () => { try { return fs.readFileSync(pushLog, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } },
+    clearPushes: () => { try { fs.writeFileSync(pushLog, ''); } catch { /* none yet */ } },
     /** Direct, read-only peeks at the database, for the few values the API never returns (for example an OTP). */
     peek: async (collection, filter = {}, sort = { _id: -1 }) => (await database()).collection(collection).findOne(filter, { sort }),
     /** Puts a document straight into a collection, for data the API itself never creates without an outside event. */
@@ -139,6 +148,11 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
 function recorder(server) {
   const norm = makeNormaliser();
   const steps = [];
+  /** Records the pushes the server attempted since the last record (message data, never tokens: tokens are masked as ids). */
+  function recordPushes(name) {
+    steps.push({ kind: 'push', name, items: server.pushes() });
+    server.clearPushes();
+  }
   async function call(name, { method = 'GET', path: p, body, token, headers = {}, expectStatus } = {}) {
     const h = { ...headers };
     if (body !== undefined) h['Content-Type'] = 'application/json';
@@ -153,12 +167,12 @@ function recorder(server) {
     steps.push({ name, method, p, body, auth: !!token, status: res.status, type: type.split(';')[0], raw });
     return { status: res.status, body: raw, headers: res.headers };
   }
-  const finish = () => steps.map((s) => ({
+  const finish = () => steps.map((s) => s.kind === 'push' ? ({ step: s.name, pushes: norm.walk(s.items) }) : ({
     step: s.name,
     request: { method: s.method, path: norm.text(s.p), body: s.body === undefined ? undefined : norm.walk(s.body), auth: s.auth ? 'bearer' : undefined },
     response: { status: s.status, contentType: s.type, body: typeof s.raw === 'string' ? norm.text(s.raw).slice(0, 400) : norm.walk(s.raw) }
   }));
-  return { call, steps, norm, finish, alias: (value, name) => norm.alias(value, name) };
+  return { call, steps, norm, finish, recordPushes, alias: (value, name) => norm.alias(value, name) };
 }
 
 const snapPath = (name) => path.join(SNAP_DIR, `${name}.json`);
