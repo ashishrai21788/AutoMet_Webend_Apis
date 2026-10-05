@@ -28,10 +28,10 @@ test('an unknown engine stops start-up with a clear message', () => {
   assert.match(r.err, /DB_ENGINE must be one of mongo, postgres/);
 });
 
-test('postgres is selectable but says plainly that it is not built yet (until phase 3)', () => {
-  const r = run({ DB_ENGINE: 'postgres' }, "require('./lib/db/mongoose')");
-  assert.equal(r.ok, false);
-  assert.match(r.err, /not implemented yet/);
+test('postgres returns the Postgres facade (not the real mongoose module) with the same surface', () => {
+  const r = run({ DB_ENGINE: 'postgres' }, "const m = require('./lib/db/mongoose'); const real = require('mongoose'); console.log([m !== real, typeof m.Schema, typeof m.model, typeof m.connect, typeof m.connection.readyState].join(','))");
+  assert.equal(r.ok, true);
+  assert.match(r.out, /true,function,function,function,number/);
 });
 
 test('no file outside the entry point and the two maintenance scripts requires mongoose directly', () => {
@@ -46,5 +46,5 @@ test('no file outside the entry point and the two maintenance scripts requires m
     if (/require\(['"]mongoose['"]\)/.test(fs.readFileSync(abs, 'utf8'))) found.push(rel);
   };
   for (const entry of ['models', 'controllers', 'lib', 'services', 'routes', 'config', 'scripts', 'index.js', 'monitor.js']) walk(entry);
-  assert.deepEqual(found.sort(), ['lib/db/mongoose.js', 'scripts/resetAdminPassword.js', 'scripts/resetBusinessSetup.js']);
+  assert.deepEqual(found.sort(), ['lib/db/mongoose.js', 'lib/db/postgres/index.js', 'scripts/resetAdminPassword.js', 'scripts/resetBusinessSetup.js']);
 });
