@@ -35,7 +35,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const JWT = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
 const LONGHEX = /^[0-9a-f]{32,}$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'durationMs']);
+const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'temporaryPassword', 'memoryUsage', 'durationMs']);
 
 function makeNormaliser() {
   const ids = new Map();
@@ -55,7 +55,7 @@ function makeNormaliser() {
     // business App IDs are random per run ("app_" + 10 hex)
     if (/^app_[0-9a-f]{10}$/.test(s)) return label(tokens, 'appId', s);
     // ids embedded in longer text (urls, messages): replace each 24-hex run
-    return s.replace(/\b[0-9a-f]{24}\b/gi, (m) => label(ids, 'id', m.toLowerCase()));
+    return s.replace(/\b[0-9a-f]{24}\b/gi, (m) => label(ids, 'id', m.toLowerCase())).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z/g, '<date>');
   };
   const walk = (v, key) => {
     if (v === null || v === undefined) return v === undefined ? '<undefined>' : null;
@@ -165,7 +165,7 @@ function recorder(server) {
     const h = { ...headers };
     if (body !== undefined) h['Content-Type'] = 'application/json';
     if (token) h.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${server.base}${p}`, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body) });
+    const res = await fetch(`${server.base}${p}`, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(30000) }).catch((e) => { throw new Error(`${name}: no answer (${e.message})`); });
     const type = res.headers.get('content-type') || '';
     const raw = type.includes('json') ? await res.json().catch(() => null) : await res.text().catch(() => null);
     if (expectStatus !== undefined && res.status !== expectStatus) {
