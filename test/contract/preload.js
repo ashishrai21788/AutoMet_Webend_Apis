@@ -10,6 +10,7 @@ const Module = require('node:module');
 const fs = require('node:fs');
 
 const pushLog = process.env.CONTRACT_PUSH_LOG;
+let pushCount = 0; // message ids are a counter, so replays are deterministic
 const admin = {
   apps: [],
   credential: { cert: (o) => o, applicationDefault: () => ({}) },
@@ -21,7 +22,7 @@ const admin = {
   messaging: () => ({
     async send(message) {
       if (pushLog) fs.appendFileSync(pushLog, `${JSON.stringify(message)}\n`);
-      return `projects/contract/messages/fake-${Date.now()}`;
+      return `projects/contract/messages/fake-${++pushCount}`;
     }
   })
 };

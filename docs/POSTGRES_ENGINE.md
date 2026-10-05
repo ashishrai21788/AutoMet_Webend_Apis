@@ -78,3 +78,33 @@ sessions or transactions. Instance API: `save` (46 uses), `toObject` (18), `isNe
 * `DB_ENGINE=mongo` behaviour must never change. Every step is merged only with the full suite green.
 * No feature work on the branch; bug fixes go to `master` first and are merged in.
 * Nothing is pushed or deployed from this branch without an explicit decision.
+
+## 6. Contract suite (phase 0, built)
+
+`npm run contract` runs the REAL server (`index.js`) on a REAL temporary MongoDB (mongodb-memory-server) and replays three
+scenarios, each on a fresh server and database: `rider` (38 steps), `driver` (66), `ride` (80, including the push messages
+the apps would receive). Snapshots live in `test/contract/snapshots/`; `UPDATE_CONTRACT=1` re-records them (Mongo only).
+
+Isolation: the server is started from an empty temp folder with an explicit environment in production mode with strict
+auth. `test/contract/preload.js` makes `dotenv` a no-op (parts of the backend read the project `.env` by absolute path) and
+replaces `firebase-admin` with a recorder, so no real credential or service can be reached. Verified: with these in place the
+snapshots replay identically (4 consecutive full runs).
+
+Still to add: an `admin` scenario for the dashboard routes not exercised by the set-up steps, and image upload/delete
+(needs a Cloudinary stand-in).
+
+## 7. Behaviour found while capturing the contract (pre-existing, NOT changed by the migration)
+
+The Postgres engine must reproduce these exactly; fixing them is a separate decision, best done on `master` first.
+
+1. `POST /api/otp/resend` answers 500 for a driver created from the dashboard: `DriverOTP validation failed: phoneNumber:
+   Path phoneNumber is required` (the driver document has `phone`, the OTP model requires `phoneNumber`). Note that the
+   Postgres layer therefore has to produce Mongoose-identical validation messages.
+2. `GET /api/v1/rides` (the trip list) is unreachable: the generic `/:collectionName/:id` route registered earlier matches
+   `v1/rides` and answers 403 "Collection 'v1' is not allowed".
+3. `GET /api/users/detail/:userId` needs no sign-in and returns the full user record, including the access token field.
+4. `GET /api/users/notifications` (and mark-read / delete) read the `userId` from the query string, not from the session, so a
+   signed-in rider can read or change another rider's notifications.
+5. A wrong OTP is echoed back in the error response (`data: { userId, otp }`).
+6. OTP codes are stored in plain text in `users_otp` / `drivers_otp`.
+7. Driver self sign-up is closed (`POST /api/drivers` answers 403); drivers exist only when created from the dashboard.

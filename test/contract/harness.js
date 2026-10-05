@@ -112,8 +112,16 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
     await sleep(500);
     if (i === 119) throw new Error(`server did not become healthy:\n${log.join('').slice(-1500)}`);
   }
-  // the default business and the first super admin are created in the background at start-up
-  await sleep(1500);
+  // the default business and the first super admin are created in the background at start-up: wait until the owner can sign in
+  let ready = false;
+  for (let i = 0; i < 60 && !ready; i += 1) {
+    try {
+      const r = await fetch(`${base}/api/admin/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: env.ADMIN_BOOTSTRAP_EMAIL, password: env.ADMIN_BOOTSTRAP_PASSWORD }) });
+      ready = r.status === 200;
+    } catch { /* not yet */ }
+    if (!ready) await sleep(500);
+  }
+  if (!ready) throw new Error(`the bootstrap owner account was never created:\n${log.join('').slice(-1500)}`);
 
   const mongo = require('mongodb');
   let client = null;
