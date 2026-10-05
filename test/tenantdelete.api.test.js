@@ -104,3 +104,35 @@ test('an unused suspended business is removed with its setup, admins and invoice
   const gone = await fetch(base + '/business/overview', { headers: { Authorization: `Bearer ${ctx.owner}`, 'X-App-Id': 'app_a' } });
   assert.equal(gone.status, 401, 'the deleted business\'s admins can no longer sign in');
 });
+
+test('export: a JSON copy of the business without secrets, audited, super admin only; delete removes its stored files', async () => {
+  await mkTenant('app_x', 'suspended');
+  await db.Driver.create({ driverId: 'dx', tenantId: 'app_x', email: 'dx@x.test', passwordHash: 'SECRET-HASH', accessToken: 'SECRET-TOKEN', fullName: 'Dee' });
+  await db.User.create({ userId: 'ux', tenantId: 'app_x', otpCode: '123456', name: 'Rae' });
+  await db.TripDetails.create({ trip_id: 'tx', tenant_id: 'app_x' });
+  const storage = require('../lib/privateStorage');
+  const key1 = await storage.putPrivate(Buffer.from('a'), { tenantId: 'app_x', kind: 'driver-documents', mime: 'image/png' });
+  const key2 = await storage.putPrivate(Buffer.from('b'), { tenantId: 'app_live', kind: 'driver-documents', mime: 'image/png' });
+
+  const headers = (t) => ({ Authorization: `Bearer ${t}` });
+  const liveOwner = (await (await fetch(base + '/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@live.test', password: 'password-l-owner' }) })).json()).data.token;
+  assert.equal((await fetch(`${base}/tenants/app_x/export`, { headers: headers(liveOwner) })).status, 403);
+  assert.equal((await fetch(`${base}/tenants/app_x/export`)).status, 401);
+  assert.equal((await fetch(`${base}/tenants/nope/export`, { headers: headers(ctx.s) })).status, 404);
+  const res = await fetch(`${base}/tenants/app_x/export`, { headers: headers(ctx.s) });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-disposition'), /app_x-export\.json/);
+  const text = await res.text();
+  assert.ok(!/SECRET-HASH|SECRET-TOKEN|123456/.test(text), 'no secrets in the file');
+  const out = JSON.parse(text);
+  assert.deepEqual([out.business.tenantId, out.counts.drivers, out.counts.riders, out.counts.trips], ['app_x', 1, 1, 1]);
+  assert.equal(out.data.drivers[0].fullName, 'Dee');
+  assert.ok(db.AdminAudit.rows.some((a) => a.action === 'tenant.exported' && a.targetId === 'app_x' && a.tenantId === null));
+
+  const del2 = await del('app_x', ctx.s, { confirm: 'app_x' });
+  assert.equal(del2.status, 200);
+  assert.equal(del2.body.data.removed.files, 1);
+  const files = require('../lib/privateStorage');
+  void files;
+  assert.ok(key1.startsWith('automet/app_x/') && key2.startsWith('automet/app_live/'));
+});

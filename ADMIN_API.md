@@ -268,3 +268,13 @@ Data: `platform_plans`, `platform_invoices`, `platform_counters`, `platform_sett
 ## Deleting a business
 
 `DELETE /tenants/:id` with `{ "confirm": "<appId>" }` (`clients.manage`, super admin only). Permanently deletes the business and everything it owns: drivers, riders, trips, vehicles, driver and vehicle documents, assignments, timelines, support reports, invoices, regions, categories, fare rules, cancellation policies, setup, admin accounts and logo. Safeguards: the business must be suspended, its App ID must be typed, and the default business (owner of pre-business records) can never be deleted. The response lists how many records of each kind were removed, and the same counts are written to the platform audit log (`tenant.deleted`). Files already uploaded to private document storage are not removed; nothing references them afterwards and they cannot be opened.
+
+## Password reset, email, and recovery
+
+- `POST /auth/forgot-password { email }` and `POST /auth/reset-password { token, password }` (public, rate limited). The first always answers the same ("If that email belongs to an account...") whether or not the account exists, is inactive, belongs to a suspended business, or email is configured. A real, active account gets a single-use link that expires in 30 minutes; only a SHA-256 hash of the token is stored. Resetting ends every session, clears lockout and a forced-change flag. Neither the token nor the email body is logged or audited.
+- Email is configured with `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM` (and `ADMIN_DASHBOARD_URL`, default `https://auto-met-admin.vercel.app`, for the link). With no provider nothing is sent and a warning is logged without the link. Other providers plug in through `lib/mailer.js` (`setTransport`).
+- **Locked-out admin (for example the only platform owner):** `node scripts/resetAdminPassword.js --email=<address>` (dry run), then add `--execute` to set and print a one-time password. Needs the database variables; audited as `recovery-script`.
+
+## Business export and delete
+
+`GET /tenants/:id/export` (`clients.manage`) downloads a JSON copy of everything a business owns (accounts, setup, drivers, riders, trips, vehicles, document records, support reports, invoices; up to 20,000 rows per kind, with a `truncated` list) without password hashes, tokens, codes, push tokens or file links, and is audited as `tenant.exported`. `DELETE /tenants/:id` now also removes the business's uploaded document files from Cloudinary (best effort; the count or `failed` is in the response and audit entry).

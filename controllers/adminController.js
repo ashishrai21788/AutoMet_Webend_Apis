@@ -108,6 +108,70 @@ exports.login = async (req, res) => {
 
 exports.me = (req, res) => ok(res, publicAdmin(req.admin));
 
+// ---------- forgot / reset password ----------
+
+const RESET_TTL_MS = 30 * 60 * 1000;
+const sha256 = (v) => crypto.createHash('sha256').update(v).digest('hex');
+
+/**
+ * POST /auth/forgot-password { email }
+ * Always answers the same way, so it cannot be used to find out which emails have accounts or whether email is set up.
+ * An active account of an active business gets a single-use link that expires in 30 minutes; only a hash is stored.
+ */
+exports.forgotPassword = async (req, res) => {
+  const generic = () => ok(res, { message: 'If that email belongs to an account, a reset link is on its way.' });
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || !EMAIL_RE.test(email)) return generic();
+    const admin = await AdminUser.findOne({ email });
+    if (!admin || admin.active === false) return generic();
+    if (admin.tenantId) {
+      const tenant = await Tenant.findOne({ tenantId: admin.tenantId });
+      if (!tenant || tenant.status === 'suspended') return generic();
+    }
+    const token = crypto.randomBytes(32).toString('hex');
+    admin.resetTokenHash = sha256(token);
+    admin.resetTokenExpires = new Date(Date.now() + RESET_TTL_MS);
+    await admin.save();
+    const base = String(process.env.ADMIN_DASHBOARD_URL || 'https://auto-met-admin.vercel.app').replace(/\/$/, '');
+    const result = await require('../lib/mailer').sendMail({
+      to: admin.email, subject: 'Reset your password',
+      text: `Hello ${admin.name},\n\nUse this link to choose a new password. It works once and expires in 30 minutes:\n${base}/reset-password?token=${token}\n\nIf you did not ask for this, ignore this email; your password has not changed.`
+    });
+    if (!result.sent) console.warn(`[admin] password reset requested but the email was not sent (${result.reason})`);
+    await audit(req, 'auth.password_reset_requested', { tenantId: admin.tenantId, actor: admin, meta: { emailed: result.sent } });
+    return generic();
+  } catch (e) {
+    console.error('[admin] forgot password error:', e.message);
+    return generic();
+  }
+};
+
+/** POST /auth/reset-password { token, password }: one use, then every session of the account is ended. */
+exports.resetPassword = async (req, res) => {
+  try {
+    const token = String(req.body?.token || '');
+    const password = String(req.body?.password || '');
+    if (!/^[0-9a-f]{64}$/.test(token)) return bad(res, 400, 'This reset link is not valid. Ask for a new one.');
+    if (password.length < MIN_PASSWORD_LENGTH) return res.status(400).json({ success: false, message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`, errors: { password: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }, data: null });
+    const admin = await AdminUser.findOne({ resetTokenHash: sha256(token), resetTokenExpires: { $gt: new Date() } }).select('+passwordHash');
+    if (!admin || admin.active === false) return bad(res, 400, 'This reset link is not valid or has expired. Ask for a new one.');
+    admin.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
+    admin.resetTokenHash = null;
+    admin.resetTokenExpires = null;
+    admin.mustChangePassword = false;
+    admin.failedLogins = 0;
+    admin.lockUntil = null;
+    admin.tokenVersion = (admin.tokenVersion || 0) + 1;
+    await admin.save();
+    await audit(req, 'auth.password_reset_completed', { tenantId: admin.tenantId, actor: admin });
+    return ok(res, { role: admin.role });
+  } catch (e) {
+    console.error('[admin] reset password error:', e.message);
+    return bad(res, 500, 'Could not reset the password');
+  }
+};
+
 exports.changePassword = async (req, res) => {
   try {
     const current = String(req.body?.currentPassword || '');
@@ -120,6 +184,8 @@ exports.changePassword = async (req, res) => {
 
     admin.passwordHash = await bcrypt.hash(next, BCRYPT_COST);
     admin.mustChangePassword = false;
+    admin.resetTokenHash = null; // a pending reset link no longer applies
+    admin.resetTokenExpires = null;
     admin.tokenVersion = (admin.tokenVersion || 0) + 1; // signs out every other session
     await admin.save();
     await audit(req, 'auth.password_changed', { tenantId: admin.tenantId });
@@ -268,11 +334,35 @@ exports.deleteTenant = async (req, res) => {
     removed.adminAccounts = n(await AdminUser.deleteMany({ tenantId: id }));
     for (const [name, Model] of [['regions', ServiceRegion], ['categories', VehicleCategory], ['fareRules', FareRule], ['policies', CancellationPolicy], ['setup', SetupProgress]]) removed[name] = n(await Model.deleteMany({ tenantId: id }));
     try { await require('../lib/publicImages').removeLogo({ tenantId: id }); } catch (e) { console.warn('[tenant delete] logo removal failed:', e.message); }
+    // uploaded document files in private storage (best effort: a storage outage must not leave the business half deleted)
+    try { removed.files = await require('../lib/privateStorage').removeTenantFiles(id); } catch (e) { removed.files = 'failed'; console.warn('[tenant delete] file removal failed:', e.message); }
     await Tenant.deleteOne({ tenantId: id });
     await audit(req, 'tenant.deleted', { tenantId: null, targetType: 'tenant', targetId: id, meta: { name: tenant.name, ...removed } });
     return ok(res, { deleted: id, removed });
   } catch (e) {
     return bad(res, 500, 'Could not delete the business');
+  }
+};
+
+/** GET /tenants/:id/export: a JSON copy of everything the business owns, to keep before deleting it. Audited. */
+exports.exportTenant = async (req, res) => {
+  try {
+    const tenant = await Tenant.findOne({ tenantId: req.params.id });
+    if (!tenant) return bad(res, 404, 'Client not found');
+    const { buildExport } = require('../lib/tenantExport');
+    const fleet = require('../models/fleetModels');
+    const out = await buildExport(tenant, {
+      AdminUser, ServiceRegion, VehicleCategory, FareRule, SetupProgress, CancellationPolicy: require('../models/businessModels').CancellationPolicy,
+      Drivers: createModel('drivers'), Riders: createModel('users'), TripDetails, Vehicle: fleet.Vehicle, DriverDocument: fleet.DriverDocument,
+      VehicleDocument: fleet.VehicleDocument, DriverVehicleAssignment: fleet.DriverVehicleAssignment, EntityHistory: fleet.EntityHistory,
+      DriverIssue: require('../models/supportModels').DriverIssue, PlatformInvoice: require('../models/platformBilling').PlatformInvoice
+    });
+    await audit(req, 'tenant.exported', { tenantId: null, targetType: 'tenant', targetId: tenant.tenantId, meta: { counts: out.counts } });
+    res.set({ 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${tenant.tenantId}-export.json"`, 'Cache-Control': 'no-store', 'X-Row-Count': String(Object.values(out.counts).reduce((a, b) => a + b, 0)) });
+    return res.status(200).send(JSON.stringify(out, null, 2));
+  } catch (e) {
+    console.error('[admin] export error:', e.message);
+    return bad(res, 500, 'Could not export the business');
   }
 };
 

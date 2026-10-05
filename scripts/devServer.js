@@ -12,6 +12,7 @@ if (process.env.NODE_ENV === 'production') {
   process.exit(1);
 }
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'local-dev-only-secret';
+process.env.ADMIN_DASHBOARD_URL = process.env.ADMIN_DASHBOARD_URL || 'http://localhost:5173'; // reset links open the local dashboard
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
@@ -29,6 +30,11 @@ privateStorage.setBackend(storage);
 const images = require('../lib/publicImages');
 const logoStore = images.createMemoryImages({ baseUrl: `http://localhost:${PORT}/dev-files` });
 images.setBackend(logoStore);
+// No real email locally: messages are printed here (so the reset link can be opened), and never leave this machine.
+require('../lib/mailer').setTransport({ async send({ to, subject, text }) { console.log(`
+[dev mail] to ${to}: ${subject}
+${text}
+`); } });
 
 const DEMO_EMAIL = 'super@automet.test';
 const DEMO_PASSWORD = 'Super-Demo-123';

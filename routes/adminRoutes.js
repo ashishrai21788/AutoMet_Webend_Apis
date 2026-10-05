@@ -16,7 +16,7 @@ const support = require('../controllers/supportController');
 const logo = require('../controllers/logoController');
 const revenue = require('../controllers/revenueController');
 const { can } = require('../lib/adminPermissions');
-const { adminLoginLimiters } = require('../lib/rateLimit');
+const { adminLoginLimiters, adminForgotLimiters, adminResetLimiters } = require('../lib/rateLimit');
 
 const requireAdmin = createRequireAdmin({
   loadAdmin: (adminId) => AdminUser.findOne({ adminId }),
@@ -28,6 +28,8 @@ const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.fi
 const router = express.Router();
 
 router.post('/auth/login', ...adminLoginLimiters(), ctrl.login);
+router.post('/auth/forgot-password', ...adminForgotLimiters(), ctrl.forgotPassword);
+router.post('/auth/reset-password', ...adminResetLimiters(), ctrl.resetPassword);
 router.get('/auth/me', requireAdmin(), ctrl.me);
 router.post('/auth/change-password', requireAdmin(), ctrl.changePassword);
 
@@ -36,6 +38,7 @@ router.post('/tenants', requireAdmin('clients.manage'), ctrl.createTenant);
 router.patch('/tenants/:id/status', requireAdmin('clients.manage'), ctrl.setTenantStatus);
 router.patch('/tenants/:id', requireAdmin('clients.manage'), ctrl.updateTenant);
 router.delete('/tenants/:id', requireAdmin('clients.manage'), ctrl.deleteTenant);
+router.get('/tenants/:id/export', requireAdmin('clients.manage'), ctrl.exportTenant);
 
 // a business's team: its own admin manages everyone; the platform owner (clients.manage) only its client_admin accounts (see the controller)
 const teamAccess = requireAdmin(['team.manage', 'clients.manage']);

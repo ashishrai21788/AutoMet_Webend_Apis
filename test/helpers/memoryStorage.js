@@ -16,6 +16,11 @@ function createMemoryStorage({ secret = 'memory-storage-secret', baseUrl = 'http
       files.set(key, { buffer, mime });
       return key;
     },
+    async removePrefix(prefix) {
+      let n = 0;
+      for (const k of [...files.keys()]) if (k.startsWith(prefix)) { files.delete(k); n++; }
+      return n;
+    },
     url(key, { ttlSeconds }) {
       const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
       return `${baseUrl}/files?key=${encodeURIComponent(key)}&exp=${exp}&sig=${sign(key, exp)}`;

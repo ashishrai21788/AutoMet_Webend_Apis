@@ -49,7 +49,10 @@ const adminUserSchema = new mongoose.Schema({
   tokenVersion: { type: Number, default: 0 },
   failedLogins: { type: Number, default: 0 },
   lockUntil: { type: Date, default: null },
-  lastLoginAt: { type: Date, default: null }
+  lastLoginAt: { type: Date, default: null },
+  /** Forgot-password: only a hash of the emailed token is stored, and it works once until it expires. */
+  resetTokenHash: { type: String, default: null, select: false },
+  resetTokenExpires: { type: Date, default: null }
 }, { timestamps: true, collection: 'admin_users' });
 
 const adminAuditSchema = new mongoose.Schema({
