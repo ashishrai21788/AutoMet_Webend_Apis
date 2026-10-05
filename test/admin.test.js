@@ -1,5 +1,6 @@
 // Admin API rules that do not need a database. Run with: npm test
 process.env.JWT_SECRET = 'test-secret-for-admin-tests';
+process.env.REQUIRE_PLATFORM_2FA = '0'; // these middleware checks are about roles, not about two-step verification
 
 const test = require('node:test');
 const assert = require('node:assert/strict');

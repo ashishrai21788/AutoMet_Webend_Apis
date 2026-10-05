@@ -16,7 +16,7 @@ const support = require('../controllers/supportController');
 const logo = require('../controllers/logoController');
 const revenue = require('../controllers/revenueController');
 const { can } = require('../lib/adminPermissions');
-const { adminLoginLimiters, adminForgotLimiters, adminResetLimiters } = require('../lib/rateLimit');
+const { adminLoginLimiters, adminForgotLimiters, adminResetLimiters, adminTwoFactorLimiters } = require('../lib/rateLimit');
 
 const requireAdmin = createRequireAdmin({
   loadAdmin: (adminId) => AdminUser.findOne({ adminId }),
@@ -30,8 +30,12 @@ const router = express.Router();
 router.post('/auth/login', ...adminLoginLimiters(), ctrl.login);
 router.post('/auth/forgot-password', ...adminForgotLimiters(), ctrl.forgotPassword);
 router.post('/auth/reset-password', ...adminResetLimiters(), ctrl.resetPassword);
-router.get('/auth/me', requireAdmin(), ctrl.me);
-router.post('/auth/change-password', requireAdmin(), ctrl.changePassword);
+router.get('/auth/me', requireAdmin(null, { setup: true }), ctrl.me);
+router.post('/auth/change-password', requireAdmin(null, { setup: true }), ctrl.changePassword);
+router.post('/auth/2fa/verify', ...adminTwoFactorLimiters(), ctrl.twoFactorVerify);
+router.post('/auth/2fa/setup', requireAdmin(null, { setup: true }), ctrl.twoFactorSetup);
+router.post('/auth/2fa/enable', requireAdmin(null, { setup: true }), ctrl.twoFactorEnable);
+router.post('/auth/2fa/disable', requireAdmin(null, { setup: true }), ctrl.twoFactorDisable);
 
 router.get('/tenants', requireAdmin(), ctrl.listTenants);
 router.post('/tenants', requireAdmin('clients.manage'), ctrl.createTenant);
@@ -47,6 +51,7 @@ router.post('/users', teamAccess, ctrl.createUser);
 router.patch('/users/:id/active', teamAccess, ctrl.setUserActive);
 router.patch('/users/:id', teamAccess, ctrl.updateUser);
 router.post('/users/:id/reset-password', teamAccess, ctrl.resetUserPassword);
+router.post('/users/:id/reset-2fa', teamAccess, ctrl.resetUserTwoFactor);
 
 // the platform owner's own accounts
 router.get('/platform/team', requireAdmin('platform.team'), ctrl.platformTeamList);
@@ -54,6 +59,7 @@ router.post('/platform/team', requireAdmin('platform.team'), ctrl.platformTeamCr
 router.patch('/platform/team/:id/active', requireAdmin('platform.team'), ctrl.platformTeamSetActive);
 router.patch('/platform/team/:id', requireAdmin('platform.team'), ctrl.platformTeamRename);
 router.post('/platform/team/:id/reset-password', requireAdmin('platform.team'), ctrl.platformTeamResetPassword);
+router.post('/platform/team/:id/reset-2fa', requireAdmin('platform.team'), ctrl.resetPlatformTwoFactor);
 
 router.get('/dashboard', requireAdmin('dashboard.view'), ctrl.dashboard);
 router.get('/platform/overview', requireAdmin('clients.manage'), platform.overview);

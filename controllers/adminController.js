@@ -3,7 +3,8 @@ const bcrypt = require('bcryptjs');
 const { Tenant, AdminUser, AdminAudit } = require('../models/adminModels');
 const { TripDetails } = require('../models/tripDetailsModel');
 const { createModel } = require('../models/dynamicModel');
-const { signAdminToken } = require('../lib/adminAuth');
+const { signAdminToken, signChallenge, readChallenge } = require('../lib/adminAuth');
+const totp = require('../lib/totp');
 const { ROLES, isSuperAdmin } = require('../lib/adminPermissions');
 const { resolveTenantScope, tenantMatch } = require('../lib/tenantScope');
 const { ONGOING, startOfTodayIST, computeRates } = require('../lib/adminDashboard');
@@ -63,6 +64,15 @@ async function audit(req, action, { tenantId = null, targetType = null, targetId
 
 // ---------- auth ----------
 
+async function finishLogin(req, res, admin, meta) {
+  admin.failedLogins = 0;
+  admin.lockUntil = null;
+  admin.lastLoginAt = new Date();
+  await admin.save();
+  await audit(req, 'auth.login', { tenantId: admin.tenantId, actor: admin, meta: Object.keys(meta).length ? meta : null });
+  return ok(res, { token: signAdminToken(admin), user: publicAdmin(admin) });
+}
+
 exports.login = async (req, res) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
@@ -93,13 +103,13 @@ exports.login = async (req, res) => {
       if (!tenant || tenant.status === 'suspended') return bad(res, 403, 'This client account is suspended');
     }
 
-    admin.failedLogins = 0;
-    admin.lockUntil = null;
-    admin.lastLoginAt = new Date();
     if (bcrypt.getRounds(admin.passwordHash) > BCRYPT_COST) admin.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
-    await admin.save();
-    await audit(req, 'auth.login', { tenantId: admin.tenantId, actor: admin });
-    return ok(res, { token: signAdminToken(admin), user: publicAdmin(admin) });
+    if (admin.totpEnabled) {
+      // password is right; the code is still needed. Nothing is opened yet, and the failed-attempt counter stays as it is.
+      await admin.save();
+      return ok(res, { twoFactorRequired: true, challenge: signChallenge(admin) });
+    }
+    return finishLogin(req, res, admin, {});
   } catch (e) {
     console.error('[admin] login error:', e.message);
     return bad(res, 500, 'Sign in failed');
@@ -107,6 +117,147 @@ exports.login = async (req, res) => {
 };
 
 exports.me = (req, res) => ok(res, publicAdmin(req.admin));
+
+// ---------- two-step verification (authenticator app) ----------
+
+const TWO_FA_SELECT = '+totpSecret +totpPending +totpLastStep +recoveryHashes +passwordHash';
+
+const issuerFor = (admin, tenant) => (admin.role === 'super_admin' ? 'AutoMet Platform' : (tenant && tenant.name) || 'Admin');
+
+/**
+ * POST /auth/2fa/verify { challenge, code } or { challenge, recoveryCode }
+ * The second step of sign-in. Wrong codes count toward the same lockout as wrong passwords. A code works once.
+ */
+exports.twoFactorVerify = async (req, res) => {
+  try {
+    let decoded;
+    try { decoded = readChallenge(req.body?.challenge); } catch { return bad(res, 401, 'This sign-in expired. Start again.'); }
+    const admin = await AdminUser.findOne({ adminId: decoded.adminId }).select(TWO_FA_SELECT);
+    if (!admin || !admin.active || (admin.tokenVersion || 0) !== decoded.tv || !admin.totpEnabled) return bad(res, 401, 'This sign-in expired. Start again.');
+    if (admin.lockUntil && admin.lockUntil > new Date()) return bad(res, 429, 'Too many failed attempts. Try again in a few minutes.');
+    if (admin.tenantId) {
+      const tenant = await Tenant.findOne({ tenantId: admin.tenantId });
+      if (!tenant || tenant.status === 'suspended') return bad(res, 403, 'This client account is suspended');
+    }
+
+    let good = false;
+    let usedRecovery = false;
+    if (req.body?.recoveryCode) {
+      const hash = totp.hashRecovery(req.body.recoveryCode);
+      if ((admin.recoveryHashes || []).includes(hash)) {
+        admin.recoveryHashes = admin.recoveryHashes.filter((h) => h !== hash);
+        good = true; usedRecovery = true;
+      }
+    } else {
+      const step = totp.verify(totp.open(admin.totpSecret), req.body?.code, { afterStep: admin.totpLastStep ?? -1 });
+      if (step !== null) { admin.totpLastStep = step; good = true; }
+    }
+    if (!good) {
+      admin.failedLogins = (admin.failedLogins || 0) + 1;
+      if (admin.failedLogins >= MAX_FAILED_LOGINS) { admin.lockUntil = new Date(Date.now() + LOCK_MINUTES * 60 * 1000); admin.failedLogins = 0; }
+      await admin.save();
+      await audit(req, 'auth.two_factor_failed', { tenantId: admin.tenantId, actor: admin });
+      return bad(res, 401, 'That code is not right. Check the code in your authenticator app and try again.');
+    }
+    return finishLogin(req, res, admin, { twoFactor: usedRecovery ? 'recovery-code' : 'app' });
+  } catch (e) {
+    console.error('[admin] two-factor verify error:', e.message);
+    return bad(res, 500, 'Could not verify the code');
+  }
+};
+
+/** POST /auth/2fa/setup: starts enrolment. Nothing is switched on until a code from the app is confirmed. */
+exports.twoFactorSetup = async (req, res) => {
+  try {
+    const admin = await AdminUser.findOne({ adminId: req.admin.adminId }).select(TWO_FA_SELECT);
+    if (admin.totpEnabled) return bad(res, 409, 'Two-step verification is already on');
+    const secret = totp.generateSecret();
+    admin.totpPending = totp.seal(secret);
+    await admin.save();
+    const issuer = issuerFor(admin, req.adminTenant);
+    return ok(res, { secret, otpauthUri: totp.otpauthUri({ secret, account: admin.email, issuer }) });
+  } catch (e) {
+    return bad(res, 500, 'Could not start two-step verification');
+  }
+};
+
+/** POST /auth/2fa/enable { code }: confirms the app works, switches it on and returns eight recovery codes, once. */
+exports.twoFactorEnable = async (req, res) => {
+  try {
+    const admin = await AdminUser.findOne({ adminId: req.admin.adminId }).select(TWO_FA_SELECT);
+    if (admin.totpEnabled) return bad(res, 409, 'Two-step verification is already on');
+    if (!admin.totpPending) return bad(res, 400, 'Start the setup first');
+    const secret = totp.open(admin.totpPending);
+    const step = totp.verify(secret, req.body?.code);
+    if (step === null) return res.status(400).json({ success: false, message: 'That code is not right', errors: { code: 'That code is not right. Check the app and try again.' }, data: null });
+    const codes = totp.newRecoveryCodes();
+    admin.totpSecret = totp.seal(secret);
+    admin.totpPending = null;
+    admin.totpEnabled = true;
+    admin.totpLastStep = step;
+    admin.recoveryHashes = codes.map(totp.hashRecovery);
+    admin.tokenVersion = (admin.tokenVersion || 0) + 1; // other sessions are signed out; this one gets a fresh token
+    await admin.save();
+    await audit(req, 'auth.two_factor_enabled', { tenantId: admin.tenantId });
+    return ok(res, { token: signAdminToken(admin), user: publicAdmin(admin), recoveryCodes: codes });
+  } catch (e) {
+    return bad(res, 500, 'Could not turn on two-step verification');
+  }
+};
+
+/** POST /auth/2fa/disable { password, code }: for business accounts only. The platform owner cannot turn it off. */
+exports.twoFactorDisable = async (req, res) => {
+  try {
+    if (req.admin.role === 'super_admin' && totp.requiredForPlatform()) return bad(res, 403, 'Two-step verification is required for the platform owner and cannot be turned off');
+    const admin = await AdminUser.findOne({ adminId: req.admin.adminId }).select(TWO_FA_SELECT);
+    if (!admin.totpEnabled) return bad(res, 409, 'Two-step verification is not on');
+    if (!(await bcrypt.compare(String(req.body?.password || ''), admin.passwordHash))) return res.status(400).json({ success: false, message: 'Password is incorrect', errors: { password: 'Password is incorrect' }, data: null });
+    const step = totp.verify(totp.open(admin.totpSecret), req.body?.code, { afterStep: admin.totpLastStep ?? -1 });
+    if (step === null) return res.status(400).json({ success: false, message: 'That code is not right', errors: { code: 'That code is not right' }, data: null });
+    admin.totpEnabled = false; admin.totpSecret = null; admin.totpPending = null; admin.recoveryHashes = []; admin.totpLastStep = -1;
+    admin.tokenVersion = (admin.tokenVersion || 0) + 1;
+    await admin.save();
+    await audit(req, 'auth.two_factor_disabled', { tenantId: admin.tenantId });
+    return ok(res, { token: signAdminToken(admin), user: publicAdmin(admin) });
+  } catch (e) {
+    return bad(res, 500, 'Could not turn off two-step verification');
+  }
+};
+
+async function clearTwoFactor(req, res, user, auditTenant, auditAction) {
+  user.totpEnabled = false; user.totpSecret = null; user.totpPending = null; user.recoveryHashes = []; user.totpLastStep = -1;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
+  await audit(req, auditAction, { tenantId: auditTenant, targetType: 'admin_user', targetId: user.adminId, meta: { email: user.email } });
+  return ok(res, publicAdmin(user));
+}
+
+/** POST /users/:id/reset-2fa: for someone who lost their phone and recovery codes. They set it up again at their next sign-in. */
+exports.resetUserTwoFactor = async (req, res) => {
+  try {
+    const user = await AdminUser.findOne({ adminId: req.params.id });
+    if (!user) return bad(res, 404, 'User not found');
+    resolveTenantScope(req.admin, user.tenantId);
+    if (user.adminId === req.admin.adminId) return bad(res, 400, 'You cannot reset your own two-step verification');
+    if (user.role === 'super_admin') return bad(res, 403, 'Platform accounts are managed from Platform Team');
+    if (crossesBoundary(req, user.role)) return bad(res, 403, PLATFORM_BOUNDARY);
+    return await clearTwoFactor(req, res, user, user.tenantId, 'user.two_factor_reset');
+  } catch (e) {
+    return bad(res, e.status || 500, e.status ? e.message : 'Could not reset two-step verification');
+  }
+};
+
+/** POST /platform/team/:id/reset-2fa: another platform owner account helps one who lost their phone. */
+exports.resetPlatformTwoFactor = async (req, res) => {
+  try {
+    const user = await AdminUser.findOne({ adminId: req.params.id });
+    if (!user || user.role !== 'super_admin') return bad(res, 404, 'Platform account not found');
+    if (user.adminId === req.admin.adminId) return bad(res, 400, 'Ask another platform account, or use the recovery script, to reset your own');
+    return await clearTwoFactor(req, res, user, null, 'platform_user.two_factor_reset');
+  } catch (e) {
+    return bad(res, 500, 'Could not reset two-step verification');
+  }
+};
 
 // ---------- forgot / reset password ----------
 

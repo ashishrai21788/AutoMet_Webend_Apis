@@ -51,6 +51,12 @@ const adminUserSchema = new mongoose.Schema({
   lockUntil: { type: Date, default: null },
   lastLoginAt: { type: Date, default: null },
   /** Forgot-password: only a hash of the emailed token is stored, and it works once until it expires. */
+  /** Two-step verification (authenticator app). The secret is stored encrypted; recovery codes only as hashes. */
+  totpEnabled: { type: Boolean, default: false },
+  totpSecret: { type: String, default: null, select: false },
+  totpPending: { type: String, default: null, select: false },
+  totpLastStep: { type: Number, default: -1, select: false },
+  recoveryHashes: { type: [String], default: [], select: false },
   resetTokenHash: { type: String, default: null, select: false },
   resetTokenExpires: { type: Date, default: null }
 }, { timestamps: true, collection: 'admin_users' });

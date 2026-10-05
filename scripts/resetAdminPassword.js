@@ -5,6 +5,7 @@
  *
  *   node scripts/resetAdminPassword.js --email=owner@yourcompany.com             dry run: shows the account, changes nothing
  *   node scripts/resetAdminPassword.js --email=owner@yourcompany.com --execute   sets and prints a new one-time password
+ *   add --disable-2fa  to also turn off two-step verification (lost phone and recovery codes); they set it up again at next sign-in
  *
  * The account is unlocked, every existing session of it is ended, any pending reset link is cancelled, and the person must
  * choose their own password at the next sign-in. The new password is printed once to this terminal and stored nowhere else.
@@ -46,11 +47,11 @@ async function main() {
   }
   const password = temporaryPassword();
   await users.updateOne({ _id: account._id }, {
-    $set: { passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true, failedLogins: 0, lockUntil: null, active: true, resetTokenHash: null, resetTokenExpires: null },
+    $set: { passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true, failedLogins: 0, lockUntil: null, active: true, resetTokenHash: null, resetTokenExpires: null, ...(args.includes('--disable-2fa') ? { totpEnabled: false, totpSecret: null, totpPending: null, recoveryHashes: [], totpLastStep: -1 } : {}) },
     $inc: { tokenVersion: 1 }
   });
   await mongoose.connection.db.collection('admin_audit_logs').insertOne({
-    tenantId: account.tenantId || null, actorId: null, actorEmail: 'recovery-script', action: 'auth.password_recovered', targetType: 'admin_user', targetId: account.adminId, meta: null, ip: null, at: new Date()
+    tenantId: account.tenantId || null, actorId: null, actorEmail: 'recovery-script', action: 'auth.password_recovered', targetType: 'admin_user', targetId: account.adminId, meta: args.includes('--disable-2fa') ? { twoFactorDisabled: true } : null, ip: null, at: new Date()
   });
   console.log(`New one-time password for ${account.email}:\n\n    ${password}\n\nThey must choose their own password at the next sign-in. This is not shown again.\n`);
 }

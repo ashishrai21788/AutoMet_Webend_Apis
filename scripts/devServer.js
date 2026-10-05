@@ -12,6 +12,7 @@ if (process.env.NODE_ENV === 'production') {
   process.exit(1);
 }
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'local-dev-only-secret';
+process.env.REQUIRE_PLATFORM_2FA = process.env.REQUIRE_PLATFORM_2FA || '0'; // set to 1 to try the platform owner's two-step setup locally
 process.env.ADMIN_DASHBOARD_URL = process.env.ADMIN_DASHBOARD_URL || 'http://localhost:5173'; // reset links open the local dashboard
 
 const express = require('express');

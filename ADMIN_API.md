@@ -278,3 +278,11 @@ Data: `platform_plans`, `platform_invoices`, `platform_counters`, `platform_sett
 ## Business export and delete
 
 `GET /tenants/:id/export` (`clients.manage`) downloads a JSON copy of everything a business owns (accounts, setup, drivers, riders, trips, vehicles, document records, support reports, invoices; up to 20,000 rows per kind, with a `truncated` list) without password hashes, tokens, codes, push tokens or file links, and is audited as `tenant.exported`. `DELETE /tenants/:id` now also removes the business's uploaded document files from Cloudinary (best effort; the count or `failed` is in the response and audit entry).
+
+## Two-step verification (authenticator app)
+
+- **Required for the platform owner** (set `REQUIRE_PLATFORM_2FA=0` only for local development; the local dev server defaults it off). A platform owner can sign in with their password but every route except `/auth/me`, `/auth/change-password` and `/auth/2fa/*` answers 403 `{ error: "TWO_FACTOR_SETUP_REQUIRED" }` until it is on, and it cannot be turned off. **Optional for business accounts.**
+- `POST /auth/login` answers `{ twoFactorRequired: true, challenge }` (no session) when the account has it on. `POST /auth/2fa/verify { challenge, code | recoveryCode }` completes sign-in. The challenge is a 5-minute pass that opens nothing; wrong codes count toward the same 5-failure lockout as wrong passwords; a code works once (replay protection); a recovery code works once.
+- Setup (signed in): `POST /auth/2fa/setup` returns the secret and an `otpauth://` link (the authenticator label is the business name for business accounts, "AutoMet Platform" for the owner); `POST /auth/2fa/enable { code }` confirms it, switches it on, ends other sessions and returns **eight recovery codes, once**. `POST /auth/2fa/disable { password, code }` is for business accounts only.
+- The secret is stored encrypted (AES-256-GCM, key derived from `JWT_SECRET`); recovery codes only as SHA-256 hashes.
+- Lost phone: `POST /users/:id/reset-2fa` (a business admin for their staff; the platform owner for a client admin) and `POST /platform/team/:id/reset-2fa` (another platform account). Never yourself. Last resort: `node scripts/resetAdminPassword.js --email=... --execute --disable-2fa`.

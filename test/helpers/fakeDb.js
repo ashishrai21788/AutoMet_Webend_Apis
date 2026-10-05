@@ -162,11 +162,14 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
   };
 }
 
+// The platform owner must use two-step verification in production; the many tests that sign in as one turn that off here.
+process.env.REQUIRE_PLATFORM_2FA = process.env.REQUIRE_PLATFORM_2FA || '0';
+
 function createFakeDb() {
   const adminDefaults = () => ({ createdAt: new Date(), updatedAt: new Date() });
   const db = {
     Tenant: fakeModel({ uniques: ['tenantId', 'slug', 'packageName'], defaults: () => ({ ...adminDefaults(), supportEmail: '', supportPhone: '', market: null, brandColor: '#f5a300', isDefault: false }) }),
-    AdminUser: fakeModel({ uniques: ['adminId', 'email'], defaults: () => ({ ...adminDefaults(), active: true, tokenVersion: 0, failedLogins: 0, lockUntil: null, mustChangePassword: false }) }),
+    AdminUser: fakeModel({ uniques: ['adminId', 'email'], defaults: () => ({ ...adminDefaults(), active: true, tokenVersion: 0, failedLogins: 0, lockUntil: null, mustChangePassword: false, totpEnabled: false, totpLastStep: -1, recoveryHashes: [] }) }),
     AdminAudit: fakeModel({ defaults: () => ({ at: new Date() }) }),
     ServiceRegion: fakeModel({ uniques: ['regionId', ['tenantId', 'key']] }),
     VehicleCategory: fakeModel({ uniques: ['categoryId', ['tenantId', 'nameKey']] }),
