@@ -50,6 +50,8 @@ function makeNormaliser() {
     if (UUID.test(s) || LONGHEX.test(s)) return label(tokens, 'token', s);
     // content hashes such as the public config "version" (16 hex characters) change with the random App ID
     if (/^[0-9a-f]{16}$/i.test(s)) return '<hash16>';
+    // generated ids of the dashboard entities: a short prefix, an underscore and 16 hex characters (a_, rg_, vc_, fr_, veh_, as_ ...)
+    if (/^[a-z]{1,5}_[0-9a-f]{16}$/.test(s)) return label(ids, s.split('_')[0] + '_', s);
     // business App IDs are random per run ("app_" + 10 hex)
     if (/^app_[0-9a-f]{10}$/.test(s)) return label(tokens, 'appId', s);
     // ids embedded in longer text (urls, messages): replace each 24-hex run
@@ -117,6 +119,8 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
     peek: async (collection, filter = {}, sort = { _id: -1 }) => (await database()).collection(collection).findOne(filter, { sort }),
     /** Puts a document straight into a collection, for data the API itself never creates without an outside event. */
     seed: async (collection, doc) => (await database()).collection(collection).insertOne(doc),
+    /** Sets fields on the matching documents (for example verification statuses, which need uploaded documents in real life). */
+    patch: async (collection, filter, set) => (await database()).collection(collection).updateMany(filter, { $set: set }),
     async stop() {
       if (client) await client.close();
       child.kill();
@@ -177,7 +181,7 @@ function firstDifference(a, b, at = '$') {
 /** Runs a scenario against the server and compares with (or, with UPDATE_CONTRACT=1, writes) its snapshot. */
 async function runScenario(server, name, scenario) {
   const rec = recorder(server);
-  await scenario({ ...rec, server, peek: server.peek, seed: server.seed });
+  await scenario({ ...rec, server, peek: server.peek, seed: server.seed, patch: server.patch });
   const actual = { scenario: name, steps: rec.finish() };
   if (process.env.UPDATE_CONTRACT === '1') {
     fs.mkdirSync(SNAP_DIR, { recursive: true });
