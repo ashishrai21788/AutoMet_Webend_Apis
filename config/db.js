@@ -10,8 +10,12 @@ const connectDB = async () => {
     const cluster = process.env.MONGODB_CLUSTER;
     const dbName = process.env.DB_NAME;
     
+    // Local/contract-test opt-in: connect to an explicit URI (for example a temporary local MongoDB). Production never sets
+    // DB_USE_URI, so it keeps using the Atlas variables below exactly as before.
+    const useUri = process.env.DB_USE_URI === '1' && !!process.env.MONGODB_URI;
+
     // Validate required environment variables
-    if (!username || !password || !cluster || !dbName) {
+    if (!useUri && (!username || !password || !cluster || !dbName)) {
       throw new Error('Missing required MongoDB environment variables. Please check your .env file.');
     }
     
@@ -19,7 +23,9 @@ const connectDB = async () => {
     const encodedUsername = encodeURIComponent(username);
     const encodedPassword = encodeURIComponent(password);
     
-    const mongoURI = `mongodb+srv://${encodedUsername}:${encodedPassword}@${cluster}/${dbName}?retryWrites=true&w=majority&appName=AshishRai`;
+    const mongoURI = useUri
+      ? process.env.MONGODB_URI
+      : `mongodb+srv://${encodedUsername}:${encodedPassword}@${cluster}/${dbName}?retryWrites=true&w=majority&appName=AshishRai`;
     
     // Configure mongoose connection options
     const options = {
