@@ -173,7 +173,7 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
         const { ObjectId } = require('mongodb');
         const { dump } = require('../../lib/db/postgres/codec');
         const id = new ObjectId();
-        await pg.query(`CREATE TABLE IF NOT EXISTS ${qi(collection)} ("_id" text PRIMARY KEY, "__v" integer NOT NULL DEFAULT 0, "__extra" json)`);
+        await pg.query(`CREATE TABLE IF NOT EXISTS ${qi(collection)} ("_id" text PRIMARY KEY, "__v" integer, "__extra" json)`);
         await pg.query(`INSERT INTO ${qi(collection)} ("_id", "__extra") VALUES ($1, $2::json)`, [String(id), dump(doc)]);
         return { acknowledged: true, insertedId: id };
       }
