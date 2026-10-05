@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 /**
  * What the platform owner (AutoMet) charges businesses for using the platform: plans, invoices and platform settings.

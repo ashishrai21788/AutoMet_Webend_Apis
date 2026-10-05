@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 /**
  * Driver and vehicle management. Every document carries `tenantId` (the business's appId) and every unique rule includes

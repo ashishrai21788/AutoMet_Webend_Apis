@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 /**
  * Business-owned configuration. Every document carries `tenantId` (the business's appId) and every unique rule

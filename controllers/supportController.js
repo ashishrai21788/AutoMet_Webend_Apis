@@ -3,7 +3,7 @@
  * history of who did what. Issues are matched to the business through the driver who reported them (older reports carry
  * no business tag), so a business only ever sees its own drivers' reports.
  */
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 const { AdminAudit } = require('../models/adminModels');
 const { DriverIssue } = require('../models/supportModels');
 const { createModel } = require('../models/dynamicModel');

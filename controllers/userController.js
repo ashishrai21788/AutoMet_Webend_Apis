@@ -672,7 +672,7 @@ exports.sendUserNotification = async (req, res) => {
         data: { error: result.error }
       });
     }
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const coll = mongoose.connection.db.collection('users_notification');
     const now = new Date();
     const doc = {
@@ -717,7 +717,7 @@ exports.getUserNotifications = async (req, res) => {
     const { userId, user_id } = req.query;
     const userIdValue = userId || user_id;
 
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const db = mongoose.connection.db;
     const coll = db.collection('users_notification');
 
@@ -787,7 +787,7 @@ exports.updateUserNotificationReadStatus = async (req, res) => {
       });
     }
 
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const ObjectId = mongoose.Types.ObjectId;
     const db = mongoose.connection.db;
     const coll = db.collection('users_notification');
@@ -866,7 +866,7 @@ exports.deleteUserNotification = async (req, res) => {
       });
     }
 
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const ObjectId = mongoose.Types.ObjectId;
     const db = mongoose.connection.db;
     const coll = db.collection('users_notification');

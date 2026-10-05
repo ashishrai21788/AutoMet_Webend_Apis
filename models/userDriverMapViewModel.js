@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 const userDriverMapViewSchema = new mongoose.Schema({
   driverId: { type: String, required: true, trim: true },

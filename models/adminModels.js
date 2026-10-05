@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 const { ROLES } = require('../lib/adminPermissions');
 
 const marketSchema = new mongoose.Schema({

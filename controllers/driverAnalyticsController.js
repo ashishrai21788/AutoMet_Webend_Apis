@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 const UserDriverMapView = require('../models/userDriverMapViewModel');
 
 const MAX_RANGE_DAYS = 365;

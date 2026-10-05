@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 // Driver-specific schema with all required fields and defaults
 const driverSchema = new mongoose.Schema({

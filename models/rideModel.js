@@ -3,7 +3,7 @@
  * Status flow: REQUESTED → ACCEPTED → DRIVER_ON_THE_WAY → ARRIVED → STARTED → COMPLETED | REQUESTED/ACCEPTED → CANCELLED | REQUESTED → REJECTED
  */
 
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 const RideStatus = Object.freeze({
   REQUESTED: 'REQUESTED',

@@ -3,7 +3,7 @@ const http = require('http');
 const path = require('path');
 const os = require('os');
 const dotenv = require('dotenv');
-const mongoose = require('mongoose');
+const mongoose = require('./lib/db/mongoose');
 
 // Load .env from project root (where this file lives) so it works regardless of cwd
 dotenv.config({ path: path.join(__dirname, '.env') });

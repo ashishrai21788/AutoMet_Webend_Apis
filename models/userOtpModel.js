@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 const userOtpSchema = new mongoose.Schema({
   userId: {

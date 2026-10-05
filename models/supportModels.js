@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 /**
  * Problems drivers report from the driver app (collection `driver_issues_reports`, written by

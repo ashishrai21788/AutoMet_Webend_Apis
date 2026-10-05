@@ -2341,7 +2341,7 @@ exports.updateVehicleDetailsOld = async (req, res) => {
 // Get Driver FAQs API
 exports.getDriverFAQs = async (req, res) => {
   try {
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     
     // Access the driver_faq collection directly
     const db = mongoose.connection.db;
@@ -2448,7 +2448,7 @@ exports.submitDriverIssue = async (req, res) => {
     }
 
     // Access the driver_issues_reports collection
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const db = mongoose.connection.db;
     const issuesCollection = db.collection('driver_issues_reports');
 
@@ -2518,7 +2518,7 @@ exports.getDriverIssues = async (req, res) => {
     }
 
     // Access the driver_issues_reports collection
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const db = mongoose.connection.db;
     const issuesCollection = db.collection('driver_issues_reports');
 
@@ -2596,7 +2596,7 @@ exports.updateIssueStatus = async (req, res) => {
     }
 
     // Access the driver_issues_reports collection
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const ObjectId = mongoose.Types.ObjectId;
     const db = mongoose.connection.db;
     const issuesCollection = db.collection('driver_issues_reports');
@@ -2688,7 +2688,7 @@ exports.getDriverNotifications = async (req, res) => {
     const { driverId } = req.query; // Optional driverId filter from query params
 
     // Access the driver_notification collection
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const db = mongoose.connection.db;
     const notificationsCollection = db.collection('driver_notification');
 
@@ -2795,7 +2795,7 @@ exports.sendDriverNotification = async (req, res) => {
         data: { error: result.error }
       });
     }
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const notificationsCollection = mongoose.connection.db.collection('driver_notification');
     const now = new Date();
     const doc = {
@@ -2889,7 +2889,7 @@ exports.updateNotificationReadStatus = async (req, res) => {
     }
 
     // Access the driver_notification collection
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const ObjectId = mongoose.Types.ObjectId;
     const db = mongoose.connection.db;
     const notificationsCollection = db.collection('driver_notification');
@@ -3002,7 +3002,7 @@ exports.markAllDriverNotificationsRead = async (req, res) => {
       });
     }
 
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const db = mongoose.connection.db;
     const notificationsCollection = db.collection('driver_notification');
 
@@ -3066,7 +3066,7 @@ exports.deleteDriverNotification = async (req, res) => {
       });
     }
 
-    const mongoose = require('mongoose');
+    const mongoose = require('../lib/db/mongoose');
     const ObjectId = mongoose.Types.ObjectId;
     const db = mongoose.connection.db;
     const notificationsCollection = db.collection('driver_notification');

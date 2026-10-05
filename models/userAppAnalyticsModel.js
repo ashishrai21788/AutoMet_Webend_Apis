@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 // Event schema: only event-specific fields. deviceId, sessionId, appId, source, platform, appVersion live at document level only.
 const eventSchema = new mongoose.Schema({

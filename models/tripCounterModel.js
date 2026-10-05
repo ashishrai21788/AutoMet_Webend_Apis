@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 
 const tripCounterSchema = new mongoose.Schema({
   _id: { type: String, required: true },
