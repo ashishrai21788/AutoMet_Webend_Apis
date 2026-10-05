@@ -193,7 +193,7 @@ function createFakeDb() {
     TripEvent: fakeModel({}),
     // support
     // platform billing
-    PlatformInvoice: fakeModel({ uniques: ['invoiceId', 'number'], defaults: () => ({ issuedAt: new Date(), refundedAmount: 0, refunds: [] }) }),
+    PlatformInvoice: fakeModel({ uniques: ['invoiceId', 'number'], defaults: () => ({ issuedAt: new Date(), refundedAmount: 0, refunds: [], remindersSent: [], lapsedAt: null }) }),
     PlatformCounter: fakeModel({ uniques: ['key'] }),
     PlatformPlan: fakeModel({ uniques: ['planId', 'name'], defaults: () => ({ active: true, setupFee: 0, trialDays: null }) }),
     PlatformSettings: fakeModel({ uniques: ['key'] }),

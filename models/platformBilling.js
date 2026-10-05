@@ -16,7 +16,9 @@ const planSchema = new mongoose.Schema({
   active: { type: Boolean, default: true } // an inactive plan cannot be assigned to new subscriptions; existing ones keep it
 }, { collection: 'platform_plans', timestamps: true });
 
-const refundSchema = new mongoose.Schema({ at: Date, amount: Number, reason: String, by: String }, { _id: false });
+// amount is what was given back (tax included); exTax and tax split it in the invoice's proportion, for the revenue figures
+// number: the credit note issued for this refund (CN-000001); cgst/sgst/igst split the tax portion the way the invoice did
+const refundSchema = new mongoose.Schema({ at: Date, number: String, amount: Number, exTax: Number, tax: Number, cgst: Number, sgst: Number, igst: Number, reason: String, by: String }, { _id: false });
 
 const invoiceSchema = new mongoose.Schema({
   invoiceId: { type: String, required: true, unique: true },
@@ -26,7 +28,22 @@ const invoiceSchema = new mongoose.Schema({
   description: { type: String, default: 'Platform subscription' },
   periodStart: { type: Date, default: null },
   periodEnd: { type: Date, default: null },
+  /** the taxable value (before GST). What the client pays is `total`; invoices without tax have total = amount. */
   amount: { type: Number, required: true, min: 0 },
+  taxRate: { type: Number, default: 0 },
+  taxAmount: { type: Number, default: 0 },
+  cgst: { type: Number, default: 0 },
+  sgst: { type: Number, default: 0 },
+  igst: { type: Number, default: 0 },
+  total: { type: Number, default: null },
+  sac: { type: String, default: '' },
+  /** seller and buyer exactly as they were when the invoice was issued (later edits never change an issued invoice) */
+  seller: { type: mongoose.Schema.Types.Mixed, default: null },
+  buyer: { type: mongoose.Schema.Types.Mixed, default: null },
+  notes: { type: String, default: '' },
+  remindersSent: { type: [Number], default: [] },
+  lapsedAt: { type: Date, default: null },
+  emailedAt: { type: Date, default: null },
   currency: { type: String, required: true },
   status: { type: String, enum: ['issued', 'paid', 'void'], default: 'issued', index: true },
   issuedAt: { type: Date, default: Date.now },
@@ -56,7 +73,19 @@ const settingsSchema = new mongoose.Schema({
   billingEmail: { type: String, default: '' },
   invoiceDueDays: { type: Number, default: 14 },
   defaultTrialDays: { type: Number, default: 14 },
-  invoiceNotes: { type: String, default: '' }
+  invoiceNotes: { type: String, default: '' },
+  /** the platform's own legal and GST details; with no GSTIN no tax is charged */
+  legalName: { type: String, default: '' },
+  gstin: { type: String, default: '' },
+  address: { type: String, default: '' },
+  stateCode: { type: String, default: '' },
+  sac: { type: String, default: '998314' },
+  gstRate: { type: Number, default: 18 },
+  /** overdue handling: reminder days relative to the due date, grace before an invoice lapses, and what a lapse does */
+  reminderOffsets: { type: [Number], default: [-3, 1, 7] },
+  graceDays: { type: Number, default: 15 },
+  lapseAction: { type: String, enum: ['none', 'cancel', 'suspend'], default: 'none' },
+  lastRunAt: { type: Date, default: null }
 }, { collection: 'platform_settings', timestamps: true });
 
 const reuse = (name, schema) => mongoose.models[name] || mongoose.model(name, schema);

@@ -77,6 +77,11 @@ router.post('/tenants/:id/invoices', requireAdmin('platform.billing'), revenue.c
 router.post('/invoices/:id/pay', requireAdmin('platform.billing'), revenue.payInvoice);
 router.post('/invoices/:id/void', requireAdmin('platform.billing'), revenue.voidInvoice);
 router.post('/invoices/:id/refund', requireAdmin('platform.billing'), revenue.refundInvoice);
+router.get('/invoices/:id/pdf', requireAdmin('platform.billing'), revenue.invoicePdf);
+router.get('/invoices/:id/credit-notes/:number/pdf', requireAdmin('platform.billing'), revenue.creditNotePdf);
+router.post('/invoices/:id/send', requireAdmin('platform.billing'), revenue.sendInvoice);
+router.put('/tenants/:id/billing-details', requireAdmin('platform.billing'), revenue.updateBillingDetails);
+router.post('/platform/billing/run', requireAdmin('platform.billing'), revenue.runBilling);
 router.get('/platform/plans', requireAdmin('platform.billing'), revenue.listPlans);
 router.post('/platform/plans', requireAdmin('platform.billing'), revenue.createPlan);
 router.patch('/platform/plans/:id', requireAdmin('platform.billing'), revenue.updatePlan);

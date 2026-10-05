@@ -27,6 +27,8 @@ const tenantSchema = new mongoose.Schema({
   market: { type: marketSchema, default: null },
   /** This business's subscription to the platform: { planId, planName, price, cycle, setupFee, status: 'trialing' | 'active' | 'cancelled', startDate, trialEndsAt, renewalDate, notes } (see lib/revenue.js). null until a plan is assigned. */
   subscription: { type: mongoose.Schema.Types.Mixed, default: null },
+  /** who is invoiced: { legalName, gstin, address, stateCode, email } (see lib/revenue.js validateBillingDetails) */
+  billingDetails: { type: mongoose.Schema.Types.Mixed, default: null },
   /** Ride rules: { requireEligibleDrivers } (see lib/driverAvailability.js). */
   rideSettings: { type: mongoose.Schema.Types.Mixed, default: {} },
   /** Overrides of which optional documents are mandatory for drivers and vehicles: { driver: {TYPE: bool}, vehicle: {TYPE: bool} }. */
@@ -72,6 +74,11 @@ const adminAuditSchema = new mongoose.Schema({
   ip: { type: String, default: null },
   at: { type: Date, default: Date.now, index: true }
 }, { collection: 'admin_audit_logs' });
+
+// Optional retention: set AUDIT_RETENTION_DAYS (at least 90) and entries older than that are deleted by the database itself.
+// Unset (the default) keeps everything. Changing the number later needs the old index dropped in MongoDB first.
+const retentionDays = Number(process.env.AUDIT_RETENTION_DAYS);
+if (Number.isInteger(retentionDays) && retentionDays >= 90) adminAuditSchema.index({ at: 1 }, { expireAfterSeconds: retentionDays * 86400, name: 'audit_retention' });
 
 const Tenant = mongoose.models.Tenant || mongoose.model('Tenant', tenantSchema);
 const AdminUser = mongoose.models.AdminUser || mongoose.model('AdminUser', adminUserSchema);
