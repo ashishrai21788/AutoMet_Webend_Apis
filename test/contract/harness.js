@@ -55,7 +55,7 @@ function makeNormaliser() {
     // business App IDs are random per run ("app_" + 10 hex)
     if (/^app_[0-9a-f]{10}$/.test(s)) return label(tokens, 'appId', s);
     // ids embedded in longer text (urls, messages): replace each 24-hex run
-    return s.replace(/\b[0-9a-f]{24}\b/gi, (m) => label(ids, 'id', m.toLowerCase())).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z/g, '<date>');
+    return s.replace(/\b[0-9a-f]{24}\b/gi, (m) => label(ids, 'id', m.toLowerCase())).replace(/\b([a-z]{1,5}_)[0-9a-f]{16}\b/g, (m, p) => label(ids, p, m)).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z/g, '<date>');
   };
   const walk = (v, key) => {
     if (v === null || v === undefined) return v === undefined ? '<undefined>' : null;

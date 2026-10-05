@@ -90,8 +90,8 @@ auth. `test/contract/preload.js` makes `dotenv` a no-op (parts of the backend re
 replaces `firebase-admin` with a recorder, so no real credential or service can be reached. Verified: with these in place the
 snapshots replay identically (4 consecutive full runs).
 
-Still to add: an `admin` scenario for the dashboard routes not exercised by the set-up steps, and image upload/delete
-(needs a Cloudinary stand-in).
+Also covered: `platform` (91 steps: owner sign-in, businesses, admin users, team, plans, subscriptions, invoices, refunds, settings, audit) and `business` (121 steps: profile, regions, categories, fares, policies, requirements, drivers, vehicles, riders, trips, reports, CSV, support, audit).
+Not captured yet: image and document upload/delete (needs a Cloudinary stand-in), the legacy generic collection routes.
 
 ## 7. Behaviour found while capturing the contract (pre-existing, NOT changed by the migration)
 

@@ -3,5 +3,6 @@ module.exports = {
   rider: require('./rider'),
   driver: require('./driver'),
   ride: require('./ride'),
-  platform: require('./platform')
+  platform: require('./platform'),
+  business: require('./business')
 };
