@@ -163,7 +163,8 @@ test('rider actions: who may, and only this business\'s riders', async () => {
   assert.equal((await post('/business/riders/rid_a/status', body, { token: ctx.b, appId: 'app_a' })).status, 403);
   assert.equal((await post('/business/riders/rid_a/status', body, { token: ctx.ops })).status, 200, 'operations may');
   await post('/business/riders/rid_a/status', { status: 'ACTIVE' });
-  assert.equal(row(db.User.rows, 'userId', 'rid_b').accountStatus, undefined, 'the other business was not touched');
+  const other = row(db.User.rows, 'userId', 'rid_b');
+  assert.ok(other.accountStatus !== 'SUSPENDED' && !other.suspendedAt, 'the other business was not touched');
 });
 
 test('cancel a trip: before and after a driver accepted, atomic, audited, and the apps are told', async () => {

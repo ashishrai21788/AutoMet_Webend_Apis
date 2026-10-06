@@ -172,6 +172,8 @@ function fakeModel({ uniques = [], defaults = () => ({}) }) {
 process.env.REQUIRE_PLATFORM_2FA = process.env.REQUIRE_PLATFORM_2FA || '0';
 
 function createFakeDb() {
+  // TEST_DB=postgres runs the same tests on the real models over the Postgres engine (see helpers/pgDb.js)
+  if (process.env.TEST_DB === 'postgres') return require('./pgDb').createPgDb();
   const adminDefaults = () => ({ createdAt: new Date(), updatedAt: new Date() });
   const db = {
     Tenant: fakeModel({ uniques: ['tenantId', 'slug', 'packageName'], defaults: () => ({ ...adminDefaults(), supportEmail: '', supportPhone: '', market: null, brandColor: '#f5a300', isDefault: false }) }),

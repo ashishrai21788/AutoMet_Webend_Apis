@@ -122,7 +122,7 @@ test('update: change status, add a note, both; resolved time follows the status;
   const done = await call('POST', `/business/support/issues/${ID.a1}`, { body: { status: 'complete' } });
   assert.equal(done.body.data.status, 'complete');
   assert.ok(db.DriverIssue.rows.find((i) => i._id === ID.a1).resolvedAt, 'resolved time is set');
-  assert.equal(doc.notes[1].text, 'Status changed to Resolved');
+  assert.equal(db.DriverIssue.rows.find((i) => i._id === ID.a1).notes[1].text, 'Status changed to Resolved');
 
   const reopened = await call('POST', `/business/support/issues/${ID.a1}`, { body: { status: 'under process' } });
   assert.equal(reopened.status, 200);
@@ -150,5 +150,5 @@ test('driver-facing routes: a driver can no longer change report status, and rea
   const put = await fetch(`${base}/api/drivers/issues/${ID.b1}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'complete', adminNotes: 'hacked' }) });
   assert.equal(put.status, 403);
   assert.equal(db.DriverIssue.rows.find((i) => i._id === ID.b1).status, 'issue submitted');
-  assert.equal(db.DriverIssue.rows.find((i) => i._id === ID.b1).adminNotes, undefined);
+  assert.ok(!db.DriverIssue.rows.find((i) => i._id === ID.b1).adminNotes, 'no note was stored');
 });

@@ -115,8 +115,8 @@ test('integration status is yes/no only and never contains a value', () => {
 test('setup progress is the same number on the overview and on the business list (it needs each category\'s own id)', async () => {
   const app = db.Tenant.rows.find((t) => t.tenantId === 'app_a');
   app.market = { country: 'IN', currency: 'INR', timezone: 'Asia/Kolkata' };
-  await db.VehicleCategory.create({ tenantId: 'app_a', categoryId: 'cat_overview', name: 'Sedan', nameKey: 'sedan', active: true });
-  await db.FareRule.create({ tenantId: 'app_a', ruleId: 'fr_overview', categoryId: 'cat_overview', regionKey: 'k', active: true, baseFare: 50 });
+  await db.VehicleCategory.create({ tenantId: 'app_a', categoryId: 'cat_overview', name: 'Sedan', nameKey: 'sedan', active: true, rideType: 'economy', passengerCapacity: 4 });
+  await db.FareRule.create({ tenantId: 'app_a', ruleId: 'fr_overview', categoryId: 'cat_overview', regionKey: 'k', active: true, baseFare: 50, currency: 'INR', perKm: 10, perMinute: 1, minimumFare: 50, bookingFee: 0, waitingFreeMinutes: 0, waitingPerMinute: 0 });
   const overview = (await get(ctx.super)).body.data.businesses.find((b) => b.appId === 'app_a').setup;
   const list = await (await fetch(`${base}/tenants`, { headers: { Authorization: `Bearer ${ctx.super}` } })).json();
   const listed = list.data.find((b) => b.appId === 'app_a').setup;

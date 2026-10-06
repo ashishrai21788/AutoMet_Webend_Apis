@@ -208,7 +208,8 @@ test('sign-in upgrades an older, slower password hash and keeps working', async 
   row.passwordHash = bcrypt.hashSync('client-password-1', 12);
   assert.equal(bcrypt.getRounds(row.passwordHash), 12);
   assert.equal((await login('a@x.test', 'client-password-1')).status, 200);
-  assert.equal(bcrypt.getRounds(row.passwordHash), 10);
+  const upgraded = AdminUser.rows.find((u) => u.email === 'a@x.test'); // look it up again: the stored row is what changed
+  assert.equal(bcrypt.getRounds(upgraded.passwordHash), 10);
   assert.equal((await login('a@x.test', 'client-password-1')).status, 200, 'the upgraded hash still verifies');
   assert.equal((await login('a@x.test', 'wrong-wrong-wrong')).status, 401);
 });

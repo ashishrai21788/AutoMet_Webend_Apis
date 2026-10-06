@@ -192,15 +192,18 @@ test('an app that names its business can only take that business\'s drivers onli
 
 test('the ride-request check uses the same rules (suspended, and ineligible when required)', async () => {
   await admin('PUT', '/business/ride-settings', { body: { requireEligibleDrivers: true } });
+  clearAppTenantCache();
   const plain = await checkDriverAvailable(row('drv_a_plain'));
-  assert.equal(plain.available, false);
+  assert.equal(plain.available, false, JSON.stringify(plain.reasons));
   assert.equal(plain.code, 'DRIVER_NOT_ELIGIBLE');
   const ready = await checkDriverAvailable(row('drv_a_ready'));
   assert.equal(ready.available, true, JSON.stringify(ready.reasons));
   const legacy = await checkDriverAvailable(row('drv_legacy'));
   assert.equal(legacy.available, true, 'the default business has not turned the setting on');
   await admin('PUT', '/business/ride-settings', { body: { requireEligibleDrivers: false } });
-  assert.equal((await checkDriverAvailable(row('drv_a_plain'))).available, true);
+  clearAppTenantCache();
+  const offAgain = await checkDriverAvailable(row('drv_a_plain'));
+  assert.equal(offAgain.available, true, `setting off again: ${JSON.stringify(offAgain.reasons)}`);
   row('drv_a_plain').accountStatus = 'SUSPENDED';
   assert.equal((await checkDriverAvailable(row('drv_a_plain'))).available, false, 'a suspension applies even when the setting is off');
   row('drv_a_plain').accountStatus = 'ACTIVE';

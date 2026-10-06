@@ -139,3 +139,17 @@ Verification (all green):
 Not done yet: the 315 unit tests on Postgres (they run on a Mongo stand-in), a real Postgres server (the driver path was
 exercised against PGlite over a socket, not against Supabase), upload/legacy-route contract, RLS, query-plan indexes,
 paise money columns, backups, load test.
+
+## 9. The unit tests on Postgres
+
+`TEST_DB=postgres npm test` (or `npm run test:postgres`) runs the same 315 tests with the real Mongoose models on the Postgres
+engine (PGlite in-process) instead of the hand-written stand-ins in `test/helpers/fakeDb.js`. `test/helpers/pgDb.js` returns the
+same object shape; the `db.Model.rows` arrays the tests read are a mirror reloaded after each write, and a test that edits a
+mirrored row directly has the edit written to the database before the server's next database operation.
+
+Result: 315/315 on the stand-in and 315/315 on Postgres. Running on a real database showed that some tests had relied on
+the stand-in's looseness, and they were corrected so that they pass on both: fixtures that omitted fields the real models
+require (the stand-in never validated), assertions that assumed no schema defaults, rows held across an API call, and a settings
+test that did not clear the 60-second business cache (`clearAppTenantCache`) that real Mongo also has.
+
+Contract snapshots mask a date-only `createdAt` (the calendar day the data was made).

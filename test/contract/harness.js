@@ -59,6 +59,8 @@ function makeNormaliser() {
   };
   const walk = (v, key) => {
     if (v === null || v === undefined) return v === undefined ? '<undefined>' : null;
+    // a date-only createdAt is the calendar day the data was made: it changes every day
+    if (typeof v === 'string' && key === 'createdAt' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return '<day>';
     if (typeof v === 'string') return text(v);
     if (typeof v === 'number') return VOLATILE_KEYS.has(key) ? '<number>' : v;
     if (typeof v === 'boolean') return v;

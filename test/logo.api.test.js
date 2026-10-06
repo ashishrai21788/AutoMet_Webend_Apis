@@ -66,7 +66,7 @@ test('upload: a PNG is stored, the business gets its link, it is audited, and th
   assert.equal(r.status, 200);
   assert.match(r.body.data.logoUrl, /^https:\/\/cdn\.test\/logo\/app_a-\d+$/);
   assert.equal(tenant('app_a').logoUrl, r.body.data.logoUrl);
-  assert.equal(tenant('app_b').logoUrl, undefined, 'the other business is untouched');
+  assert.ok(!tenant('app_b').logoUrl, 'the other business is untouched');
   const a = db.AdminAudit.rows.find((x) => x.action === 'business.logo_updated');
   assert.deepEqual([a.tenantId, a.actorEmail, a.meta.type], ['app_a', 'admin@a.test', 'image/png']);
   const cfg = await (await fetch(base + '/api/v1/public/business/config', { headers: { 'X-App-Id': 'app_a' } })).json();

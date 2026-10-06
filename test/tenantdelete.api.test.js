@@ -29,8 +29,8 @@ test.before(async () => {
   await mk('s1', 'super@x.test', 'super_admin', null, 'password-super-1');
   await mk('a1', 'owner@a.test', 'client_admin', 'app_a', 'password-a-owner');
   await mk('l1', 'owner@live.test', 'client_admin', 'app_live', 'password-l-owner');
-  await db.ServiceRegion.create({ regionId: 'r1', tenantId: 'app_a', state: 'MH', city: 'Pune', cityKey: 'pune', zoneName: 'Z', zoneKey: 'z' });
-  await db.Driver.create({ driverId: 'd1', tenantId: 'app_b', email: 'd1@x.test' });
+  await db.ServiceRegion.create({ regionId: 'r1', tenantId: 'app_a', country: 'IN', state: 'MH', city: 'Pune', cityKey: 'pune', zoneName: 'Z', zoneKey: 'z', key: 'pune-z' });
+  await db.Driver.create({ driverId: 'd1', tenantId: 'app_b', email: 'd1@x.test', firstName: 'D', lastName: 'Driver', phone: '+919900000001', passwordHash: 'x' });
   await db.PlatformInvoice.create({ invoiceId: 'i1', number: 'INV-000001', tenantId: 'app_c', amount: 10, currency: 'INR', status: 'issued', dueDate: new Date() });
   await db.PlatformInvoice.create({ invoiceId: 'i2', number: 'INV-000002', tenantId: 'app_d', amount: 10, currency: 'INR', status: 'void', dueDate: new Date() });
   const app = express();
@@ -70,13 +70,13 @@ test('refused without the typed App ID, for an active business, for the default,
 
 test('deleting a business deletes everything it owns, and nothing of any other business', async () => {
   const mine = 'app_b';
-  await db.User.create({ userId: 'u1', tenantId: mine });
-  await db.User.create({ userId: 'u2', tenantId: 'app_live' });
-  await db.Driver.create({ driverId: 'd2', tenantId: 'app_live', email: 'd2@x.test' });
-  await db.TripDetails.create({ trip_id: 't1', tenant_id: mine });
-  await db.TripDetails.create({ trip_id: 't2', tenant_id: 'app_live' });
-  await db.Vehicle.create({ vehicleId: 'v1', tenantId: mine, registrationKey: 'k1' });
-  await db.Vehicle.create({ vehicleId: 'v2', tenantId: 'app_live', registrationKey: 'k2' });
+  await db.User.create({ userId: 'u1', tenantId: mine, firstName: 'R', lastName: 'Rider', phone: '+919800000001' });
+  await db.User.create({ userId: 'u2', tenantId: 'app_live', firstName: 'R', lastName: 'Rider', phone: '+919800000002' });
+  await db.Driver.create({ driverId: 'd2', tenantId: 'app_live', email: 'd2@x.test', firstName: 'D', lastName: 'Driver', phone: '+919900000002', passwordHash: 'x' });
+  await db.TripDetails.create({ trip_id: 't1', request_id: 'r-t1', user_id: 'u', driver_id: 'd', pickup: { address: 'A', lat: 1, lng: 1 }, drop: { address: 'B', lat: 2, lng: 2 }, status: 'REQUESTED', requested_at: new Date(), timeout_at: new Date(Date.now() + 60000), tenant_id: mine });
+  await db.TripDetails.create({ trip_id: 't2', request_id: 'r-t2', user_id: 'u', driver_id: 'd', pickup: { address: 'A', lat: 1, lng: 1 }, drop: { address: 'B', lat: 2, lng: 2 }, status: 'REQUESTED', requested_at: new Date(), timeout_at: new Date(Date.now() + 60000), tenant_id: 'app_live' });
+  await db.Vehicle.create({ vehicleId: 'v1', tenantId: mine, registrationKey: 'k1', registrationNumber: 'K1', make: 'M', model: 'X', categoryId: 'c', passengerCapacity: 4 });
+  await db.Vehicle.create({ vehicleId: 'v2', tenantId: 'app_live', registrationKey: 'k2', registrationNumber: 'K2', make: 'M', model: 'X', categoryId: 'c', passengerCapacity: 4 });
   await db.DriverIssue.create({ tenantId: mine, driverId: 'd1', issueText: 'x' });
   await db.DriverIssue.create({ tenantId: 'app_live', driverId: 'd2', issueText: 'y' });
   await db.PlatformInvoice.create({ invoiceId: 'i9', number: 'INV-000009', tenantId: mine, amount: 10, currency: 'INR', status: 'paid', dueDate: new Date() });
@@ -107,9 +107,9 @@ test('an unused suspended business is removed with its setup, admins and invoice
 
 test('export: a JSON copy of the business without secrets, audited, super admin only; delete removes its stored files', async () => {
   await mkTenant('app_x', 'suspended');
-  await db.Driver.create({ driverId: 'dx', tenantId: 'app_x', email: 'dx@x.test', passwordHash: 'SECRET-HASH', accessToken: 'SECRET-TOKEN', fullName: 'Dee' });
-  await db.User.create({ userId: 'ux', tenantId: 'app_x', otpCode: '123456', name: 'Rae' });
-  await db.TripDetails.create({ trip_id: 'tx', tenant_id: 'app_x' });
+  await db.Driver.create({ driverId: 'dx', tenantId: 'app_x', email: 'dx@x.test', firstName: 'Dee', lastName: 'Driver', phone: '+919900000003', passwordHash: 'SECRET-HASH', accessToken: 'SECRET-TOKEN', fullName: 'Dee Driver' });
+  await db.User.create({ userId: 'ux', tenantId: 'app_x', otpCode: '123456', name: 'Rae', firstName: 'Rae', lastName: 'Rider', phone: '+919800000003' });
+  await db.TripDetails.create({ trip_id: 'tx', request_id: 'r-tx', user_id: 'u', driver_id: 'd', pickup: { address: 'A', lat: 1, lng: 1 }, drop: { address: 'B', lat: 2, lng: 2 }, status: 'REQUESTED', requested_at: new Date(), timeout_at: new Date(Date.now() + 60000), tenant_id: 'app_x' });
   const storage = require('../lib/privateStorage');
   const key1 = await storage.putPrivate(Buffer.from('a'), { tenantId: 'app_x', kind: 'driver-documents', mime: 'image/png' });
   const key2 = await storage.putPrivate(Buffer.from('b'), { tenantId: 'app_live', kind: 'driver-documents', mime: 'image/png' });
@@ -126,7 +126,7 @@ test('export: a JSON copy of the business without secrets, audited, super admin 
   assert.ok(!/SECRET-HASH|SECRET-TOKEN|123456/.test(text), 'no secrets in the file');
   const out = JSON.parse(text);
   assert.deepEqual([out.business.tenantId, out.counts.drivers, out.counts.riders, out.counts.trips], ['app_x', 1, 1, 1]);
-  assert.equal(out.data.drivers[0].fullName, 'Dee');
+  assert.equal(out.data.drivers[0].firstName, 'Dee'); // (fullName is a virtual: a lean export carries the stored first and last name)
   assert.ok(db.AdminAudit.rows.some((a) => a.action === 'tenant.exported' && a.targetId === 'app_x' && a.tenantId === null));
 
   const del2 = await del('app_x', ctx.s, { confirm: 'app_x' });
