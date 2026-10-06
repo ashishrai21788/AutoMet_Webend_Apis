@@ -153,3 +153,18 @@ require (the stand-in never validated), assertions that assumed no schema defaul
 test that did not clear the 60-second business cache (`clearAppTenantCache`) that real Mongo also has.
 
 Contract snapshots mask a date-only `createdAt` (the calendar day the data was made).
+
+## 10. Verified on a real Postgres server (Supabase)
+
+Run against a real, empty Supabase project (PostgreSQL 17, direct connection, SSL) on 2026-10-06:
+
+* the 21 model checks: 21/21 (`PARITY_DATABASE_URL=... PARITY_ENGINE=postgres node --test test/pgmodel.test.js`);
+* the 22 database-backed unit-test files, one at a time, each starting from empty tables
+  (`TEST_DB=postgres TEST_DB_RESET=1 DATABASE_URL=... node --test test/<file>`): 238/238, plus 77 tests that use no database.
+
+`test/helpers/realDbReset.js` resets a real database safely: it drops only tables AutoMet's own models create and refuses (changing
+nothing) if the public schema holds any other table. Never point these runs at a database that holds other data.
+
+What a real network showed: (1) schema creation sent one request per statement, which is very slow when every round trip costs
+50 to 200 ms, so each table is now created with ONE request (`tx.exec`); (2) one test measured the age of a location against the
+real clock and failed because its own set-up took a minute, so it now freezes the clock.

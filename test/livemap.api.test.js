@@ -4,6 +4,7 @@ process.env.JWT_SECRET = 'test-secret-for-live-map-tests';
 process.env.RATE_LIMIT_DISABLED = '1';
 
 const test = require('node:test');
+const { mock } = test;
 const assert = require('node:assert/strict');
 const bcrypt = require('bcryptjs');
 const express = require('express');
@@ -25,6 +26,9 @@ let base;
 const ctx = {};
 
 test.before(async () => {
+  // The fixtures say "10 seconds ago" and the assertions check the age. Freeze the clock so those agree however slow the
+  // database is (over a network the set-up alone takes a minute, which would age every location).
+  mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const market = { country: 'IN', currency: 'INR', timezone: 'Asia/Kolkata' };
   await db.Tenant.create({ tenantId: 'app_a', name: 'Alpha', slug: 'a', appName: 'A', packageName: 'com.a', status: 'active', market });
   await db.Tenant.create({ tenantId: 'app_b', name: 'Beta', slug: 'b', appName: 'B', packageName: 'com.b', status: 'active', market });
@@ -71,7 +75,7 @@ test.before(async () => {
   ctx.support = await login('support@a.test', 'password-a-supp');
   ctx.b = await login('admin@b.test', 'password-b-admin');
 });
-test.after(() => server.close());
+test.after(() => { server.close(); mock.timers.reset(); });
 
 const get = async (path, { token = ctx.admin, appId = 'app_a' } = {}) => {
   const res = await fetch(base + '/api/admin' + path, { headers: { Authorization: `Bearer ${token}`, 'X-App-Id': appId } });

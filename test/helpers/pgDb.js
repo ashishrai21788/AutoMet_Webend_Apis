@@ -59,11 +59,17 @@ function createPgDb() {
     } finally { flushing = false; }
   };
 
-  const refreshAll = async () => {
+  // the table a write statement changes: INSERT INTO "t", UPDATE "t", DELETE FROM "t"
+  const WRITE = /^\s*(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+"([^"]+)"/i;
+  const noteWrite = (text, into) => { const m = WRITE.exec(text); if (m) into.add(m[1]); };
+
+  // refreshes only the models whose table was written (over a network every query counts)
+  const refreshAll = async (only) => {
     if (refreshing) return;
     refreshing = true;
     try {
       for (const m of models) {
+        if (only && !only.has(m.collection.name)) continue;
         const docs = await m.find({}).select(everything(m)).lean();
         m.rows.length = 0;
         // ids as strings, like the stand-in's rows (an ObjectId would not compare equal to the hex string a test holds)
@@ -77,15 +83,30 @@ function createPgDb() {
     const c = clientModule.connect();
     const tx = c.transaction.bind(c);
     const query = c.query.bind(c);
+    // TEST_DB_RESET=1 (real database): start each test file from empty tables; everything else waits for the reset
+    let ready = Promise.resolve();
+    if (process.env.TEST_DB_RESET === '1' && c.kind === 'pg') {
+      const { resetOwnTables } = require('./realDbReset');
+      ready = resetOwnTables(query, models.map((m) => m.collection.name));
+    }
     // refresh only after a transaction that wrote rows (table creation, which every first query waits for, must not wait on a refresh)
     c.transaction = async (fn) => {
+      await ready;
       if (!refreshing) await flushEdits();
-      let wrote = false;
-      const out = await tx((t) => fn({ query: (text, params) => { if (/^s*(INSERT|UPDATE|DELETE)/i.test(text)) wrote = true; return t.query(text, params); } }));
-      if (wrote && !refreshing) await refreshAll();
+      const written = new Set();
+      const out = await tx((t) => fn({ query: (text, params) => { noteWrite(text, written); return t.query(text, params); }, exec: (text) => t.exec(text) }));
+      if (written.size && !refreshing) await refreshAll(written);
       return out;
     };
-    c.query = async (text, params) => { if (!refreshing && !flushing) await flushEdits(); const out = await query(text, params); if (!refreshing && /^\s*(INSERT|UPDATE|DELETE)/i.test(text)) await refreshAll(); return out; };
+    c.query = async (text, params) => {
+      await ready;
+      if (!refreshing && !flushing) await flushEdits();
+      const out = await query(text, params);
+      const written = new Set();
+      noteWrite(text, written);
+      if (written.size && !refreshing) await refreshAll(written);
+      return out;
+    };
   };
   return db;
 }

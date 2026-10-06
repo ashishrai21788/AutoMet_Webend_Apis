@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
 // PARITY_ENGINE=mongo runs these same expectations against real MongoDB (an in-memory server): the reference behaviour
 const ENGINE = process.env.PARITY_ENGINE || 'postgres';
 process.env.DB_ENGINE = ENGINE;
-process.env.DATABASE_URL = 'pglite:memory';
+process.env.DATABASE_URL = process.env.PARITY_DATABASE_URL || 'pglite:memory'; // a real server when PARITY_DATABASE_URL is set
 const mongoose = require('../lib/db/mongoose');
 
 const schema = new mongoose.Schema({
@@ -28,6 +28,12 @@ const Thing = mongoose.model('Thing', schema);
 
 let mongod;
 test('connect creates the tables and reports connected', async () => {
+  if (ENGINE === 'postgres' && process.env.PARITY_DATABASE_URL) {
+    // a real server: start clean (only this file's pg_* tables are dropped; anything else in the database stops the run)
+    const { resetOwnTables } = require('./helpers/realDbReset');
+    const c = require('../lib/db/postgres/client').connect();
+    await resetOwnTables((t, p) => c.query(t, p).then((r) => ({ rows: r.rows })), []);
+  }
   if (ENGINE === 'mongo') {
     const { MongoMemoryReplSet } = require('mongodb-memory-server');
     mongod = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
