@@ -84,13 +84,14 @@ async function startPostgres() {
   const url = `postgres://postgres:postgres@127.0.0.1:${port}/postgres?sslmode=disable`;
   return {
     url,
+    db,
     // the database lives in this process, so the harness reads and writes it directly (no second connection)
     query: (text, params) => db.query(text, params),
     stop: async () => { await server.stop(); await db.close(); }
   };
 }
 
-async function start({ engine = 'mongo', env: extra = {} } = {}) {
+async function start({ engine = 'mongo', env: extra = {}, prepare = null, waitOwner = true } = {}) {
   if (engine !== 'mongo' && engine !== 'postgres') throw new Error(`engine "${engine}" is not available in the harness`);
   let repl = null; let uri = ''; let pg = null;
   if (engine === 'mongo') {
@@ -100,6 +101,7 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
   } else {
     pg = await startPostgres();
   }
+  if (prepare) await prepare({ engine, uri, pg });
   const port = await freePort();
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'automet-contract-'));
 
@@ -137,7 +139,7 @@ async function start({ engine = 'mongo', env: extra = {} } = {}) {
     if (i === 119) throw new Error(`server did not become healthy:\n${log.join('').slice(-1500)}`);
   }
   // the default business and the first super admin are created in the background at start-up: wait until the owner can sign in
-  let ready = false;
+  let ready = !waitOwner;
   for (let i = 0; i < 60 && !ready; i += 1) {
     try {
       const r = await fetch(`${base}/api/admin/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: env.ADMIN_BOOTSTRAP_EMAIL, password: env.ADMIN_BOOTSTRAP_PASSWORD }) });

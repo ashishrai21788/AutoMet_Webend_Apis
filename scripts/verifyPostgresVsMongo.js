@@ -48,8 +48,9 @@ function diffPaths(a, b, at, out) {
   if (a && b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)) {
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const k of keys) {
-      if (!(k in b)) out.push(`${at}.${k} (missing in Postgres)`);
-      else if (!(k in a)) out.push(`${at}.${k} (extra in Postgres)`);
+      // null and "absent" are one state in a column: reported separately, they are not data loss
+      if (!(k in b)) out.push(a[k] === null ? `${at}.${k} (null in Mongo, absent in Postgres) [info]` : `${at}.${k} (missing in Postgres)`);
+      else if (!(k in a)) out.push(b[k] === null ? `${at}.${k} (absent in Mongo, null in Postgres) [info]` : `${at}.${k} (extra in Postgres)`);
       else diffPaths(a[k], b[k], `${at}.${k}`, out);
     }
     // same keys, different order
@@ -73,18 +74,19 @@ function diffPaths(a, b, at, out) {
     for (const d of docs) { try { await pg.insertOne({ ...d }); imported += 1; } catch (e) { importErrors += 1; } }
     const back = await pg.find({}).toArray();
     const byId = new Map(back.map((x) => [String(x._id), x]));
-    let identical = 0; const diffs = new Map();
+    let identical = 0; let infoOnly = 0; const diffs = new Map();
     for (const d of docs) {
       const other = byId.get(String(d._id));
       if (!other) continue;
       const out = [];
       diffPaths(canon(d), canon(other), '$', out);
       if (!out.length) identical += 1;
+      else if (out.every((o) => o.endsWith('[info]'))) { infoOnly += 1; }
       for (const o of out) diffs.set(o.replace(/\.\d+(\.|$| )/g, '.#$1'), (diffs.get(o.replace(/\.\d+(\.|$| )/g, '.#$1')) || 0) + 1);
     }
-    const ok = docs.length === back.length && identical === docs.length && !importErrors;
+    const ok = docs.length === back.length && identical + infoOnly === docs.length && !importErrors;
     if (!ok) problems += 1;
-    console.log(`${ok ? 'OK     ' : 'DIFFERS'} ${name}: mongo ${docs.length}, postgres ${back.length}, identical ${identical}${importErrors ? `, import errors ${importErrors}` : ''}`);
+    console.log(`${ok ? 'OK     ' : 'DIFFERS'} ${name}: mongo ${docs.length}, postgres ${back.length}, identical ${identical}${infoOnly ? `, null-vs-absent only ${infoOnly}` : ''}${importErrors ? `, import errors ${importErrors}` : ''}`);
     for (const [k, n] of [...diffs.entries()].slice(0, 8)) console.log(`          ${k} x${n}`);
   }
   await client.close();

@@ -297,3 +297,45 @@ test('a partial unique index only guards the rows its filter matches (one ACTIVE
   await A.updateOne({ what: 'a' }, { $set: { active: false } });
   await A.create({ who: 'w1', what: 'e', active: true });
 });
+
+test('null and a missing field stay different (older documents lack fields the schema now defaults to null)', async () => {
+  const s = new mongoose.Schema({ key: String, a: { type: String, default: null }, b: String, c: { type: String, select: false, default: null } }, { collection: 'pg_nulls' });
+  const N = mongoose.model('Nulls', s);
+  const created = await N.create({ key: 'new' }); // a and c get their default null, b stays missing
+  const lean = await N.findById(created._id).lean();
+  assert.equal(lean.a, null);
+  assert.equal('b' in lean, false);
+  const raw = await mongoose.connection.db.collection('pg_nulls').insertOne({ key: 'legacy' }); // written before the schema had a / b / c
+  const old = await N.findById(raw.insertedId).lean();
+  assert.equal('a' in old, false);
+  assert.equal('b' in old, false);
+  const doc = await N.findById(raw.insertedId);
+  doc.b = 'now';
+  await doc.save();
+  const after = await N.findById(raw.insertedId).lean();
+  assert.equal(after.b, 'now');
+  assert.equal('a' in after, false); // saving another field does not turn a missing field into null
+  await N.updateOne({ key: 'legacy' }, { $set: { a: null } });
+  assert.equal((await N.findById(raw.insertedId).lean()).a, null);
+  const hidden = await N.findById(created._id).select('+c').lean();
+  assert.equal(hidden.c, null);
+  const fresh = await N.findById(created._id);
+  fresh.b = 'x'; await fresh.save();
+  assert.equal((await N.findById(created._id).select('+c').lean()).c, null); // an unselected null survives a save
+});
+
+test('defaults on older documents: what find, findOneAndUpdate and updateOne return and store', async () => {
+  const s = new mongoose.Schema({ key: String, a: { type: String, default: null }, st: { type: String, default: 'ACTIVE' }, b: String }, { collection: 'pg_defaults' });
+  const D = mongoose.model('Defaults', s);
+  await mongoose.connection.db.collection('pg_defaults').insertOne({ key: 'old1' });
+  await mongoose.connection.db.collection('pg_defaults').insertOne({ key: 'old2' });
+  const viaFind = (await D.findOne({ key: 'old1' })).toObject();
+  const viaLean = await D.findOne({ key: 'old1' }).lean();
+  const viaUpdate = (await D.findOneAndUpdate({ key: 'old1' }, { $set: { b: 'x' } }, { new: true })).toObject();
+  const viaUpdateLean = await D.findOneAndUpdate({ key: 'old2' }, { $set: { b: 'x' } }, { new: true }).lean();
+  const stored = await mongoose.connection.db.collection('pg_defaults').findOne({ key: 'old1' });
+  console.log('RESULT', ENGINE, JSON.stringify({
+    find: Object.keys(viaFind).sort(), lean: Object.keys(viaLean).sort(), update: Object.keys(viaUpdate).sort(),
+    updateLean: Object.keys(viaUpdateLean).sort(), stored: Object.keys(stored).sort()
+  }));
+});
