@@ -35,7 +35,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const JWT = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
 const LONGHEX = /^[0-9a-f]{32,}$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'temporaryPassword', 'memoryUsage', 'locationAgeSeconds', 'totalRequests', 'durationMs']);
+const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'temporaryPassword', 'memoryUsage', 'locationAgeSeconds', 'totalRequests', 'durationMs', 'ageSeconds', 'avgResponseMinutes', 'avgTripMinutes']); // the last three are measured elapsed time
 
 function makeNormaliser() {
   const ids = new Map();
@@ -75,7 +75,35 @@ function makeNormaliser() {
 // ---------------------------------------------------------------- the server under test
 
 /** PGlite (Postgres in WebAssembly) behind a real socket, so the server under test uses the real `pg` driver against it. */
+/**
+ * A REAL Postgres server (CONTRACT_DATABASE_URL), e.g. a Supabase test project. It must hold no other application's data:
+ * before each scenario only AutoMet's own tables are dropped, and if the public schema holds any other table nothing is changed
+ * and the run stops.
+ */
+async function startRealPostgres(url) {
+  const { Client } = require('pg');
+  const client = new Client({ connectionString: url, ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false } });
+  await client.connect();
+  // the table names AutoMet's own models use (the harness process only reads the schemas; nothing connects to MongoDB)
+  const fsx = require('node:fs');
+  const modelsDir = path.join(root, 'models');
+  for (const f of fsx.readdirSync(modelsDir)) if (f.endsWith('.js')) require(path.join(modelsDir, f));
+  const { createModel } = require(path.join(modelsDir, 'dynamicModel.js'));
+  createModel('drivers'); createModel('users');
+  // the models register in whichever registry the engine entry point uses (the real mongoose, or the Postgres facade)
+  const own = Object.values(require(path.join(root, 'lib', 'db', 'mongoose')).models).map((m) => m.collection.name);
+  if (own.length < 20) throw new Error('could not list the AutoMet table names (' + own.length + ' found); refusing to continue');
+  await require('../helpers/realDbReset').resetOwnTables((t, params) => client.query(t, params).then((r) => ({ rows: r.rows })), own);
+  return {
+    url,
+    db: null,
+    query: (text, params) => client.query(text, params),
+    stop: async () => { await client.end(); }
+  };
+}
+
 async function startPostgres() {
+  if (process.env.CONTRACT_DATABASE_URL) return startRealPostgres(process.env.CONTRACT_DATABASE_URL);
   const { PGlite } = require('@electric-sql/pglite');
   const { PGLiteSocketServer } = require('@electric-sql/pglite-socket');
   const db = new PGlite();
@@ -114,7 +142,7 @@ async function start({ engine = 'mongo', env: extra = {}, prepare = null, waitOw
     // production behaviour, as Render runs it (the project's .env, which the test server never reads, sets AUTH_ENFORCEMENT=strict)
     NODE_ENV: 'production', AUTH_ENFORCEMENT: 'strict', SCHEDULER_SECRET: 'contract-scheduler-secret', JWT_SECRET: 'contract-test-secret-not-for-real-use',
     DB_ENGINE: engine, DB_USE_URI: '1', MONGODB_URI: uri, DB_NAME: 'contract', RATE_LIMIT_DISABLED: '1',
-    ...(pg ? { DATABASE_URL: pg.url, PG_POOL_MAX: '1' } : {}),
+    ...(pg ? { DATABASE_URL: pg.url, ...(pg.db ? { PG_POOL_MAX: '1' } : {}) } : {}),
     ADMIN_BOOTSTRAP_EMAIL: 'owner@contract.test', ADMIN_BOOTSTRAP_PASSWORD: 'Contract-Owner-Pass-1', REQUIRE_PLATFORM_2FA: '0',
     ...extra
   };

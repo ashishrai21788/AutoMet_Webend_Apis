@@ -31,5 +31,14 @@ const original = Module._load;
 Module._load = function patched(request, parent, isMain) {
   if (request === 'dotenv') return { config: () => ({ parsed: {} }) };
   if (request === 'firebase-admin') return admin;
-  return original.apply(this, arguments);
+  const loaded = original.apply(this, arguments);
+  // The billing scheduler runs once, 90 seconds after start-up, and stamps the platform settings' lastRunAt. Whether a scenario
+  // reaches that moment depends on how fast the database is, so a scenario's answers would differ between a fast and a slow
+  // database. Pushing the first run far out makes the answers independent of speed (no production code is changed).
+  if (/billingJobs(.js)?$/.test(request) && loaded && typeof loaded.startBillingScheduler === 'function' && !loaded.__contractPatched) {
+    const real = loaded.startBillingScheduler;
+    loaded.startBillingScheduler = (opts = {}) => real({ ...opts, firstDelayMs: 6 * 60 * 60 * 1000 });
+    loaded.__contractPatched = true;
+  }
+  return loaded;
 };

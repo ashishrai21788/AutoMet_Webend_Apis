@@ -24,6 +24,13 @@ module.exports = async function business(t) {
   await call('driver: vehicle details', { method: 'PUT', path: '/api/drivers/vehicle-details', body: { driverId, vehicleType: 'Sedan', vehicleNumber: 'MH12AB1234', vehicleModel: 'Dzire', isVehicleAdded: true }, token: driverToken, expectStatus: 200 });
   await call('driver: go online', { method: 'PUT', path: '/api/drivers/online-status', body: { driverId, isOnline: true, onlineAs: 0 }, token: driverToken, expectStatus: 200 });
   await call('driver: position', { method: 'POST', path: '/api/drivers/location', body: { driverId, lat: 18.5204, lng: 73.8567, accuracy: 10 }, token: driverToken, expectStatus: 200 });
+  // A driver counts as "live" only for a short time after the last position. A fresh position is sent just before each screen
+  // that shows presence, so the answers do not depend on how fast the database is. It is NOT recorded: the response carries the
+  // region name from the server's one-minute region cache, which is itself timing dependent.
+  const fresh = async (why) => {
+    const res = await fetch(`${t.server.base}/api/drivers/location`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${driverToken}` }, body: JSON.stringify({ driverId, lat: 18.5204, lng: 73.8567, accuracy: 10 }) });
+    if (res.status !== 200) throw new Error(`keeping the driver live (${why}) failed: HTTP ${res.status}`);
+  };
   const trip = (n) => ({ request_id: `req-biz-${n}`, user_id: userId, driver_id: driverId, pickup_address: 'Shivajinagar, Pune', pickup_latitude: 18.5314, pickup_longitude: 73.8446, drop_address: 'Hinjewadi, Pune', drop_latitude: 18.5912, drop_longitude: 73.7389 });
   const r1 = await call('ride 1: request', { method: 'POST', path: '/api/v1/trips/create-request', body: trip(1), token: riderToken });
   const trip1 = r1.body.data && r1.body.data.trip_id;
@@ -37,6 +44,7 @@ module.exports = async function business(t) {
 
   // ---- business profile and settings
   await biz('business: read', { path: '/api/admin/business', expectStatus: 200 });
+  await fresh('before the overview');
   await biz('business: overview', { path: '/api/admin/business/overview', expectStatus: 200 });
   await biz('settings: nothing to update', { method: 'PUT', path: '/api/admin/business/settings', body: {}, expectStatus: 400 });
   await biz('settings: too short', { method: 'PUT', path: '/api/admin/business/settings', body: { name: 'x' }, expectStatus: 400 });
@@ -82,9 +90,11 @@ module.exports = async function business(t) {
   await biz('ride settings: read', { path: '/api/admin/business/ride-settings', expectStatus: 200 });
   await biz('ride settings: invalid', { method: 'PUT', path: '/api/admin/business/ride-settings', body: { requireEligibleDrivers: 'yes' }, expectStatus: 400 });
   await biz('ride settings: update', { method: 'PUT', path: '/api/admin/business/ride-settings', body: { requireEligibleDrivers: true } });
+  await fresh('before availability');
   await biz('availability', { path: '/api/admin/business/availability', expectStatus: 200 });
 
   // ---- drivers
+  await fresh('before the driver screens');
   await biz('drivers: list', { path: '/api/admin/business/drivers', expectStatus: 200 });
   await biz('drivers: list filtered', { path: '/api/admin/business/drivers?status=ACTIVE&q=Dee' });
   await biz('drivers: one', { path: `/api/admin/business/drivers/${driverId}`, expectStatus: 200 });
@@ -132,6 +142,7 @@ module.exports = async function business(t) {
   await biz('trips: cancel a completed trip', { method: 'POST', path: `/api/admin/business/trips/${trip1}/cancel`, body: { reason: 'Cancelled by support' } });
 
   // ---- reports, exports, live reads
+  await fresh('before stats, alerts and the live map');
   await biz('stats', { path: '/api/admin/business/stats', expectStatus: 200 });
   await biz('alerts', { path: '/api/admin/business/alerts', expectStatus: 200 });
   await biz('live map', { path: '/api/admin/business/live-map' });

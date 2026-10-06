@@ -168,3 +168,11 @@ nothing) if the public schema holds any other table. Never point these runs at a
 What a real network showed: (1) schema creation sent one request per statement, which is very slow when every round trip costs
 50 to 200 ms, so each table is now created with ONE request (`tx.exec`); (2) one test measured the age of a location against the
 real clock and failed because its own set-up took a minute, so it now freezes the clock.
+
+The contract suite also runs on a real server: `CONTRACT_DATABASE_URL=<postgres url> DB_ENGINE=postgres node test/contract/run.js`
+(`test/helpers/realDbReset.js` resets only AutoMet's own tables and refuses if it finds any other). On the Supabase test project all
+five scenarios, 396 steps, match the Mongo snapshots. A real network exposed answers that depended on database speed, and the
+contract was made independent of it: the first scheduled billing run is pushed out in the test preload (`lastRunAt`); the business
+scenario sends unrecorded fresh driver positions before the screens that show presence (a driver is "live" only briefly, and the
+region name in a position response comes from a one-minute cache); and measured elapsed times (`ageSeconds`, `avgResponseMinutes`,
+`avgTripMinutes`) are masked.
