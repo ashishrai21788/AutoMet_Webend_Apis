@@ -9,7 +9,9 @@
  * - Prints collection names, counts and field NAMES that differ. It never prints field values (they may be personal data).
  */
 process.env.DB_ENGINE = 'postgres';
-process.env.DATABASE_URL = 'pglite:memory';
+// VERIFY_LIVE_POSTGRES=1: compare against the database in DATABASE_URL (after scripts/migrateMongoToPostgres.js) instead of a local copy; nothing is written
+const live = process.env.VERIFY_LIVE_POSTGRES === '1';
+if (!live) process.env.DATABASE_URL = 'pglite:memory';
 require('dotenv').config(); // credentials are only used to connect; they are never printed
 
 const fs = require('node:fs');
@@ -71,7 +73,7 @@ function diffPaths(a, b, at, out) {
     const docs = await mdb.collection(name).find({}).toArray(); // read only
     const pg = mongoose.connection.db.collection(name);
     let imported = 0; let importErrors = 0;
-    for (const d of docs) { try { await pg.insertOne({ ...d }); imported += 1; } catch (e) { importErrors += 1; } }
+    if (!live) for (const d of docs) { try { await pg.insertOne({ ...d }); imported += 1; } catch (e) { importErrors += 1; } }
     const back = await pg.find({}).toArray();
     const byId = new Map(back.map((x) => [String(x._id), x]));
     let identical = 0; let infoOnly = 0; const diffs = new Map();
