@@ -4,5 +4,7 @@ module.exports = {
   driver: require('./driver'),
   ride: require('./ride'),
   platform: require('./platform'),
-  business: require('./business')
+  business: require('./business'),
+  uploads: require('./uploads'),
+  legacy: require('./legacy')
 };

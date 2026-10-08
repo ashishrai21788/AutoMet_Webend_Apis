@@ -106,7 +106,7 @@ test('filters: comparison, regex, $or, $ne, $exists, $nin, null, dates, nested a
   assert.deepEqual(await codes({ email: { $exists: true } }), ['AB1']);
   assert.deepEqual(await codes({ $and: [{ score: { $gte: 0 } }, { $nor: [{ code: 'C3' }] }] }), ['AB1', 'B2']);
   assert.deepEqual(await codes({ _id: (await Thing.findOne({ code: 'C3' }).lean())._id }), ['C3']);
-  if (ENGINE === 'postgres') await assert.rejects(Thing.find({ score: { $bogus: 1 } }), /not supported/); // fails loudly instead of matching the wrong rows
+  if (ENGINE === 'postgres') await assert.rejects(Thing.find({ tags: { $size: 2 } }), /not supported/); // a real Mongo operator this engine does not implement fails loudly instead of matching the wrong rows
 });
 
 test('select: select:false fields are hidden unless asked for with +, inclusion and exclusion lists work', async () => {
@@ -344,4 +344,13 @@ test('defaults on older documents: what find, findOneAndUpdate and updateOne ret
     find: Object.keys(viaFind).sort(), lean: Object.keys(viaLean).sort(), update: Object.keys(viaUpdate).sort(),
     updateLean: Object.keys(viaUpdateLean).sort(), stored: Object.keys(stored).sort()
   }));
+});
+
+test('a value that cannot be the type of its path raises the same CastError (an id that is not an id, text for a number)', async () => {
+  const msg = async (p) => { try { await p; return null; } catch (e) { return `${e.name}: ${e.message}`; } };
+  assert.equal(await msg(Thing.findById('not-an-id')), 'CastError: Cast to ObjectId failed for value "not-an-id" (type string) at path "_id" for model "Thing"');
+  assert.equal(await msg(Thing.find({ score: 'abc' })), 'CastError: Cast to Number failed for value "abc" (type string) at path "score" for model "Thing"');
+  assert.equal(await msg(Thing.updateOne({ _id: 'zzz' }, { $set: { name: 'x' } })), 'CastError: Cast to ObjectId failed for value "zzz" (type string) at path "_id" for model "Thing"');
+  assert.equal(await msg(Thing.deleteOne({ _id: 'zzz' })), 'CastError: Cast to ObjectId failed for value "zzz" (type string) at path "_id" for model "Thing"');
+  assert.equal(await msg(Thing.find({ score: '5' })), null, 'text that is a number is cast, not refused');
 });

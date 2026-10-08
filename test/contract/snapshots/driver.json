@@ -1,0 +1,3436 @@
+{
+  "scenario": "driver",
+  "steps": [
+    {
+      "step": "setup: platform owner signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: list businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "admin@contract.test",
+          "name": "Client Admin",
+          "role": "client_admin",
+          "tenantId": "<defaultAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "admin@contract.test",
+            "id": "<a_2>",
+            "mustChangePassword": true,
+            "name": "Client Admin",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "admin@contract.test",
+          "password": "<tempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": true,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<tempPassword>",
+          "newPassword": "Client-Admin-Pass-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": false,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: market",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: region",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "name": "Pune"
+            }
+          ],
+          "radiusKm": 30,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "city": "Pune",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_3>",
+                "radiusKm": 30,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: vehicle category",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Sedan",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_4>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "name": "Sedan",
+            "passengerCapacity": 4,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: fare rule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 40,
+          "bookingFee": 5,
+          "categoryId": "<vc_4>",
+          "minimumFare": 70,
+          "perKm": 12,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 40,
+            "bookingFee": 5,
+            "categoryId": "<vc_4>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_5>",
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "1 Main Road",
+            "state": "Maharashtra"
+          },
+          "dateOfBirth": "1990-04-02",
+          "eligibleCategoryId": "<vc_4>",
+          "email": "dee@contract.test",
+          "fullName": "Dee Driver",
+          "operatingRegionId": "<rg_3>",
+          "phone": "+919811111111"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "White",
+          "luggageCapacity": 2,
+          "make": "Maruti",
+          "model": "Dzire",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH12AB1234",
+          "status": "ACTIVE",
+          "year": 2021
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_6>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: assign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_7>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: the driver is now eligible",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": null,
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "login: missing phone",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/login",
+        "body": {}
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "phoneNumber": true
+            }
+          },
+          "message": "Missing required field: phoneNumber",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "login: unknown phone",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/login",
+        "body": {
+          "phoneNumber": "+919899999999"
+        }
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "phoneNumber": "+919899999999"
+          },
+          "message": "Driver not found with this phone number",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "self sign-up is closed",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers",
+        "body": {
+          "fullName": "New Person",
+          "phone": "+919822222222"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "POST"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "generic read of all drivers is closed",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "generic read of one driver is closed",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/<driverId>"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "otp: verify with missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/verify",
+        "body": {
+          "driverId": "<driverId>"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "driverId": false,
+              "otp": true
+            }
+          },
+          "message": "Missing required fields: driverId, otp",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver: login",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/login",
+        "body": {
+          "device_id": "driver-device-1",
+          "fcm_id": "driver-fcm-1",
+          "phoneNumber": "+919811111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": false,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "OTP sent to your registered phone number. Please verify to complete login."
+            }
+          },
+          "message": "OTP sent to your registered phone number",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: verify OTP",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/verify",
+        "body": {
+          "device_id": "driver-device-1",
+          "driverId": "<driverId>",
+          "fcm_id": "driver-fcm-1",
+          "otp": "<driverOtp>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "lastActive": "<date>",
+              "tokenExpiresIn": "7d"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "otp: the same code twice",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/verify",
+        "body": {
+          "driverId": "<driverId>",
+          "otp": "000000"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driverId": "<driverId>"
+          },
+          "message": "Invalid or expired OTP",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "otp: resend, missing driverId",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/resend",
+        "body": {}
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "driverId": true
+            }
+          },
+          "message": "Missing required field: driverId",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "otp: resend",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/resend",
+        "body": {
+          "driverId": "<driverId>"
+        }
+      },
+      "response": {
+        "status": 500,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "details": "DriverOTP validation failed: phoneNumber: Path `phoneNumber` is required."
+          },
+          "message": "Server error",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "otp: update-token without a session",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/update-token",
+        "body": {
+          "driverId": "<driverId>",
+          "fcm_id": "driver-fcm-2"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "otp: update-token",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/update-token",
+        "body": {
+          "device_id": "driver-device-2",
+          "driverId": "<driverId>",
+          "fcm_id": "driver-fcm-2"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "deviceId": true,
+            "driverId": "<driverId>",
+            "fcmToken": true
+          },
+          "message": "Token updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "profile: no session",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/profile"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "profile",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/profile",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            }
+          },
+          "message": "Driver profile retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "profile: update, missing driverId",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/profile",
+        "body": {
+          "firstName": "Deepa"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "",
+              "fullName": "Deepa Driver",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "updatedFields": [
+              "firstName"
+            ]
+          },
+          "message": "Driver profile updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "profile: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/profile",
+        "body": {
+          "driverId": "<driverId>",
+          "firstName": "Deepa",
+          "lastName": "Driver-Rao"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "updatedFields": [
+              "firstName",
+              "lastName"
+            ]
+          },
+          "message": "Driver profile updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "profile: another driver id is refused",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/profile",
+        "body": {
+          "driverId": "9999999999",
+          "firstName": "X"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "driverId does not match authenticated driver"
+          },
+          "message": "driverId does not match authenticated driver",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "update fields: nothing to update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/update",
+        "body": {
+          "driverId": "<driverId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "note": "Provide at least one field to update (excluding driverId)",
+            "receivedFields": [
+              "driverId"
+            ]
+          },
+          "message": "No fields provided to update",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "update fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/update",
+        "body": {
+          "driverId": "<driverId>",
+          "emergencyContactName": "Asha",
+          "gender": "female"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "updatedFields": [
+              "gender",
+              "emergencyContactName"
+            ]
+          },
+          "message": "Driver updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "profile: after the updates",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/profile",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            }
+          },
+          "message": "Driver profile retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "status of a driver",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/status/<driverId>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "driverId": "<driverId>",
+            "driverName": "Deepa Driver-Rao",
+            "lastActive": "<date>",
+            "location": {
+              "coordinates": [
+                0,
+                0
+              ],
+              "type": "Point"
+            },
+            "retrievedAt": "<date>",
+            "status": {
+              "isLoggedin": true,
+              "isOnline": false,
+              "onlineAs": 0,
+              "onlineAsText": "Public",
+              "statusText": "Offline"
+            }
+          },
+          "message": "Driver status retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle details: read",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/<driverId>/vehicle-details"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "retrievedAt": "<date>",
+            "vehicleDetails": {
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "driverId": "<driverId>",
+              "driverName": "Deepa Driver-Rao",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "firstName": "Deepa",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isProfileComplete": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "onlineAs": 0,
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "role": "driver",
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null
+            }
+          },
+          "message": "Vehicle details retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle details: missing driverId",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/vehicle-details",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "note": "Provide at least one field to update",
+            "receivedFields": []
+          },
+          "message": "No fields provided to update",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "vehicle details: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/vehicle-details",
+        "body": {
+          "driverId": "<driverId>",
+          "fuleType": "Petrol",
+          "isVehicleAdded": true,
+          "seatingCapacity": 4,
+          "vehicleColor": "White",
+          "vehicleManufacturingYear": "2021",
+          "vehicleModel": "Dzire",
+          "vehicleNumber": "MH12AB1234",
+          "vehicleType": "Sedan"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "Petrol",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "4",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": "White",
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": 2021,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "updatedFields": [
+              "vehicleType",
+              "vehicleNumber",
+              "vehicleModel",
+              "vehicleColor",
+              "fuleType",
+              "seatingCapacity",
+              "isVehicleAdded",
+              "vehicleManufacturingYear"
+            ]
+          },
+          "message": "Vehicle details updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle details: read after the update",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/<driverId>/vehicle-details"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "retrievedAt": "<date>",
+            "vehicleDetails": {
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "driverId": "<driverId>",
+              "driverName": "Deepa Driver-Rao",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "firstName": "Deepa",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isProfileComplete": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "onlineAs": 0,
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "role": "driver",
+              "updatedAt": "<date>",
+              "vehicleColor": "White",
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": 2021,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan"
+            }
+          },
+          "message": "Vehicle details retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "online: invalid onlineAs",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/online-status",
+        "body": {
+          "driverId": "<driverId>",
+          "isOnline": true,
+          "onlineAs": "driver"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "onlineAs": "driver"
+          },
+          "message": "Invalid onlineAs value. Must be 0 (public) or 1 (private booking)",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "online: go online",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/online-status",
+        "body": {
+          "driverId": "<driverId>",
+          "isOnline": true,
+          "onlineAs": 0
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "Petrol",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": true,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "4",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": "White",
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": 2021,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "statusInfo": {
+              "isOnline": true,
+              "lastActive": "<date>",
+              "onlineAs": 0,
+              "onlineAsText": "Public"
+            },
+            "updateTime": "<date>"
+          },
+          "message": "Driver online status updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "location: bad coordinates",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/location",
+        "body": {
+          "driverId": "<driverId>",
+          "lat": 95,
+          "lng": 73.85
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "lat": "Latitude must be a number from -90 to 90"
+          },
+          "message": "Invalid location",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "location: heartbeat",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/location",
+        "body": {
+          "accuracy": 12,
+          "driverId": "<driverId>",
+          "heading": 90,
+          "lat": 18.5204,
+          "lng": 73.8567,
+          "speed": 5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "available": {
+              "code": null,
+              "message": null,
+              "ok": true
+            },
+            "freshSeconds": 60,
+            "inServiceArea": true,
+            "isOnline": true,
+            "nextHeartbeatSeconds": 10,
+            "region": {
+              "city": "Pune",
+              "regionId": "<rg_3>",
+              "zoneName": "All areas"
+            },
+            "serverTime": "<volatile>"
+          },
+          "message": "Location received",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "status of a driver: online",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/status/<driverId>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "Petrol",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": true,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastLocation": {
+                "coordinates": [
+                  73.8567,
+                  18.5204
+                ],
+                "type": "Point"
+              },
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": 12,
+              "locationHeading": 90,
+              "locationRegionId": "<rg_3>",
+              "locationSpeedKph": 18,
+              "locationUpdatedAt": "<date>",
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "4",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": "White",
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": 2021,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "driverId": "<driverId>",
+            "driverName": "Deepa Driver-Rao",
+            "lastActive": "<date>",
+            "location": {
+              "coordinates": [
+                0,
+                0
+              ],
+              "type": "Point"
+            },
+            "retrievedAt": "<date>",
+            "status": {
+              "isLoggedin": true,
+              "isOnline": true,
+              "onlineAs": 0,
+              "onlineAsText": "Public",
+              "statusText": "Online"
+            }
+          },
+          "message": "Driver status retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: no session",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/notifications?driverId=<driverId>"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "notifications: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/notifications?driverId=<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Weekly summary",
+                "driverId": "<driverId>",
+                "id": "<id9>",
+                "isUnread": true,
+                "notification_id": "dn-2",
+                "title": "Payout",
+                "type": "Informational",
+                "updatedAt": null
+              },
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Demand is high in Pune",
+                "driverId": "<driverId>",
+                "id": "<id10>",
+                "isUnread": true,
+                "notification_id": "dn-1",
+                "title": "New ride area",
+                "type": "Informational",
+                "updatedAt": null
+              }
+            ],
+            "totalCount": 2,
+            "unreadCount": 2
+          },
+          "message": "Notifications retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: mark-read, missing ids",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/notifications/mark-read",
+        "body": {
+          "driverId": "<driverId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "notificationIds": true
+            }
+          },
+          "message": "Missing required field: notificationIds",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "notifications: mark-read",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/notifications/mark-read",
+        "body": {
+          "driverId": "<driverId>",
+          "notificationIds": [
+            "<id9>"
+          ]
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "matchedCount": 1,
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Weekly summary",
+                "driverId": "<driverId>",
+                "id": "<id9>",
+                "isUnread": false,
+                "notification_id": "dn-2",
+                "title": "Payout",
+                "type": "Informational",
+                "updatedAt": "<date>"
+              }
+            ],
+            "summary": {
+              "alreadyRead": 0,
+              "successfullyUpdated": 1,
+              "totalRequested": 1
+            },
+            "updatedCount": 1
+          },
+          "message": "Notification read status updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: mark all read",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/notifications/mark-all-read?driverId=<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "markedCount": 1,
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Weekly summary",
+                "driverId": "<driverId>",
+                "id": "<id9>",
+                "isUnread": false,
+                "notification_id": "dn-2",
+                "title": "Payout",
+                "type": "Informational",
+                "updatedAt": "<date>"
+              },
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Demand is high in Pune",
+                "driverId": "<driverId>",
+                "id": "<id10>",
+                "isUnread": false,
+                "notification_id": "dn-1",
+                "title": "New ride area",
+                "type": "Informational",
+                "updatedAt": "<date>"
+              }
+            ],
+            "totalCount": 2,
+            "unreadCount": 0
+          },
+          "message": "All notifications marked as read",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: list after reading",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/notifications?driverId=<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Weekly summary",
+                "driverId": "<driverId>",
+                "id": "<id9>",
+                "isUnread": false,
+                "notification_id": "dn-2",
+                "title": "Payout",
+                "type": "Informational",
+                "updatedAt": "<date>"
+              },
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Demand is high in Pune",
+                "driverId": "<driverId>",
+                "id": "<id10>",
+                "isUnread": false,
+                "notification_id": "dn-1",
+                "title": "New ride area",
+                "type": "Informational",
+                "updatedAt": "<date>"
+              }
+            ],
+            "totalCount": 2,
+            "unreadCount": 0
+          },
+          "message": "Notifications retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: delete",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/notifications/delete?driverId=<driverId>&notificationId=<id9>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Demand is high in Pune",
+                "driverId": "<driverId>",
+                "id": "<id10>",
+                "isUnread": false,
+                "notification_id": "dn-1",
+                "title": "New ride area",
+                "type": "Informational",
+                "updatedAt": "<date>"
+              }
+            ],
+            "totalCount": 1,
+            "unreadCount": 0
+          },
+          "message": "Notification deleted successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: list after delete",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/notifications?driverId=<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Demand is high in Pune",
+                "driverId": "<driverId>",
+                "id": "<id10>",
+                "isUnread": false,
+                "notification_id": "dn-1",
+                "title": "New ride area",
+                "type": "Informational",
+                "updatedAt": "<date>"
+              }
+            ],
+            "totalCount": 1,
+            "unreadCount": 0
+          },
+          "message": "Notifications retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/faqs"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "faqs": [],
+          "message": "FAQs retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "issue: no session",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/issues",
+        "body": {
+          "driverId": "<driverId>",
+          "issueText": "App crashes"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "issue: submit",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/issues",
+        "body": {
+          "driverId": "<driverId>",
+          "imageUrls": [],
+          "issueText": "The app closes when I accept a ride"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "createdAt": "<date>",
+            "driverId": "<driverId>",
+            "imageUrls": [],
+            "issueId": "<id11>",
+            "issueText": "The app closes when I accept a ride",
+            "status": "issue submitted",
+            "updatedAt": "<date>"
+          },
+          "message": "Issue report submitted successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "issue: list my own",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/<driverId>/issues",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driverId": "<driverId>",
+            "issues": [
+              {
+                "adminNotes": null,
+                "createdAt": "<date>",
+                "driverId": "<driverId>",
+                "imageUrls": [],
+                "issueId": "<id11>",
+                "issueText": "The app closes when I accept a ride",
+                "resolvedAt": null,
+                "status": "issue submitted",
+                "updatedAt": "<date>"
+              }
+            ],
+            "totalIssues": 1
+          },
+          "message": "Driver issues retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "issue: cannot change status from the app",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/issues/anything",
+        "body": {
+          "status": "complete"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Issue status is managed by support, not from the app",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "analytics: rider app saves events",
+      "request": {
+        "method": "POST",
+        "path": "/api/user-app-analytics",
+        "body": {
+          "deviceId": "rider-device-1",
+          "events": [
+            {
+              "eventName": "visible_driver_snapshot",
+              "params": {
+                "driver_ids": [
+                  "<driverId>"
+                ]
+              },
+              "timestamp": "<volatile>"
+            },
+            {
+              "eventName": "driver_marker_tapped",
+              "params": {
+                "driver_id": "<driverId>"
+              },
+              "timestamp": "<volatile>"
+            },
+            {
+              "eventName": "driver_call_tapped",
+              "params": {
+                "driver_id": "<driverId>"
+              },
+              "timestamp": "<volatile>"
+            },
+            {
+              "eventName": "driver-info-card-viewed",
+              "params": {
+                "driver_id": "<driverId>"
+              },
+              "timestamp": "<volatile>"
+            }
+          ],
+          "platform": "android",
+          "sessionId": "session-1"
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "in.automet.user",
+            "createdAt": "<date>",
+            "deviceId": "rider-device-1",
+            "eventsCount": 4,
+            "id": "<id12>",
+            "sessionId": "session-1"
+          },
+          "message": "Analytics events saved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "analytics: empty body",
+      "request": {
+        "method": "POST",
+        "path": "/api/user-app-analytics",
+        "body": {}
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "hint": "Required: { events: [...], deviceId }. Optional: sessionId, appId, source, platform, os."
+          },
+          "message": "Request body is empty or invalid. Send JSON with Content-Type: application/json",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "analytics: driver summary",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/<driverId>/analytics"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "calls": 1,
+            "currentlyViewing": 1,
+            "directionsTapped": 0,
+            "driverId": "<driverId>",
+            "from": "<date>",
+            "infoCardViews": 1,
+            "mapAppearances": 0,
+            "markerTaps": 1,
+            "messageTaps": 0,
+            "period": "week",
+            "pickupRequests": 0,
+            "profileOpenedFromMap": 0,
+            "to": "<date>",
+            "todayTotalViewed": 1,
+            "totalVisibilityDurationHours": 0,
+            "totalVisibilityDurationMinutes": 0,
+            "totalVisibilityDurationMs": 0
+          },
+          "meta": {
+            "description": "mapAppearances = map_screen_opened only (once per session, no overcounting). todayTotalViewed = map_screen_opened + visible_driver_snapshot. currentlyViewing = active search live (TTL). totalVisibilityDuration* = how many ms/min/hours this driver was visible on users' maps in the period (approximate, from first→last event per session). See MAP_ANALYTICS_DESIGN.md."
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "analytics: driver app saves its own events",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver-app-analytics",
+        "body": {
+          "deviceId": "driver-device-1",
+          "events": [
+            {
+              "eventName": "app_opened",
+              "params": {},
+              "timestamp": "<volatile>"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "in.automet.driver",
+            "createdAt": "<date>",
+            "deviceId": "driver-device-1",
+            "eventsCount": 1,
+            "id": "<id13>",
+            "sessionId": "driver-device-1"
+          },
+          "message": "Driver analytics events saved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "collections not open to the app: admin users",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin_users"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "allowedCollections": [
+              "drivers",
+              "users",
+              "admins",
+              "driver_faqs",
+              "driver_issues",
+              "drivers_notification"
+            ]
+          },
+          "message": "Collection 'admin_users' is not allowed",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "go offline",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/online-status",
+        "body": {
+          "driverId": "<driverId>",
+          "isOnline": false,
+          "onlineAs": 0
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-2",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-2",
+              "firstName": "Deepa",
+              "fuleType": "Petrol",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastLocation": {
+                "coordinates": [
+                  73.8567,
+                  18.5204
+                ],
+                "type": "Point"
+              },
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": 12,
+              "locationHeading": 90,
+              "locationRegionId": "<rg_3>",
+              "locationSpeedKph": 18,
+              "locationUpdatedAt": "<date>",
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "4",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": "White",
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": 2021,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "statusInfo": {
+              "isOnline": false,
+              "lastActive": "<date>",
+              "onlineAs": 0,
+              "onlineAsText": "Public"
+            },
+            "updateTime": "<date>"
+          },
+          "message": "Driver online status updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logout: no session",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/logout",
+        "body": {
+          "driverId": "<driverId>"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "logout",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/logout",
+        "body": {
+          "driverId": "<driverId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id8>",
+              "aadhaarNumber": null,
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": null,
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": null,
+              "firstName": "Deepa",
+              "fuleType": "Petrol",
+              "fullName": "Deepa Driver-Rao",
+              "id": "<id8>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": false,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastLocation": {
+                "coordinates": [
+                  73.8567,
+                  18.5204
+                ],
+                "type": "Point"
+              },
+              "lastName": "Driver-Rao",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": 12,
+              "locationHeading": 90,
+              "locationRegionId": "<rg_3>",
+              "locationSpeedKph": 18,
+              "locationUpdatedAt": "<date>",
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "4",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": "White",
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": 2021,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "logoutTime": "<date>",
+            "sessionInfo": {
+              "deviceId": null,
+              "fcmToken": null,
+              "isLoggedin": false,
+              "lastActive": "<date>"
+            }
+          },
+          "message": "Driver logged out successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "after logout: the old session",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/profile",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Driver not found or token invalidated"
+          },
+          "message": "Invalid or expired token",
+          "success": false
+        }
+      }
+    }
+  ]
+}

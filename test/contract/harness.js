@@ -35,6 +35,8 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const JWT = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
 const LONGHEX = /^[0-9a-f]{32,}$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// date-only values under these keys are calendar days that move with today's date (reports, stats, created-on days)
+const CALENDAR_KEYS = new Set(['createdAt', 'date', 'from', 'to']);
 const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'temporaryPassword', 'memoryUsage', 'locationAgeSeconds', 'totalRequests', 'durationMs', 'ageSeconds', 'avgResponseMinutes', 'avgTripMinutes']); // the last three are measured elapsed time
 
 function makeNormaliser() {
@@ -55,12 +57,13 @@ function makeNormaliser() {
     // business App IDs are random per run ("app_" + 10 hex)
     if (/^app_[0-9a-f]{10}$/.test(s)) return label(tokens, 'appId', s);
     // ids embedded in longer text (urls, messages): replace each 24-hex run
+    s = s.replace(/([?&]exp=)\d{9,}/g, '$1<ts>').replace(/([?&]sig=)[0-9a-f]{64}/g, '$1<sig>');
     return s.replace(/\b[0-9a-f]{24}\b/gi, (m) => label(ids, 'id', m.toLowerCase())).replace(/\b([a-z]{1,5}_)[0-9a-f]{16}\b/g, (m, p) => label(ids, p, m)).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z/g, '<date>');
   };
   const walk = (v, key) => {
     if (v === null || v === undefined) return v === undefined ? '<undefined>' : null;
     // a date-only createdAt is the calendar day the data was made: it changes every day
-    if (typeof v === 'string' && key === 'createdAt' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return '<day>';
+    if (typeof v === 'string' && CALENDAR_KEYS.has(key) && /^\d{4}-\d{2}-\d{2}$/.test(v)) return '<day>';
     if (typeof v === 'string') return text(v);
     if (typeof v === 'number') return VOLATILE_KEYS.has(key) ? '<number>' : v;
     if (typeof v === 'boolean') return v;
@@ -243,11 +246,18 @@ function recorder(server) {
     steps.push({ kind: 'push', name, items: server.pushes() });
     server.clearPushes();
   }
-  async function call(name, { method = 'GET', path: p, body, token, headers = {}, expectStatus } = {}) {
+  async function call(name, { method = 'GET', path: p, body, form, token, headers = {}, expectStatus } = {}) {
     const h = { ...headers };
-    if (body !== undefined) h['Content-Type'] = 'application/json';
+    let payload = body === undefined ? undefined : JSON.stringify(body);
+    if (form) {
+      // a multipart upload (the browser or app sets the boundary itself, so no Content-Type header is given)
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(form.fields || {})) fd.append(k, String(v));
+      if (form.file) fd.append(form.file.field || 'file', new Blob([form.file.data], { type: form.file.type || 'application/octet-stream' }), form.file.name || 'upload.bin');
+      payload = fd;
+    } else if (body !== undefined) h['Content-Type'] = 'application/json';
     if (token) h.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${server.base}${p}`, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(30000) }).catch((e) => { throw new Error(`${name}: no answer (${e.message})`); });
+    const res = await fetch(`${server.base}${p}`, { method, headers: h, body: payload, signal: AbortSignal.timeout(30000) }).catch((e) => { throw new Error(`${name}: no answer (${e.message})`); });
     const type = res.headers.get('content-type') || '';
     const raw = type.includes('json') ? await res.json().catch(() => null) : await res.text().catch(() => null);
     if (expectStatus !== undefined && res.status !== expectStatus) {
@@ -260,7 +270,8 @@ function recorder(server) {
   const finish = () => steps.map((s) => s.kind === 'push' ? ({ step: s.name, pushes: norm.walk(s.items) }) : ({
     step: s.name,
     request: { method: s.method, path: norm.text(s.p), body: s.body === undefined ? undefined : norm.walk(s.body), auth: s.auth ? 'bearer' : undefined },
-    response: { status: s.status, contentType: s.type, body: typeof s.raw === 'string' ? norm.text(s.raw).slice(0, 400) : norm.walk(s.raw) }
+    // a CSV can hold relative calendar days ("from: 2026-09-06"), which move every day
+    response: { status: s.status, contentType: s.type, body: typeof s.raw === 'string' ? (/csv/.test(s.type) ? norm.text(s.raw).replace(/\b\d{4}-\d{2}-\d{2}\b/g, '<day>') : norm.text(s.raw)).slice(0, 400) : norm.walk(s.raw) }
   }));
   return { call, steps, norm, finish, recordPushes, alias: (value, name) => norm.alias(value, name) };
 }

@@ -176,3 +176,23 @@ contract was made independent of it: the first scheduled billing run is pushed o
 scenario sends unrecorded fresh driver positions before the screens that show presence (a driver is "live" only briefly, and the
 region name in a position response comes from a one-minute cache); and measured elapsed times (`ageSeconds`, `avgResponseMinutes`,
 `avgTripMinutes`) are masked.
+
+## 11. Uploads and the generic collection routes (contract scenarios `uploads` and `legacy`)
+
+`uploads` (70 steps): the business logo (type, size, replace, remove), driver and vehicle documents (submit, replace, signed link,
+review, revoke, history, verification status), and the older `/api/images` upload / delete. `legacy` (48 steps): the generic
+`/api/:collectionName` routes (create, list, read, update, delete, odd ids and bodies, the closed collections). The test server's
+preload (`test/contract/preload.js`) replaces Cloudinary and the two storage layers with in-memory stand-ins that use counter
+names, so nothing leaves the machine and a replay gives the same names; the harness sends multipart uploads and masks the
+expiry and signature of a signed link.
+
+Result: both match the Mongo snapshots on local Postgres and on the Supabase test project. Total: 7 scenarios, 514 steps.
+
+Findings: (1) an id that is not an id (`/api/driver_faqs/not-an-id`) makes Mongoose raise a CastError (HTTP 500 with a precise
+message). The first Postgres version answered 404; every filter now goes through Mongoose's own query casting
+(`require('mongoose/lib/cast')`) first, so the error and its message are identical, and `test/pgmodel.test.js` pins it on both
+engines. (2) MongoDB builds a unique index in the background right after a collection is first used, so a duplicate sent within
+milliseconds can get in on Mongo; Postgres creates its constraint before the table is used (stricter, and the scenario waits
+for the Mongo index so the answer is stable). (3) Pre-existing, reproduced exactly: the open generic collections
+(`driver_faqs`, `driver_issues`, `drivers_notification`) accept create / update / delete with no sign-in, and every record needs
+`name` and `phone`; `/api/Driver_Faqs` is a separate collection from `/api/driver_faqs` (Mongo collection names are case-sensitive).

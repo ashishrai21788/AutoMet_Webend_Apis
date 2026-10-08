@@ -1,0 +1,1071 @@
+{
+  "scenario": "legacy",
+  "steps": [
+    {
+      "step": "closed: admins list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admins"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "admins",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /admins is disabled. Use dedicated /api/admins/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: admins create",
+      "request": {
+        "method": "POST",
+        "path": "/api/admins",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "admins",
+            "method": "POST"
+          },
+          "message": "Generic CRUD on /admins is disabled. Use dedicated /api/admins/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: admins one",
+      "request": {
+        "method": "GET",
+        "path": "/api/admins/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "admins",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /admins is disabled. Use dedicated /api/admins/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: admins update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admins/123",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "admins",
+            "method": "PUT"
+          },
+          "message": "Generic CRUD on /admins is disabled. Use dedicated /api/admins/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: admins delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admins/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "admins",
+            "method": "DELETE"
+          },
+          "message": "Generic CRUD on /admins is disabled. Use dedicated /api/admins/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: users list",
+      "request": {
+        "method": "GET",
+        "path": "/api/users"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "users",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /users is disabled. Use dedicated /api/users/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: users create",
+      "request": {
+        "method": "POST",
+        "path": "/api/users",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "users",
+            "method": "POST"
+          },
+          "message": "Generic CRUD on /users is disabled. Use dedicated /api/users/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: users one",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "users",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /users is disabled. Use dedicated /api/users/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: users update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/123",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "users",
+            "method": "PUT"
+          },
+          "message": "Generic CRUD on /users is disabled. Use dedicated /api/users/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: users delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/users/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "users",
+            "method": "DELETE"
+          },
+          "message": "Generic CRUD on /users is disabled. Use dedicated /api/users/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers list",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers create",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "POST"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers one",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/123",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "PUT"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/drivers/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers",
+            "method": "DELETE"
+          },
+          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "unknown collection: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/widgets"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "allowedCollections": [
+              "drivers",
+              "users",
+              "admins",
+              "driver_faqs",
+              "driver_issues",
+              "drivers_notification"
+            ]
+          },
+          "message": "Collection 'widgets' is not allowed",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "unknown collection: create",
+      "request": {
+        "method": "POST",
+        "path": "/api/widgets",
+        "body": {
+          "a": 1
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "allowedCollections": [
+              "drivers",
+              "users",
+              "admins",
+              "driver_faqs",
+              "driver_issues",
+              "drivers_notification"
+            ]
+          },
+          "message": "Collection 'widgets' is not allowed",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "unknown collection: one",
+      "request": {
+        "method": "GET",
+        "path": "/api/widgets/abc"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "allowedCollections": [
+              "drivers",
+              "users",
+              "admins",
+              "driver_faqs",
+              "driver_issues",
+              "drivers_notification"
+            ]
+          },
+          "message": "Collection 'widgets' is not allowed",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "faqs: empty list",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_faqs"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "0",
+          "data": [],
+          "message": "No drivers found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: create without the fields every record needs",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver_faqs",
+        "body": {
+          "question": "No name or phone"
+        }
+      },
+      "response": {
+        "status": 500,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "details": "Driver_faqs validation failed: phone: Path `phone` is required., name: Path `name` is required."
+          },
+          "message": "Server error",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "faqs: create",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver_faqs",
+        "body": {
+          "answer": "Tap the switch on the home screen.",
+          "meta": {
+            "audience": "drivers",
+            "nested": {
+              "deep": [
+                1,
+                2,
+                {
+                  "three": 3
+                }
+              ]
+            }
+          },
+          "name": "Going online",
+          "note": null,
+          "order": 1,
+          "phone": "+910000000001",
+          "published": true,
+          "question": "How do I go online?",
+          "rating": 4.5,
+          "tags": [
+            "start",
+            "basics"
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<faq1>",
+            "createdAt": "<date>",
+            "name": "Going online",
+            "phone": "+910000000001",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "message": "driver_faqs created successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: create another, different fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver_faqs",
+        "body": {
+          "name": "Payouts",
+          "order": 2,
+          "phone": "+910000000002",
+          "question": "Where is my payout?",
+          "translations": {
+            "hi": "मेरा भुगतान कहाँ है?"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<faq2>",
+            "createdAt": "<date>",
+            "name": "Payouts",
+            "phone": "+910000000002",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "message": "driver_faqs created successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: create from an empty body",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver_faqs",
+        "body": {}
+      },
+      "response": {
+        "status": 500,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "details": "Driver_faqs validation failed: phone: Path `phone` is required., name: Path `name` is required."
+          },
+          "message": "Server error",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "faqs: a duplicate phone",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver_faqs",
+        "body": {
+          "name": "Again",
+          "phone": "+910000000001"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "field": "phone"
+          },
+          "message": "Phone number already exists",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "faqs: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_faqs"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "2",
+          "data": [
+            {
+              "__v": 0,
+              "_id": "<faq1>",
+              "createdAt": "<date>",
+              "name": "Going online",
+              "phone": "+910000000001",
+              "role": "user",
+              "updatedAt": "<date>"
+            },
+            {
+              "__v": 0,
+              "_id": "<faq2>",
+              "createdAt": "<date>",
+              "name": "Payouts",
+              "phone": "+910000000002",
+              "role": "user",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "2 driver(s) found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: read one",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_faqs/<faq1>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<faq1>",
+            "createdAt": "<date>",
+            "name": "Going online",
+            "phone": "+910000000001",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: read one that does not exist",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_faqs/<id1>"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "error": "driver_faqs not found"
+        }
+      }
+    },
+    {
+      "step": "faqs: read with an id that is not an id",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_faqs/not-an-id"
+      },
+      "response": {
+        "status": 500,
+        "contentType": "application/json",
+        "body": {
+          "details": "Cast to ObjectId failed for value \"not-an-id\" (type string) at path \"_id\" for model \"Driver_faqs\"",
+          "error": "Server error"
+        }
+      }
+    },
+    {
+      "step": "faqs: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/driver_faqs/<faq1>",
+        "body": {
+          "answer": "Open the app and use the duty switch.",
+          "extra": {
+            "added": true
+          },
+          "meta.audience": "everyone",
+          "order": 10
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<faq1>",
+            "createdAt": "<date>",
+            "name": "Going online",
+            "phone": "+910000000001",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "message": "driver_faqs updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: read after the update",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_faqs/<faq1>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<faq1>",
+            "createdAt": "<date>",
+            "name": "Going online",
+            "phone": "+910000000001",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: update with an empty body",
+      "request": {
+        "method": "PUT",
+        "path": "/api/driver_faqs/<faq2>",
+        "body": {}
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<faq2>",
+            "createdAt": "<date>",
+            "name": "Payouts",
+            "phone": "+910000000002",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "message": "driver_faqs updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: update one that does not exist",
+      "request": {
+        "method": "PUT",
+        "path": "/api/driver_faqs/<id1>",
+        "body": {
+          "a": 1
+        }
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "error": "driver_faqs not found"
+        }
+      }
+    },
+    {
+      "step": "faqs: update with an id that is not an id",
+      "request": {
+        "method": "PUT",
+        "path": "/api/driver_faqs/not-an-id",
+        "body": {
+          "a": 1
+        }
+      },
+      "response": {
+        "status": 500,
+        "contentType": "application/json",
+        "body": {
+          "details": "Cast to ObjectId failed for value \"not-an-id\" (type string) at path \"_id\" for model \"Driver_faqs\"",
+          "error": "Server error"
+        }
+      }
+    },
+    {
+      "step": "faqs: names with a different case reach the same collection",
+      "request": {
+        "method": "GET",
+        "path": "/api/Driver_Faqs"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "0",
+          "data": [],
+          "message": "No drivers found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/driver_faqs/<faq2>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "driver_faqs deleted successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "faqs: delete again",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/driver_faqs/<faq2>"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "error": "driver_faqs not found"
+        }
+      }
+    },
+    {
+      "step": "faqs: delete with an id that is not an id",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/driver_faqs/not-an-id"
+      },
+      "response": {
+        "status": 500,
+        "contentType": "application/json",
+        "body": {
+          "details": "Cast to ObjectId failed for value \"not-an-id\" (type string) at path \"_id\" for model \"Driver_faqs\"",
+          "error": "Server error"
+        }
+      }
+    },
+    {
+      "step": "faqs: list after the delete",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_faqs"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "1",
+          "data": [
+            {
+              "__v": 0,
+              "_id": "<faq1>",
+              "createdAt": "<date>",
+              "name": "Going online",
+              "phone": "+910000000001",
+              "role": "user",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "1 driver(s) found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers_notification: create",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers_notification",
+        "body": {
+          "date": "<day>",
+          "description": "A note",
+          "driverId": "D-LEGACY-1",
+          "isUnread": true,
+          "name": "Note",
+          "phone": "+910000000003",
+          "title": "Hello"
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<note1>",
+            "createdAt": "<date>",
+            "name": "Note",
+            "phone": "+910000000003",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "message": "drivers_notification created successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers_notification: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers_notification"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "1",
+          "data": [
+            {
+              "__v": 0,
+              "_id": "<note1>",
+              "createdAt": "<date>",
+              "name": "Note",
+              "phone": "+910000000003",
+              "role": "user",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "1 driver(s) found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers_notification: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers_notification/<note1>",
+        "body": {
+          "isUnread": false
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<note1>",
+            "createdAt": "<date>",
+            "name": "Note",
+            "phone": "+910000000003",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "message": "drivers_notification updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers_notification: read one",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers_notification/<note1>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<note1>",
+            "createdAt": "<date>",
+            "name": "Note",
+            "phone": "+910000000003",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver_issues: create",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver_issues",
+        "body": {
+          "driverId": "D-LEGACY-1",
+          "issueText": "The app is slow",
+          "name": "Issue",
+          "phone": "+910000000004",
+          "status": "issue submitted"
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "__v": 0,
+            "_id": "<issue1>",
+            "createdAt": "<date>",
+            "name": "Issue",
+            "phone": "+910000000004",
+            "role": "user",
+            "updatedAt": "<date>"
+          },
+          "message": "driver_issues created successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver_issues: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_issues"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "1",
+          "data": [
+            {
+              "__v": 0,
+              "_id": "<issue1>",
+              "createdAt": "<date>",
+              "name": "Issue",
+              "phone": "+910000000004",
+              "role": "user",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "1 driver(s) found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver_issues: delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/driver_issues/<issue1>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "driver_issues deleted successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver_issues: list after the delete",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_issues"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "0",
+          "data": [],
+          "message": "No drivers found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers_notification: delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/drivers_notification/<note1>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "drivers_notification deleted successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers_notification: list after the delete",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers_notification"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "count": "0",
+          "data": [],
+          "message": "No drivers found",
+          "success": true
+        }
+      }
+    }
+  ]
+}

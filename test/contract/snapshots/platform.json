@@ -1,0 +1,3703 @@
+{
+  "scenario": "platform",
+  "steps": [
+    {
+      "step": "login: missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {}
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Email and password are required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "login: wrong password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "nope-nope-1"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Invalid email or password",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "login: unknown email",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "nobody@contract.test",
+          "password": "nope-nope-1"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Invalid email or password",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "login: owner",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "session: me",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/auth/me",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "owner@contract.test",
+            "id": "<a_1>",
+            "mustChangePassword": true,
+            "name": "Platform Owner",
+            "role": "super_admin",
+            "tenantId": null,
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "session: no token",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/auth/me"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "session: garbage token",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/auth/me",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Invalid token",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "forgot password: unknown email",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/forgot-password",
+        "body": {
+          "email": "nobody@contract.test"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "message": "If that email belongs to an account, a reset link is on its way."
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "reset password: bad token",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/reset-password",
+        "body": {
+          "newPassword": "Whatever-Pass-1",
+          "token": "x"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "This reset link is not valid. Ask for a new one.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<appId1>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<appId1>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "tenants: create, missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "name, appName and adminName are required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: create, bad package name",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants",
+        "body": {
+          "adminEmail": "zed@contract.test",
+          "adminName": "Zed Admin",
+          "appName": "Zed",
+          "name": "Zed Cabs",
+          "packageName": "nope"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "packageName must look like com.client.rider",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: create",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants",
+        "body": {
+          "adminEmail": "zed@contract.test",
+          "adminName": "Zed Admin",
+          "appName": "Zed Rides",
+          "city": "Pune",
+          "name": "Zed Cabs",
+          "packageName": "com.zed.rider",
+          "plan": "trial"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<zedAppId>",
+            "appName": "Zed Rides",
+            "brandColor": "#f5a300",
+            "city": "Pune",
+            "createdAt": "<day>",
+            "id": "<zedAppId>",
+            "initialAdmin": {
+              "email": "zed@contract.test",
+              "temporaryPassword": "<volatile>"
+            },
+            "isDefault": false,
+            "logoUrl": "",
+            "market": null,
+            "name": "Zed Cabs",
+            "packageName": "com.zed.rider",
+            "plan": "trial",
+            "slug": "zed-cabs",
+            "status": "trial",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "tenants: create again (duplicate email)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants",
+        "body": {
+          "adminEmail": "zed@contract.test",
+          "adminName": "Zed Admin",
+          "appName": "Zed Two",
+          "name": "Zed Two",
+          "packageName": "com.zed.two",
+          "plan": "trial"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "That admin email is already in use",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/tenants/<zedAppId>",
+        "body": {
+          "appName": "Zed Rides Pune",
+          "city": "Mumbai"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<zedAppId>",
+            "appName": "Zed Rides Pune",
+            "brandColor": "#f5a300",
+            "city": "Mumbai",
+            "createdAt": "<day>",
+            "id": "<zedAppId>",
+            "isDefault": false,
+            "logoUrl": "",
+            "market": null,
+            "name": "Zed Cabs",
+            "packageName": "com.zed.rider",
+            "plan": "trial",
+            "slug": "zed-cabs",
+            "status": "trial",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "tenants: bad status",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/tenants/<zedAppId>/status",
+        "body": {
+          "status": "flying"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "status must be one of active, trial, suspended",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: suspend",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/tenants/<zedAppId>/status",
+        "body": {
+          "status": "suspended"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<zedAppId>",
+            "appName": "Zed Rides Pune",
+            "brandColor": "#f5a300",
+            "city": "Mumbai",
+            "createdAt": "<day>",
+            "id": "<zedAppId>",
+            "isDefault": false,
+            "logoUrl": "",
+            "market": null,
+            "name": "Zed Cabs",
+            "packageName": "com.zed.rider",
+            "plan": "trial",
+            "slug": "zed-cabs",
+            "status": "suspended",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "tenants: reactivate",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/tenants/<zedAppId>/status",
+        "body": {
+          "status": "active"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<zedAppId>",
+            "appName": "Zed Rides Pune",
+            "brandColor": "#f5a300",
+            "city": "Mumbai",
+            "createdAt": "<day>",
+            "id": "<zedAppId>",
+            "isDefault": false,
+            "logoUrl": "",
+            "market": null,
+            "name": "Zed Cabs",
+            "packageName": "com.zed.rider",
+            "plan": "trial",
+            "slug": "zed-cabs",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "tenants: unknown id",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/tenants/app_0000000000/status",
+        "body": {
+          "status": "active"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Client not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: export",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants/<zedAppId>/export",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "business": {
+            "_id": "<id2>",
+            "appName": "Zed Rides Pune",
+            "billingDetails": null,
+            "brandColor": "#f5a300",
+            "city": "Mumbai",
+            "createdAt": "<date>",
+            "isDefault": false,
+            "logoUrl": "",
+            "market": null,
+            "name": "Zed Cabs",
+            "packageName": "com.zed.rider",
+            "plan": "trial",
+            "slug": "zed-cabs",
+            "status": "active",
+            "subscription": null,
+            "supportEmail": "",
+            "supportPhone": "",
+            "tenantId": "<zedAppId>",
+            "updatedAt": "<date>"
+          },
+          "counts": {
+            "adminAccounts": 1,
+            "cancellationPolicies": 0,
+            "driverDocuments": 0,
+            "driverVehicleAssignments": 0,
+            "drivers": 0,
+            "fareRules": 0,
+            "invoices": 0,
+            "regions": 0,
+            "riders": 0,
+            "setupProgress": 0,
+            "supportReports": 0,
+            "timeline": 0,
+            "trips": 0,
+            "vehicleCategories": 0,
+            "vehicleDocuments": 0,
+            "vehicles": 0
+          },
+          "data": {
+            "adminAccounts": [
+              {
+                "_id": "<id3>",
+                "active": true,
+                "adminId": "<a_4>",
+                "createdAt": "<date>",
+                "email": "zed@contract.test",
+                "failedLogins": 0,
+                "lastLoginAt": null,
+                "lockUntil": null,
+                "name": "Zed Admin",
+                "role": "client_admin",
+                "tenantId": "<zedAppId>",
+                "updatedAt": "<date>"
+              }
+            ],
+            "cancellationPolicies": [],
+            "driverDocuments": [],
+            "driverVehicleAssignments": [],
+            "drivers": [],
+            "fareRules": [],
+            "invoices": [],
+            "regions": [],
+            "riders": [],
+            "setupProgress": [],
+            "supportReports": [],
+            "timeline": [],
+            "trips": [],
+            "vehicleCategories": [],
+            "vehicleDocuments": [],
+            "vehicles": []
+          },
+          "exportedAt": "<date>",
+          "note": "Account secrets are not included. Document files are not included, only their records.",
+          "truncated": []
+        }
+      }
+    },
+    {
+      "step": "tenants: list after changes",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<appId1>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<appId1>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            },
+            {
+              "appId": "<zedAppId>",
+              "appName": "Zed Rides Pune",
+              "brandColor": "#f5a300",
+              "city": "Mumbai",
+              "createdAt": "<day>",
+              "id": "<zedAppId>",
+              "isDefault": false,
+              "logoUrl": "",
+              "market": null,
+              "name": "Zed Cabs",
+              "packageName": "com.zed.rider",
+              "plan": "trial",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "zed-cabs",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/users",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "email": "zed@contract.test",
+              "id": "<a_4>",
+              "mustChangePassword": true,
+              "name": "Zed Admin",
+              "role": "client_admin",
+              "tenantId": "<zedAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: create, missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "name and a valid email are required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "users: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "ops@contract.test",
+          "name": "Olly Ops",
+          "role": "client_admin",
+          "tenantId": "<zedAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "ops@contract.test",
+            "id": "<opsAdminId>",
+            "mustChangePassword": true,
+            "name": "Olly Ops",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<zedAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: create duplicate",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "ops@contract.test",
+          "name": "Olly Ops",
+          "role": "client_admin",
+          "tenantId": "<zedAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "That email is already in use",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "users: update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/users/<opsAdminId>",
+        "body": {
+          "name": "Olly Operations"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "ops@contract.test",
+            "id": "<opsAdminId>",
+            "mustChangePassword": true,
+            "name": "Olly Operations",
+            "role": "client_admin",
+            "tenantId": "<zedAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: deactivate",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/users/<opsAdminId>/active",
+        "body": {
+          "active": false
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": false,
+            "email": "ops@contract.test",
+            "id": "<opsAdminId>",
+            "mustChangePassword": true,
+            "name": "Olly Operations",
+            "role": "client_admin",
+            "tenantId": "<zedAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: sign in while deactivated",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "ops@contract.test",
+          "password": "<opsTempPassword>"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Invalid email or password",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "users: reactivate",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/users/<opsAdminId>/active",
+        "body": {
+          "active": true
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "ops@contract.test",
+            "id": "<opsAdminId>",
+            "mustChangePassword": true,
+            "name": "Olly Operations",
+            "role": "client_admin",
+            "tenantId": "<zedAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: reset password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users/<opsAdminId>/reset-password",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "ops@contract.test",
+            "id": "<opsAdminId>",
+            "mustChangePassword": true,
+            "name": "Olly Operations",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<zedAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: reset two-factor",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users/<opsAdminId>/reset-2fa",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "ops@contract.test",
+            "id": "<opsAdminId>",
+            "mustChangePassword": true,
+            "name": "Olly Operations",
+            "role": "client_admin",
+            "tenantId": "<zedAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: list after changes",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/users",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "email": "zed@contract.test",
+              "id": "<a_4>",
+              "mustChangePassword": true,
+              "name": "Zed Admin",
+              "role": "client_admin",
+              "tenantId": "<zedAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            },
+            {
+              "active": true,
+              "email": "ops@contract.test",
+              "id": "<opsAdminId>",
+              "mustChangePassword": true,
+              "name": "Olly Operations",
+              "role": "client_admin",
+              "tenantId": "<zedAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "users: the new user signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "ops@contract.test",
+          "password": "<opsResetPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "ops@contract.test",
+              "id": "<opsAdminId>",
+              "mustChangePassword": true,
+              "name": "Olly Operations",
+              "role": "client_admin",
+              "tenantId": "<zedAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "permissions: a business user may not manage businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<zedAppId>",
+              "appName": "Zed Rides Pune",
+              "brandColor": "#f5a300",
+              "city": "Mumbai",
+              "createdAt": "<day>",
+              "id": "<zedAppId>",
+              "isDefault": false,
+              "logoUrl": "",
+              "market": null,
+              "name": "Zed Cabs",
+              "packageName": "com.zed.rider",
+              "plan": "trial",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "zed-cabs",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "permissions: a business user may not read platform billing",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/plans",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "team: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/team",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "team: add a member",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/platform/team",
+        "body": {
+          "email": "fin@contract.test",
+          "name": "Fin Finance",
+          "role": "finance"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "fin@contract.test",
+            "id": "<finAdminId>",
+            "mustChangePassword": true,
+            "name": "Fin Finance",
+            "role": "super_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": null,
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "team: rename",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/platform/team/<finAdminId>",
+        "body": {
+          "name": "Fin Accounts"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "fin@contract.test",
+            "id": "<finAdminId>",
+            "mustChangePassword": true,
+            "name": "Fin Accounts",
+            "role": "super_admin",
+            "tenantId": null,
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "team: deactivate",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/platform/team/<finAdminId>/active",
+        "body": {
+          "active": false
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": false,
+            "email": "fin@contract.test",
+            "id": "<finAdminId>",
+            "mustChangePassword": true,
+            "name": "Fin Accounts",
+            "role": "super_admin",
+            "tenantId": null,
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "team: reset password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/platform/team/<finAdminId>/reset-password",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": false,
+            "email": "fin@contract.test",
+            "id": "<finAdminId>",
+            "mustChangePassword": true,
+            "name": "Fin Accounts",
+            "role": "super_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": null,
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "team: reset two-factor",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/platform/team/<finAdminId>/reset-2fa",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": false,
+            "email": "fin@contract.test",
+            "id": "<finAdminId>",
+            "mustChangePassword": true,
+            "name": "Fin Accounts",
+            "role": "super_admin",
+            "tenantId": null,
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "team: list after changes",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/team",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            },
+            {
+              "active": false,
+              "email": "fin@contract.test",
+              "id": "<finAdminId>",
+              "mustChangePassword": true,
+              "name": "Fin Accounts",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "settings: read",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/settings",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "address": "",
+            "billingEmail": "",
+            "companyName": "",
+            "currency": "INR",
+            "defaultTrialDays": 14,
+            "emailConfigured": false,
+            "graceDays": 15,
+            "gstEnabled": false,
+            "gstRate": 18,
+            "gstin": "",
+            "invoiceDueDays": 14,
+            "invoiceNotes": "",
+            "lapseAction": "none",
+            "lastRunAt": null,
+            "legalName": "",
+            "reminderOffsets": [
+              -3,
+              1,
+              7
+            ],
+            "sac": "998314",
+            "stateCode": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "settings: nothing to update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/platform/settings",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "companyName": "Nothing to update"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "settings: bad GSTIN",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/platform/settings",
+        "body": {
+          "gstin": "bad"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "gstin": "Enter a valid 15-character GSTIN"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "settings: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/platform/settings",
+        "body": {
+          "address": "1 Platform Road, Pune",
+          "billingEmail": "billing@contract.test",
+          "companyName": "Contract Platform Pvt Ltd",
+          "graceDays": 5,
+          "gstRate": 18,
+          "invoiceDueDays": 10,
+          "lapseAction": "none",
+          "legalName": "Contract Platform Private Limited",
+          "reminderOffsets": [
+            -3,
+            0,
+            5
+          ],
+          "stateCode": "27"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "address": "1 Platform Road, Pune",
+            "billingEmail": "billing@contract.test",
+            "companyName": "Contract Platform Pvt Ltd",
+            "currency": "INR",
+            "defaultTrialDays": 14,
+            "emailConfigured": false,
+            "graceDays": 5,
+            "gstEnabled": false,
+            "gstRate": 18,
+            "gstin": "",
+            "invoiceDueDays": 10,
+            "invoiceNotes": "",
+            "lapseAction": "none",
+            "lastRunAt": null,
+            "legalName": "Contract Platform Private Limited",
+            "reminderOffsets": [
+              -3,
+              0,
+              5
+            ],
+            "sac": "998314",
+            "stateCode": "27"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "settings: read after update",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/settings",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "address": "1 Platform Road, Pune",
+            "billingEmail": "billing@contract.test",
+            "companyName": "Contract Platform Pvt Ltd",
+            "currency": "INR",
+            "defaultTrialDays": 14,
+            "emailConfigured": false,
+            "graceDays": 5,
+            "gstEnabled": false,
+            "gstRate": 18,
+            "gstin": "",
+            "invoiceDueDays": 10,
+            "invoiceNotes": "",
+            "lapseAction": "none",
+            "lastRunAt": null,
+            "legalName": "Contract Platform Private Limited",
+            "reminderOffsets": [
+              -3,
+              0,
+              5
+            ],
+            "sac": "998314",
+            "stateCode": "27"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "plans: list (none yet)",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/plans",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "plans: create, invalid",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/platform/plans",
+        "body": {
+          "name": "x"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "cycle": "Choose monthly or yearly",
+            "name": "Name must be 2 to 60 characters",
+            "price": "The price must be a number, 0 or more"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "plans: create",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/platform/plans",
+        "body": {
+          "cycle": "monthly",
+          "description": "For growing fleets",
+          "name": "Growth",
+          "price": 10000,
+          "setupFee": 5000,
+          "trialDays": 14
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "currency": "INR",
+            "cycle": "monthly",
+            "description": "For growing fleets",
+            "id": "<planId>",
+            "name": "Growth",
+            "price": 10000,
+            "setupFee": 5000,
+            "subscribers": 0,
+            "trialDays": 14
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "plans: update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/platform/plans/<planId>",
+        "body": {
+          "price": 12000
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "currency": "INR",
+            "cycle": "monthly",
+            "description": "For growing fleets",
+            "id": "<planId>",
+            "name": "Growth",
+            "price": 12000,
+            "setupFee": 5000,
+            "subscribers": 0,
+            "trialDays": 14
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "plans: update nothing",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/platform/plans/<planId>",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "name": "Nothing to update"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "plans: unknown plan",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/platform/plans/plan_0000",
+        "body": {
+          "price": 1
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Plan not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "plans: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/plans",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "currency": "INR",
+              "cycle": "monthly",
+              "description": "For growing fleets",
+              "id": "<planId>",
+              "name": "Growth",
+              "price": 12000,
+              "setupFee": 5000,
+              "subscribers": 0,
+              "trialDays": 14
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "billing: read (nothing yet)",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants/<zedAppId>/billing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "businessStatus": "active",
+            "details": null,
+            "invoices": [],
+            "subscription": null,
+            "totals": {
+              "billed": 0,
+              "collected": 0,
+              "gst": 0,
+              "outstanding": 0,
+              "refunded": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "billing details: bad GSTIN",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/tenants/<zedAppId>/billing-details",
+        "body": {
+          "gstin": "bad"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "gstin": "Enter a valid 15-character GSTIN"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "billing details: save",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/tenants/<zedAppId>/billing-details",
+        "body": {
+          "address": "9 Zed Street, Mumbai",
+          "email": "accounts@zed.test",
+          "legalName": "Zed Cabs Private Limited",
+          "stateCode": "27"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "details": {
+              "address": "9 Zed Street, Mumbai",
+              "email": "accounts@zed.test",
+              "gstin": "",
+              "legalName": "Zed Cabs Private Limited",
+              "stateCode": "27"
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "subscription: choose a plan",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/tenants/<zedAppId>/subscription",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "planId": "Choose a plan"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "subscription: assign",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/tenants/<zedAppId>/subscription",
+        "body": {
+          "notes": "Contract subscription",
+          "planId": "<planId>",
+          "startDate": "2026-01-01"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "setupInvoice": null,
+            "subscription": {
+              "cancelReason": "",
+              "cancelledAt": null,
+              "currency": "INR",
+              "cycle": "monthly",
+              "notes": "Contract subscription",
+              "planId": "<planId>",
+              "planName": "Growth",
+              "price": 12000,
+              "recurring": true,
+              "renewalDate": "<date>",
+              "setupFee": 5000,
+              "startDate": "<date>",
+              "status": "active",
+              "trialEndsAt": null
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "subscription: renew",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants/<zedAppId>/subscription/renew",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "invoice": null,
+            "subscription": {
+              "cancelReason": "",
+              "cancelledAt": null,
+              "currency": "INR",
+              "cycle": "monthly",
+              "notes": "Contract subscription",
+              "planId": "<planId>",
+              "planName": "Growth",
+              "price": 12000,
+              "recurring": true,
+              "renewalDate": "<date>",
+              "setupFee": 5000,
+              "startDate": "<date>",
+              "status": "active",
+              "trialEndsAt": null
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "billing: read",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants/<zedAppId>/billing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "businessStatus": "active",
+            "details": {
+              "address": "9 Zed Street, Mumbai",
+              "email": "accounts@zed.test",
+              "gstin": "",
+              "legalName": "Zed Cabs Private Limited",
+              "stateCode": "27"
+            },
+            "invoices": [],
+            "subscription": {
+              "cancelReason": "",
+              "cancelledAt": null,
+              "currency": "INR",
+              "cycle": "monthly",
+              "notes": "Contract subscription",
+              "planId": "<planId>",
+              "planName": "Growth",
+              "price": 12000,
+              "recurring": true,
+              "renewalDate": "<date>",
+              "setupFee": 5000,
+              "startDate": "<date>",
+              "status": "active",
+              "trialEndsAt": null
+            },
+            "totals": {
+              "billed": 0,
+              "collected": 0,
+              "gst": 0,
+              "outstanding": 0,
+              "refunded": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoice: create, invalid",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants/<zedAppId>/invoices",
+        "body": {
+          "type": "subscription"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "periodEnd": "Enter the last day this invoice covers",
+            "periodStart": "Enter the first day this invoice covers"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "invoice: create 1",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants/<zedAppId>/invoices",
+        "body": {
+          "amount": 12000,
+          "periodEnd": "2026-02-28",
+          "periodStart": "2026-02-01",
+          "type": "subscription"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "amount": 12000,
+            "appId": "<zedAppId>",
+            "businessName": "Zed Cabs",
+            "buyerGstin": "",
+            "cgst": 0,
+            "currency": "INR",
+            "description": "Platform subscription",
+            "dueDate": "<date>",
+            "emailedAt": null,
+            "id": "<invoice1>",
+            "igst": 0,
+            "issuedAt": "<date>",
+            "lapsedAt": null,
+            "netPaid": 0,
+            "number": "INV-000001",
+            "overdue": false,
+            "paidAt": null,
+            "paymentMethod": null,
+            "periodEnd": "<date>",
+            "periodStart": "<date>",
+            "reference": "",
+            "refundedAmount": 0,
+            "refunds": [],
+            "sac": "998314",
+            "sgst": 0,
+            "status": "issued",
+            "taxAmount": 0,
+            "taxRate": 0,
+            "total": 12000,
+            "type": "subscription",
+            "voidReason": "",
+            "voidedAt": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoice: create 2",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants/<zedAppId>/invoices",
+        "body": {
+          "amount": 3000,
+          "description": "Custom work",
+          "type": "other"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "amount": 3000,
+            "appId": "<zedAppId>",
+            "businessName": "Zed Cabs",
+            "buyerGstin": "",
+            "cgst": 0,
+            "currency": "INR",
+            "description": "Custom work",
+            "dueDate": "<date>",
+            "emailedAt": null,
+            "id": "<invoice2>",
+            "igst": 0,
+            "issuedAt": "<date>",
+            "lapsedAt": null,
+            "netPaid": 0,
+            "number": "INV-000002",
+            "overdue": false,
+            "paidAt": null,
+            "paymentMethod": null,
+            "periodEnd": null,
+            "periodStart": null,
+            "reference": "",
+            "refundedAmount": 0,
+            "refunds": [],
+            "sac": "998314",
+            "sgst": 0,
+            "status": "issued",
+            "taxAmount": 0,
+            "taxRate": 0,
+            "total": 3000,
+            "type": "other",
+            "voidReason": "",
+            "voidedAt": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoice: pay, no method",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice1>/pay",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "paymentMethod": "Choose how it was paid"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "invoice: pay",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice1>/pay",
+        "body": {
+          "paymentMethod": "upi",
+          "reference": "UPI-REF-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "amount": 12000,
+            "appId": "<zedAppId>",
+            "businessName": "Zed Cabs",
+            "buyerGstin": "",
+            "cgst": 0,
+            "currency": "INR",
+            "description": "Platform subscription",
+            "dueDate": "<date>",
+            "emailedAt": null,
+            "id": "<invoice1>",
+            "igst": 0,
+            "issuedAt": "<date>",
+            "lapsedAt": null,
+            "netPaid": 12000,
+            "number": "INV-000001",
+            "overdue": false,
+            "paidAt": "<date>",
+            "paymentMethod": "upi",
+            "periodEnd": "<date>",
+            "periodStart": "<date>",
+            "reference": "UPI-REF-1",
+            "refundedAmount": 0,
+            "refunds": [],
+            "sac": "998314",
+            "sgst": 0,
+            "status": "paid",
+            "taxAmount": 0,
+            "taxRate": 0,
+            "total": 12000,
+            "type": "subscription",
+            "voidReason": "",
+            "voidedAt": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoice: pay again",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice1>/pay",
+        "body": {
+          "paymentMethod": "upi"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "This invoice is already paid",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "invoice: refund too much",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice1>/refund",
+        "body": {
+          "amount": 99999999,
+          "reason": "Too much for contract"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "amount": "At most 12000 can still be refunded"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "invoice: refund",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice1>/refund",
+        "body": {
+          "amount": 1000,
+          "reason": "Goodwill credit"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "amount": 12000,
+            "appId": "<zedAppId>",
+            "businessName": "Zed Cabs",
+            "buyerGstin": "",
+            "cgst": 0,
+            "currency": "INR",
+            "description": "Platform subscription",
+            "dueDate": "<date>",
+            "emailedAt": null,
+            "id": "<invoice1>",
+            "igst": 0,
+            "issuedAt": "<date>",
+            "lapsedAt": null,
+            "netPaid": 11000,
+            "number": "INV-000001",
+            "overdue": false,
+            "paidAt": "<date>",
+            "paymentMethod": "upi",
+            "periodEnd": "<date>",
+            "periodStart": "<date>",
+            "reference": "UPI-REF-1",
+            "refundedAmount": 1000,
+            "refunds": [
+              {
+                "amount": 1000,
+                "at": "<date>",
+                "by": "owner@contract.test",
+                "exTax": 1000,
+                "number": "CN-000001",
+                "reason": "Goodwill credit",
+                "tax": 0
+              }
+            ],
+            "sac": "998314",
+            "sgst": 0,
+            "status": "paid",
+            "taxAmount": 0,
+            "taxRate": 0,
+            "total": 12000,
+            "type": "subscription",
+            "voidReason": "",
+            "voidedAt": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoice: refund again",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice1>/refund",
+        "body": {
+          "amount": 500,
+          "reason": "Second credit"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "amount": 12000,
+            "appId": "<zedAppId>",
+            "businessName": "Zed Cabs",
+            "buyerGstin": "",
+            "cgst": 0,
+            "currency": "INR",
+            "description": "Platform subscription",
+            "dueDate": "<date>",
+            "emailedAt": null,
+            "id": "<invoice1>",
+            "igst": 0,
+            "issuedAt": "<date>",
+            "lapsedAt": null,
+            "netPaid": 10500,
+            "number": "INV-000001",
+            "overdue": false,
+            "paidAt": "<date>",
+            "paymentMethod": "upi",
+            "periodEnd": "<date>",
+            "periodStart": "<date>",
+            "reference": "UPI-REF-1",
+            "refundedAmount": 1500,
+            "refunds": [
+              {
+                "amount": 1000,
+                "at": "<date>",
+                "by": "owner@contract.test",
+                "exTax": 1000,
+                "number": "CN-000001",
+                "reason": "Goodwill credit",
+                "tax": 0
+              },
+              {
+                "amount": 500,
+                "at": "<date>",
+                "by": "owner@contract.test",
+                "exTax": 500,
+                "number": "CN-000002",
+                "reason": "Second credit",
+                "tax": 0
+              }
+            ],
+            "sac": "998314",
+            "sgst": 0,
+            "status": "paid",
+            "taxAmount": 0,
+            "taxRate": 0,
+            "total": 12000,
+            "type": "subscription",
+            "voidReason": "",
+            "voidedAt": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoice: void",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice2>/void",
+        "body": {
+          "reason": "Raised by mistake"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "amount": 3000,
+            "appId": "<zedAppId>",
+            "businessName": "Zed Cabs",
+            "buyerGstin": "",
+            "cgst": 0,
+            "currency": "INR",
+            "description": "Custom work",
+            "dueDate": "<date>",
+            "emailedAt": null,
+            "id": "<invoice2>",
+            "igst": 0,
+            "issuedAt": "<date>",
+            "lapsedAt": null,
+            "netPaid": 0,
+            "number": "INV-000002",
+            "overdue": false,
+            "paidAt": null,
+            "paymentMethod": null,
+            "periodEnd": null,
+            "periodStart": null,
+            "reference": "",
+            "refundedAmount": 0,
+            "refunds": [],
+            "sac": "998314",
+            "sgst": 0,
+            "status": "void",
+            "taxAmount": 0,
+            "taxRate": 0,
+            "total": 3000,
+            "type": "other",
+            "voidReason": "Raised by mistake",
+            "voidedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoice: void again",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice2>/void",
+        "body": {
+          "reason": "Raised by mistake"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "This invoice is already void",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "invoice: pay a voided invoice",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/<invoice2>/pay",
+        "body": {
+          "paymentMethod": "cash"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "This invoice is already void",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "invoice: unknown",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/invoices/inv_missing/pay",
+        "body": {
+          "paymentMethod": "cash"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Invoice not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "invoices: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/invoices",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "amount": 3000,
+                "appId": "<zedAppId>",
+                "businessName": "Zed Cabs",
+                "buyerGstin": "",
+                "cgst": 0,
+                "currency": "INR",
+                "description": "Custom work",
+                "dueDate": "<date>",
+                "emailedAt": null,
+                "id": "<invoice2>",
+                "igst": 0,
+                "issuedAt": "<date>",
+                "lapsedAt": null,
+                "netPaid": 0,
+                "number": "INV-000002",
+                "overdue": false,
+                "paidAt": null,
+                "paymentMethod": null,
+                "periodEnd": null,
+                "periodStart": null,
+                "reference": "",
+                "refundedAmount": 0,
+                "refunds": [],
+                "sac": "998314",
+                "sgst": 0,
+                "status": "void",
+                "taxAmount": 0,
+                "taxRate": 0,
+                "total": 3000,
+                "type": "other",
+                "voidReason": "Raised by mistake",
+                "voidedAt": "<date>"
+              },
+              {
+                "amount": 12000,
+                "appId": "<zedAppId>",
+                "businessName": "Zed Cabs",
+                "buyerGstin": "",
+                "cgst": 0,
+                "currency": "INR",
+                "description": "Platform subscription",
+                "dueDate": "<date>",
+                "emailedAt": null,
+                "id": "<invoice1>",
+                "igst": 0,
+                "issuedAt": "<date>",
+                "lapsedAt": null,
+                "netPaid": 10500,
+                "number": "INV-000001",
+                "overdue": false,
+                "paidAt": "<date>",
+                "paymentMethod": "upi",
+                "periodEnd": "<date>",
+                "periodStart": "<date>",
+                "reference": "UPI-REF-1",
+                "refundedAmount": 1500,
+                "refunds": [
+                  {
+                    "amount": 1000,
+                    "at": "<date>",
+                    "by": "owner@contract.test",
+                    "exTax": 1000,
+                    "number": "CN-000001",
+                    "reason": "Goodwill credit",
+                    "tax": 0
+                  },
+                  {
+                    "amount": 500,
+                    "at": "<date>",
+                    "by": "owner@contract.test",
+                    "exTax": 500,
+                    "number": "CN-000002",
+                    "reason": "Second credit",
+                    "tax": 0
+                  }
+                ],
+                "sac": "998314",
+                "sgst": 0,
+                "status": "paid",
+                "taxAmount": 0,
+                "taxRate": 0,
+                "total": 12000,
+                "type": "subscription",
+                "voidReason": "",
+                "voidedAt": null
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 2
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoices: list filtered",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/invoices?status=paid",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "amount": 12000,
+                "appId": "<zedAppId>",
+                "businessName": "Zed Cabs",
+                "buyerGstin": "",
+                "cgst": 0,
+                "currency": "INR",
+                "description": "Platform subscription",
+                "dueDate": "<date>",
+                "emailedAt": null,
+                "id": "<invoice1>",
+                "igst": 0,
+                "issuedAt": "<date>",
+                "lapsedAt": null,
+                "netPaid": 10500,
+                "number": "INV-000001",
+                "overdue": false,
+                "paidAt": "<date>",
+                "paymentMethod": "upi",
+                "periodEnd": "<date>",
+                "periodStart": "<date>",
+                "reference": "UPI-REF-1",
+                "refundedAmount": 1500,
+                "refunds": [
+                  {
+                    "amount": 1000,
+                    "at": "<date>",
+                    "by": "owner@contract.test",
+                    "exTax": 1000,
+                    "number": "CN-000001",
+                    "reason": "Goodwill credit",
+                    "tax": 0
+                  },
+                  {
+                    "amount": 500,
+                    "at": "<date>",
+                    "by": "owner@contract.test",
+                    "exTax": 500,
+                    "number": "CN-000002",
+                    "reason": "Second credit",
+                    "tax": 0
+                  }
+                ],
+                "sac": "998314",
+                "sgst": 0,
+                "status": "paid",
+                "taxAmount": 0,
+                "taxRate": 0,
+                "total": 12000,
+                "type": "subscription",
+                "voidReason": "",
+                "voidedAt": null
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "invoices: csv",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/invoices.csv",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "text/csv",
+        "body": "Invoice,Business,App ID,Type,Description,Period start,Period end,Taxable value,GST,Total,Buyer GSTIN,Currency,Status,Issued,Due,Paid,Payment method,Reference,Refunded,Net paid\r\nINV-000002,Zed Cabs,<zedAppId>,other,Custom work,,,3000,0,3000,,INR,void,<date>,<date>,,,,0,0\r\nINV-000001,Zed Cabs,<zedAppId>,subscription,Platform subscription,<date>,<date>,12000,0,12000,,INR,paid,<date>,<date>,<date>,upi"
+      }
+    },
+    {
+      "step": "revenue: summary",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/revenue/summary",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "acquisition": [
+              {
+                "month": "2025-11",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2025-12",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-01",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-02",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-03",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-04",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-05",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-06",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-07",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-08",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-09",
+                "newBusinesses": 0
+              },
+              {
+                "month": "2026-10",
+                "newBusinesses": 2
+              }
+            ],
+            "arr": 144000,
+            "billed": 12000,
+            "byBusiness": [
+              {
+                "appId": "<zedAppId>",
+                "billed": 12000,
+                "collected": 12000,
+                "cycle": "monthly",
+                "mrr": 12000,
+                "name": "Zed Cabs",
+                "outstanding": 0,
+                "overdue": 0,
+                "planName": "Growth",
+                "price": 12000,
+                "refunded": 1500,
+                "renewalDate": "<date>",
+                "status": "active",
+                "subscriptionStatus": "active"
+              },
+              {
+                "appId": "<appId1>",
+                "billed": 0,
+                "collected": 0,
+                "cycle": null,
+                "mrr": 0,
+                "name": "AutoMet",
+                "outstanding": 0,
+                "overdue": 0,
+                "planName": null,
+                "price": null,
+                "refunded": 0,
+                "renewalDate": null,
+                "status": "active",
+                "subscriptionStatus": "none"
+              }
+            ],
+            "byPlan": [
+              {
+                "active": true,
+                "cycle": "monthly",
+                "mrr": 12000,
+                "name": "Growth",
+                "planId": "<planId>",
+                "price": 12000,
+                "subscribers": 1
+              }
+            ],
+            "collected": 12000,
+            "counts": {
+              "activeSubscriptions": 1,
+              "businesses": 2,
+              "cancelled": 0,
+              "outstandingInvoices": 0,
+              "overdueInvoices": 0,
+              "recurring": 1,
+              "renewalsDue": 0,
+              "renewalsOverdue": 1,
+              "suspended": 0,
+              "trialing": 0,
+              "withoutSubscription": 1
+            },
+            "currency": "INR",
+            "generatedAt": "<volatile>",
+            "gstCharged": 0,
+            "gstCollected": 0,
+            "mrr": 12000,
+            "netCollected": 10500,
+            "outstanding": 0,
+            "overdue": 0,
+            "partial": false,
+            "range": {
+              "from": "<date>",
+              "to": "<date>"
+            },
+            "refunded": 1500,
+            "series": [
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2025-11",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2025-12",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-01",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-02",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-03",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-04",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-05",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-06",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-07",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-08",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 0,
+                "collected": 0,
+                "month": "2026-09",
+                "net": 0,
+                "refunded": 0
+              },
+              {
+                "billed": 12000,
+                "collected": 12000,
+                "month": "2026-10",
+                "net": 10500,
+                "refunded": 1500
+              }
+            ],
+            "upcomingRenewals": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "billing: read after invoices",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants/<zedAppId>/billing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "businessStatus": "active",
+            "details": {
+              "address": "9 Zed Street, Mumbai",
+              "email": "accounts@zed.test",
+              "gstin": "",
+              "legalName": "Zed Cabs Private Limited",
+              "stateCode": "27"
+            },
+            "invoices": [
+              {
+                "amount": 3000,
+                "appId": "<zedAppId>",
+                "businessName": "Zed Cabs",
+                "buyerGstin": "",
+                "cgst": 0,
+                "currency": "INR",
+                "description": "Custom work",
+                "dueDate": "<date>",
+                "emailedAt": null,
+                "id": "<invoice2>",
+                "igst": 0,
+                "issuedAt": "<date>",
+                "lapsedAt": null,
+                "netPaid": 0,
+                "number": "INV-000002",
+                "overdue": false,
+                "paidAt": null,
+                "paymentMethod": null,
+                "periodEnd": null,
+                "periodStart": null,
+                "reference": "",
+                "refundedAmount": 0,
+                "refunds": [],
+                "sac": "998314",
+                "sgst": 0,
+                "status": "void",
+                "taxAmount": 0,
+                "taxRate": 0,
+                "total": 3000,
+                "type": "other",
+                "voidReason": "Raised by mistake",
+                "voidedAt": "<date>"
+              },
+              {
+                "amount": 12000,
+                "appId": "<zedAppId>",
+                "businessName": "Zed Cabs",
+                "buyerGstin": "",
+                "cgst": 0,
+                "currency": "INR",
+                "description": "Platform subscription",
+                "dueDate": "<date>",
+                "emailedAt": null,
+                "id": "<invoice1>",
+                "igst": 0,
+                "issuedAt": "<date>",
+                "lapsedAt": null,
+                "netPaid": 10500,
+                "number": "INV-000001",
+                "overdue": false,
+                "paidAt": "<date>",
+                "paymentMethod": "upi",
+                "periodEnd": "<date>",
+                "periodStart": "<date>",
+                "reference": "UPI-REF-1",
+                "refundedAmount": 1500,
+                "refunds": [
+                  {
+                    "amount": 1000,
+                    "at": "<date>",
+                    "by": "owner@contract.test",
+                    "exTax": 1000,
+                    "number": "CN-000001",
+                    "reason": "Goodwill credit",
+                    "tax": 0
+                  },
+                  {
+                    "amount": 500,
+                    "at": "<date>",
+                    "by": "owner@contract.test",
+                    "exTax": 500,
+                    "number": "CN-000002",
+                    "reason": "Second credit",
+                    "tax": 0
+                  }
+                ],
+                "sac": "998314",
+                "sgst": 0,
+                "status": "paid",
+                "taxAmount": 0,
+                "taxRate": 0,
+                "total": 12000,
+                "type": "subscription",
+                "voidReason": "",
+                "voidedAt": null
+              }
+            ],
+            "subscription": {
+              "cancelReason": "",
+              "cancelledAt": null,
+              "currency": "INR",
+              "cycle": "monthly",
+              "notes": "Contract subscription",
+              "planId": "<planId>",
+              "planName": "Growth",
+              "price": 12000,
+              "recurring": true,
+              "renewalDate": "<date>",
+              "setupFee": 5000,
+              "startDate": "<date>",
+              "status": "active",
+              "trialEndsAt": null
+            },
+            "totals": {
+              "billed": 12000,
+              "collected": 12000,
+              "gst": 0,
+              "outstanding": 0,
+              "refunded": 1500
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "subscription: cancel",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/tenants/<zedAppId>/subscription/cancel",
+        "body": {
+          "reason": "Contract cancel"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "subscription": {
+              "cancelReason": "Contract cancel",
+              "cancelledAt": "<date>",
+              "currency": "INR",
+              "cycle": "monthly",
+              "notes": "Contract subscription",
+              "planId": "<planId>",
+              "planName": "Growth",
+              "price": 12000,
+              "recurring": false,
+              "renewalDate": "<date>",
+              "setupFee": 5000,
+              "startDate": "<date>",
+              "status": "cancelled",
+              "trialEndsAt": null
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "billing run",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/platform/billing/run",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "actions": [],
+            "emailConfigured": false,
+            "lapsed": 0,
+            "reminded": 0,
+            "skipped": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "overview",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/overview",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "businesses": [
+              {
+                "admins": 0,
+                "appId": "<appId1>",
+                "appName": "AutoMet",
+                "createdAt": "<date>",
+                "drivers": {
+                  "online": 0,
+                  "suspended": 0,
+                  "total": 0
+                },
+                "isDefault": true,
+                "name": "AutoMet",
+                "plan": "enterprise",
+                "riders": {
+                  "newThisWeek": 0,
+                  "total": 0
+                },
+                "setup": {
+                  "complete": false,
+                  "nextStep": "Country and service regions",
+                  "percent": 0
+                },
+                "status": "active",
+                "trips": {
+                  "active": 0,
+                  "last7Days": 0,
+                  "requestedToday": 0,
+                  "searching": 0
+                }
+              },
+              {
+                "admins": 2,
+                "appId": "<zedAppId>",
+                "appName": "Zed Rides Pune",
+                "createdAt": "<date>",
+                "drivers": {
+                  "online": 0,
+                  "suspended": 0,
+                  "total": 0
+                },
+                "isDefault": false,
+                "name": "Zed Cabs",
+                "plan": "standard",
+                "riders": {
+                  "newThisWeek": 0,
+                  "total": 0
+                },
+                "setup": {
+                  "complete": false,
+                  "nextStep": "Country and service regions",
+                  "percent": 0
+                },
+                "status": "active",
+                "trips": {
+                  "active": 0,
+                  "last7Days": 0,
+                  "requestedToday": 0,
+                  "searching": 0
+                }
+              }
+            ],
+            "generatedAt": "<volatile>",
+            "integrations": {
+              "adminSecurity": {
+                "configured": true
+              },
+              "database": {
+                "configured": true,
+                "connected": true
+              },
+              "documentStorage": {
+                "configured": false,
+                "provider": "Cloudinary"
+              },
+              "otpDelivery": {
+                "configured": false,
+                "provider": null
+              },
+              "payments": {
+                "configured": false,
+                "provider": null
+              },
+              "pushNotifications": {
+                "configured": true,
+                "provider": "Firebase Cloud Messaging"
+              }
+            },
+            "partial": false,
+            "totals": {
+              "active": 2,
+              "activeTrips": 0,
+              "businesses": 2,
+              "drivers": 0,
+              "driversOnline": 0,
+              "riders": 0,
+              "setupComplete": 0,
+              "suspended": 0,
+              "trial": 0,
+              "tripsLast7Days": 0,
+              "tripsToday": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "dashboard",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/dashboard",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "audit (platform)",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/platform/audit",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "action": "billing.run",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "lapsed": "0",
+                  "reminded": "0",
+                  "skipped": "0"
+                },
+                "id": "<id5>",
+                "targetId": "platform",
+                "targetType": "platform",
+                "tenantId": null
+              },
+              {
+                "action": "subscription.cancelled",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "plan": "Growth",
+                  "reason": "Contract cancel"
+                },
+                "id": "<id6>",
+                "targetId": "<zedAppId>",
+                "targetType": "tenant",
+                "tenantId": null
+              },
+              {
+                "action": "export.invoices",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "rows": "2"
+                },
+                "id": "<id7>",
+                "targetId": null,
+                "targetType": "export",
+                "tenantId": null
+              },
+              {
+                "action": "invoice.voided",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "reason": "Raised by mistake"
+                },
+                "id": "<id8>",
+                "targetId": "<invoice2>",
+                "targetType": "invoice",
+                "tenantId": null
+              },
+              {
+                "action": "invoice.refunded",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "amount": "500",
+                  "creditNote": "CN-000002",
+                  "reason": "Second credit"
+                },
+                "id": "<id9>",
+                "targetId": "<invoice1>",
+                "targetType": "invoice",
+                "tenantId": null
+              },
+              {
+                "action": "invoice.refunded",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "amount": "1000",
+                  "creditNote": "CN-000001",
+                  "reason": "Goodwill credit"
+                },
+                "id": "<id10>",
+                "targetId": "<invoice1>",
+                "targetType": "invoice",
+                "tenantId": null
+              },
+              {
+                "action": "invoice.paid",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "amount": "12000",
+                  "method": "upi"
+                },
+                "id": "<id11>",
+                "targetId": "<invoice1>",
+                "targetType": "invoice",
+                "tenantId": null
+              },
+              {
+                "action": "invoice.issued",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "amount": "3000",
+                  "business": "<zedAppId>",
+                  "tax": "0",
+                  "total": "3000",
+                  "type": "other"
+                },
+                "id": "<id12>",
+                "targetId": "<invoice2>",
+                "targetType": "invoice",
+                "tenantId": null
+              },
+              {
+                "action": "invoice.issued",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "amount": "12000",
+                  "business": "<zedAppId>",
+                  "tax": "0",
+                  "total": "12000",
+                  "type": "subscription"
+                },
+                "id": "<id13>",
+                "targetId": "<invoice1>",
+                "targetType": "invoice",
+                "tenantId": null
+              },
+              {
+                "action": "subscription.renewed",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "plan": "Growth",
+                  "until": "2026-03-01"
+                },
+                "id": "<id14>",
+                "targetId": "<zedAppId>",
+                "targetType": "tenant",
+                "tenantId": null
+              },
+              {
+                "action": "subscription.assigned",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "plan": "Growth",
+                  "price": "12000",
+                  "status": "active"
+                },
+                "id": "<id15>",
+                "targetId": "<zedAppId>",
+                "targetType": "tenant",
+                "tenantId": null
+              },
+              {
+                "action": "tenant.billing_details_updated",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "gstin": "none",
+                  "state": "27"
+                },
+                "id": "<id16>",
+                "targetId": "<zedAppId>",
+                "targetType": "tenant",
+                "tenantId": null
+              },
+              {
+                "action": "plan.updated",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "name": "Growth",
+                  "price": "10000 -> 12000"
+                },
+                "id": "<id17>",
+                "targetId": "<planId>",
+                "targetType": "plan",
+                "tenantId": null
+              },
+              {
+                "action": "plan.created",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "cycle": "monthly",
+                  "name": "Growth",
+                  "price": "10000"
+                },
+                "id": "<id18>",
+                "targetId": "<planId>",
+                "targetType": "plan",
+                "tenantId": null
+              },
+              {
+                "action": "platform.settings_updated",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "fields": "companyName,billingEmail,legalName,address,stateCode,gstRate,graceDays,lapseAction,reminderOffsets,invoiceDueDays"
+                },
+                "id": "<id19>",
+                "targetId": "platform",
+                "targetType": "platform",
+                "tenantId": null
+              },
+              {
+                "action": "platform_user.two_factor_reset",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "email": "fin@contract.test"
+                },
+                "id": "<id20>",
+                "targetId": "<finAdminId>",
+                "targetType": "admin_user",
+                "tenantId": null
+              },
+              {
+                "action": "platform_user.password_reset",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": null,
+                "id": "<id21>",
+                "targetId": "<finAdminId>",
+                "targetType": "admin_user",
+                "tenantId": null
+              },
+              {
+                "action": "platform_user.deactivated",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": null,
+                "id": "<id22>",
+                "targetId": "<finAdminId>",
+                "targetType": "admin_user",
+                "tenantId": null
+              },
+              {
+                "action": "platform_user.updated",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "renamed": "true"
+                },
+                "id": "<id23>",
+                "targetId": "<finAdminId>",
+                "targetType": "admin_user",
+                "tenantId": null
+              },
+              {
+                "action": "platform_user.created",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Platform",
+                "details": {
+                  "email": "fin@contract.test"
+                },
+                "id": "<id24>",
+                "targetId": "<finAdminId>",
+                "targetType": "admin_user",
+                "tenantId": null
+              },
+              {
+                "action": "auth.login",
+                "actorEmail": "ops@contract.test",
+                "at": "<date>",
+                "businessName": "Zed Cabs",
+                "details": null,
+                "id": "<id25>",
+                "targetId": null,
+                "targetType": null,
+                "tenantId": "<zedAppId>"
+              },
+              {
+                "action": "user.two_factor_reset",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Zed Cabs",
+                "details": {
+                  "email": "ops@contract.test"
+                },
+                "id": "<id26>",
+                "targetId": "<opsAdminId>",
+                "targetType": "admin_user",
+                "tenantId": "<zedAppId>"
+              },
+              {
+                "action": "user.password_reset",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Zed Cabs",
+                "details": {
+                  "email": "ops@contract.test"
+                },
+                "id": "<id27>",
+                "targetId": "<opsAdminId>",
+                "targetType": "admin_user",
+                "tenantId": "<zedAppId>"
+              },
+              {
+                "action": "user.activated",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Zed Cabs",
+                "details": null,
+                "id": "<id28>",
+                "targetId": "<opsAdminId>",
+                "targetType": "admin_user",
+                "tenantId": "<zedAppId>"
+              },
+              {
+                "action": "user.deactivated",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "businessName": "Zed Cabs",
+                "details": null,
+                "id": "<id29>",
+                "targetId": "<opsAdminId>",
+                "targetType": "admin_user",
+                "tenantId": "<zedAppId>"
+              }
+            ],
+            "page": 1,
+            "pageSize": 25,
+            "total": 35
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "audit (all)",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/audit",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "public: health",
+      "request": {
+        "method": "GET",
+        "path": "/health"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "health": {
+            "dbConnected": true,
+            "errorCount": 0,
+            "fcmProjectId": "contract-project",
+            "fcmReady": true,
+            "fcmStatus": "OK",
+            "isHealthy": true,
+            "lastHealthCheck": "<date>",
+            "memoryUsage": "<volatile>",
+            "startTime": "<date>",
+            "totalRequests": "<volatile>",
+            "uptime": "<volatile>"
+          },
+          "message": "Server is healthy",
+          "ready": true,
+          "success": true,
+          "timestamp": "<volatile>"
+        }
+      }
+    },
+    {
+      "step": "tenants: delete without confirmation",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admin/tenants/<zedAppId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "confirm": "Type the business App ID to confirm"
+          },
+          "message": "Type the business App ID to confirm",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: delete while active",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admin/tenants/<zedAppId>",
+        "body": {
+          "confirm": "<zedAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Suspend the business before deleting it",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "tenants: suspend before delete",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/tenants/<zedAppId>/status",
+        "body": {
+          "status": "suspended"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<zedAppId>",
+            "appName": "Zed Rides Pune",
+            "brandColor": "#f5a300",
+            "city": "Mumbai",
+            "createdAt": "<day>",
+            "id": "<zedAppId>",
+            "isDefault": false,
+            "logoUrl": "",
+            "market": null,
+            "name": "Zed Cabs",
+            "packageName": "com.zed.rider",
+            "plan": "standard",
+            "slug": "zed-cabs",
+            "status": "suspended",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "tenants: delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admin/tenants/<zedAppId>",
+        "body": {
+          "confirm": "<zedAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "deleted": "<zedAppId>",
+            "removed": {
+              "adminAccounts": 2,
+              "assignments": 0,
+              "categories": 0,
+              "driverDocuments": 0,
+              "drivers": 0,
+              "fareRules": 0,
+              "files": 0,
+              "invoices": 2,
+              "policies": 0,
+              "regions": 0,
+              "riders": 0,
+              "setup": 0,
+              "supportReports": 0,
+              "timelineEntries": 0,
+              "trips": 0,
+              "vehicleDocuments": 0,
+              "vehicles": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "tenants: list at the end",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<appId1>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<appId1>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    }
+  ]
+}

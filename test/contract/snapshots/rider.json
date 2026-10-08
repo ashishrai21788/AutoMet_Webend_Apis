@@ -1,0 +1,1206 @@
+{
+  "scenario": "rider",
+  "steps": [
+    {
+      "step": "public config: default business",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/public/business/config"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<appId1>",
+            "business": {
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "logoUrl": "",
+              "name": "AutoMet",
+              "supportEmail": "",
+              "supportPhone": ""
+            },
+            "market": null,
+            "regions": [],
+            "resolvedBy": "default",
+            "rideSettings": {
+              "requireEligibleDrivers": false
+            },
+            "serviceAvailable": false,
+            "vehicleCategories": [],
+            "version": "<hash16>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "public config: unknown App ID",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/public/business/config"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Unknown app",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "register: missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/register",
+        "body": {
+          "name": "Rae"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "name": false,
+              "phone": true
+            }
+          },
+          "message": "Missing required fields: name, phone",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "register",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/register",
+        "body": {
+          "email": "Rae@Contract.test",
+          "name": "Rae Rider",
+          "phone": "+919800000001"
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "Verify using the OTP sent to your phone."
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": null,
+              "email": "rae@contract.test",
+              "fcmToken": null,
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id1>",
+              "isLoggedin": false,
+              "isPhoneVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "User registered successfully. OTP sent for verification.",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "register: phone already used",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/register",
+        "body": {
+          "name": "Other Person",
+          "phone": "+919800000001"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "field": "phone",
+            "value": "+919800000001"
+          },
+          "message": "Phone number already registered",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "register: email already used",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/register",
+        "body": {
+          "email": "rae@contract.test",
+          "name": "Other Person",
+          "phone": "+919800000002"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "field": "email",
+            "value": "rae@contract.test"
+          },
+          "message": "Email already registered",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "verify-otp: missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "otp": true,
+              "userId": false
+            }
+          },
+          "message": "Missing required fields: userId, otp",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "verify-otp: wrong code",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "otp": "000000",
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": "000000",
+            "userId": "<userId>"
+          },
+          "message": "Invalid or expired OTP",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "verify-otp",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "device_id": "device-1",
+          "fcm_id": "fcm-token-1",
+          "otp": "<otp1>",
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "tokenExpiresIn": "7d"
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "fcm-token-1",
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "verify-otp: the same code twice",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "otp": "<otp1>",
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": "<otp1>",
+            "userId": "<userId>"
+          },
+          "message": "Invalid or expired OTP",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "login: missing phone",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/login",
+        "body": {}
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "phoneNumber": true
+            }
+          },
+          "message": "Missing required field: phoneNumber",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "login: unknown phone",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/login",
+        "body": {
+          "phoneNumber": "+919899999999"
+        }
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "phoneNumber": "+919899999999"
+          },
+          "message": "User not found with this phone number",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "login",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/login",
+        "body": {
+          "phoneNumber": "+919800000001"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "Verify OTP to complete login."
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "fcm-token-1",
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "OTP sent to your registered phone number",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "resend-otp: missing userId",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/resend-otp",
+        "body": {
+          "phoneNumber": "+919800000001"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "userId": true
+            }
+          },
+          "message": "Missing required field: userId",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "resend-otp: unknown user",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/resend-otp",
+        "body": {
+          "userId": "U_does_not_exist"
+        }
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "userId": "U_does_not_exist"
+          },
+          "message": "User not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "resend-otp",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/resend-otp",
+        "body": {
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "New OTP sent to your registered phone number."
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "fcm-token-1",
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "OTP resent successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "verify-otp: login",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "device_id": "device-1",
+          "fcm_id": "fcm-token-2",
+          "otp": "<otp3>",
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "tokenExpiresIn": "7d"
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "fcm-token-2",
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "detail: by userId",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/detail/<userId>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "fcm-token-2",
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "User detail retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "detail: unknown userId",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/detail/U_does_not_exist"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "userId": "U_does_not_exist"
+          },
+          "message": "User not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "profile: no token",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/profile",
+        "body": {
+          "firstName": "Raye",
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "profile: missing userId",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/profile",
+        "body": {
+          "firstName": "Raye"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "userId": true
+            }
+          },
+          "message": "Missing required field: userId",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "profile: empty first name",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/profile",
+        "body": {
+          "firstName": "  ",
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "field": "firstName"
+          },
+          "message": "firstName cannot be empty",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "profile: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/profile",
+        "body": {
+          "firstName": "Raye",
+          "lastName": "Rider-Lee",
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "fcm-token-2",
+              "firstName": "Raye",
+              "fullName": "Raye Rider-Lee",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider-Lee",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "Profile updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "detail: after update",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/detail/<userId>"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "fcm-token-2",
+              "firstName": "Raye",
+              "fullName": "Raye Rider-Lee",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider-Lee",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "User detail retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "update-token: missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/update-token",
+        "body": {
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "device_id": true,
+              "fcm_id": true
+            }
+          },
+          "message": "Provide at least one of: fcm_id, device_id",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "update-token",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/update-token",
+        "body": {
+          "device_id": "device-2",
+          "fcm_id": "fcm-token-3",
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "deviceId": true,
+            "fcmToken": true,
+            "userId": "<userId>"
+          },
+          "message": "Token updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: no token",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/notifications?userId=<userId>"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "notifications: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/notifications?userId=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "A driver is on the way",
+                "id": "<id2>",
+                "isUnread": true,
+                "notification_id": "n-2",
+                "title": "Your ride",
+                "type": "Ride",
+                "updatedAt": null,
+                "userId": "<userId>"
+              },
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Thanks for joining",
+                "id": "<id3>",
+                "isUnread": true,
+                "notification_id": "n-1",
+                "title": "Welcome",
+                "type": "Informational",
+                "updatedAt": null,
+                "userId": "<userId>"
+              }
+            ],
+            "totalCount": 2,
+            "unreadCount": 2
+          },
+          "message": "Notifications retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: mark-read, missing ids",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/notifications/mark-read",
+        "body": {
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "notificationIds": true
+            }
+          },
+          "message": "Missing required field: notificationIds",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "notifications: mark-read, bad id format",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/notifications/mark-read",
+        "body": {
+          "notificationIds": [
+            "n-1"
+          ],
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "invalidIds": [
+              "n-1"
+            ],
+            "validIds": []
+          },
+          "message": "Invalid notification ID format(s)",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "notifications: mark-read",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/notifications/mark-read",
+        "body": {
+          "notificationIds": [
+            "<id3>"
+          ],
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "matchedCount": 1,
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Thanks for joining",
+                "id": "<id3>",
+                "isUnread": false,
+                "notification_id": "n-1",
+                "title": "Welcome",
+                "type": "Informational",
+                "updatedAt": "<date>",
+                "userId": "<userId>"
+              }
+            ],
+            "summary": {
+              "alreadyRead": 0,
+              "successfullyUpdated": 1,
+              "totalRequested": 1
+            },
+            "updatedCount": 1
+          },
+          "message": "Notification read status updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: list after read",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/notifications?userId=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "A driver is on the way",
+                "id": "<id2>",
+                "isUnread": true,
+                "notification_id": "n-2",
+                "title": "Your ride",
+                "type": "Ride",
+                "updatedAt": null,
+                "userId": "<userId>"
+              },
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "Thanks for joining",
+                "id": "<id3>",
+                "isUnread": false,
+                "notification_id": "n-1",
+                "title": "Welcome",
+                "type": "Informational",
+                "updatedAt": "<date>",
+                "userId": "<userId>"
+              }
+            ],
+            "totalCount": 2,
+            "unreadCount": 1
+          },
+          "message": "Notifications retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: delete, missing id",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/notifications/delete?userId=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "missingFields": {
+              "notificationId": true,
+              "userId": false
+            }
+          },
+          "message": "Missing required query parameters: userId, notificationId",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "notifications: delete",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/notifications/delete?userId=<userId>&notificationId=<id3>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "A driver is on the way",
+                "id": "<id2>",
+                "isUnread": true,
+                "notification_id": "n-2",
+                "title": "Your ride",
+                "type": "Ride",
+                "updatedAt": null,
+                "userId": "<userId>"
+              }
+            ],
+            "totalCount": 1,
+            "unreadCount": 1
+          },
+          "message": "Notification deleted successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "notifications: list after delete",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/notifications?userId=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "notifications": [
+              {
+                "createdAt": "<date>",
+                "date": "<day>",
+                "description": "A driver is on the way",
+                "id": "<id2>",
+                "isUnread": true,
+                "notification_id": "n-2",
+                "title": "Your ride",
+                "type": "Ride",
+                "updatedAt": null,
+                "userId": "<userId>"
+              }
+            ],
+            "totalCount": 1,
+            "unreadCount": 1
+          },
+          "message": "Notifications retrieved successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logout: no token",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/logout",
+        "body": {
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "logout",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/logout",
+        "body": {
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "logoutTime": "<date>",
+            "sessionInfo": {
+              "deviceId": null,
+              "fcmToken": null,
+              "isLoggedin": false,
+              "lastActive": "<date>"
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": null,
+              "email": "rae@contract.test",
+              "fcmToken": null,
+              "firstName": "Raye",
+              "fullName": "Raye Rider-Lee",
+              "id": "<id1>",
+              "isLoggedin": false,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider-Lee",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "User logged out successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "after logout: profile with the old token",
+      "request": {
+        "method": "PUT",
+        "path": "/api/users/profile",
+        "body": {
+          "firstName": "Again",
+          "userId": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "User not found or token invalidated"
+          },
+          "message": "Invalid or expired token",
+          "success": false
+        }
+      }
+    }
+  ]
+}

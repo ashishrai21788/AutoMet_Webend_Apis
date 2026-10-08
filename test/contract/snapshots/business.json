@@ -1,0 +1,5637 @@
+{
+  "scenario": "business",
+  "steps": [
+    {
+      "step": "setup: platform owner signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: list businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "admin@contract.test",
+          "name": "Client Admin",
+          "role": "client_admin",
+          "tenantId": "<defaultAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "admin@contract.test",
+            "id": "<a_2>",
+            "mustChangePassword": true,
+            "name": "Client Admin",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "admin@contract.test",
+          "password": "<tempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": true,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<tempPassword>",
+          "newPassword": "Client-Admin-Pass-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": false,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: market",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: region",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "name": "Pune"
+            }
+          ],
+          "radiusKm": 30,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "city": "Pune",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_3>",
+                "radiusKm": 30,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: vehicle category",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Sedan",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_4>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "name": "Sedan",
+            "passengerCapacity": 4,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: fare rule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 40,
+          "bookingFee": 5,
+          "categoryId": "<vc_4>",
+          "minimumFare": 70,
+          "perKm": 12,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 40,
+            "bookingFee": 5,
+            "categoryId": "<vc_4>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_5>",
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "1 Main Road",
+            "state": "Maharashtra"
+          },
+          "dateOfBirth": "1990-04-02",
+          "eligibleCategoryId": "<vc_4>",
+          "email": "dee@contract.test",
+          "fullName": "Dee Driver",
+          "operatingRegionId": "<rg_3>",
+          "phone": "+919811111111"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "White",
+          "luggageCapacity": 2,
+          "make": "Maruti",
+          "model": "Dzire",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH12AB1234",
+          "status": "ACTIVE",
+          "year": 2021
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_6>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: assign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_7>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: the driver is now eligible",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": null,
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "rider: register",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/register",
+        "body": {
+          "email": "rae@contract.test",
+          "name": "Rae Rider",
+          "phone": "+919800000001"
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "Verify using the OTP sent to your phone."
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id8>",
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": null,
+              "email": "rae@contract.test",
+              "fcmToken": null,
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id8>",
+              "isLoggedin": false,
+              "isPhoneVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<defaultAppId>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "User registered successfully. OTP sent for verification.",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "rider: verify OTP",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "device_id": "rider-device-1",
+          "fcm_id": "rider-fcm-1",
+          "otp": "<riderOtp>",
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "tokenExpiresIn": "7d"
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id8>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "rider-device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "rider-fcm-1",
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id8>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<defaultAppId>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: login",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/login",
+        "body": {
+          "device_id": "driver-device-1",
+          "fcm_id": "driver-fcm-1",
+          "phoneNumber": "+919811111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": false,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "OTP sent to your registered phone number. Please verify to complete login."
+            }
+          },
+          "message": "OTP sent to your registered phone number",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: verify OTP",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/verify",
+        "body": {
+          "device_id": "driver-device-1",
+          "driverId": "<driverId>",
+          "fcm_id": "driver-fcm-1",
+          "otp": "<driverOtp>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "lastActive": "<date>",
+              "tokenExpiresIn": "7d"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: vehicle details",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/vehicle-details",
+        "body": {
+          "driverId": "<driverId>",
+          "isVehicleAdded": true,
+          "vehicleModel": "Dzire",
+          "vehicleNumber": "MH12AB1234",
+          "vehicleType": "Sedan"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "updatedFields": [
+              "vehicleType",
+              "vehicleNumber",
+              "vehicleModel",
+              "isVehicleAdded"
+            ]
+          },
+          "message": "Vehicle details updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: go online",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/online-status",
+        "body": {
+          "driverId": "<driverId>",
+          "isOnline": true,
+          "onlineAs": 0
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": true,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "statusInfo": {
+              "isOnline": true,
+              "lastActive": "<date>",
+              "onlineAs": 0,
+              "onlineAsText": "Public"
+            },
+            "updateTime": "<date>"
+          },
+          "message": "Driver online status updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: position",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/location",
+        "body": {
+          "accuracy": 10,
+          "driverId": "<driverId>",
+          "lat": 18.5204,
+          "lng": 73.8567
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "available": {
+              "code": null,
+              "message": null,
+              "ok": true
+            },
+            "freshSeconds": 60,
+            "inServiceArea": true,
+            "isOnline": true,
+            "nextHeartbeatSeconds": 10,
+            "region": {
+              "city": "Pune",
+              "regionId": "<rg_3>",
+              "zoneName": "All areas"
+            },
+            "serverTime": "<volatile>"
+          },
+          "message": "Location received",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 1: request",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-biz-1",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "data": {
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "payment_mode": "CASH",
+            "request_id": "req-biz-1",
+            "status": "REQUESTED",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000001"
+          },
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Ride request sent",
+          "payment_mode": "CASH",
+          "request_id": "req-biz-1",
+          "status": "REQUESTED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: accept",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/driver-response",
+        "body": {
+          "driver_id": "<driverId>",
+          "response": "ACCEPTED",
+          "trip_id": "amt_id_000001"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Ride accepted",
+          "request_id": "req-biz-1",
+          "status": "ACCEPTED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: DRIVER_ON_THE_WAY",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "DRIVER_ON_THE_WAY"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Driver is on the way",
+          "status": "DRIVER_ON_THE_WAY",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: ARRIVED",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "ARRIVED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Driver has arrived",
+          "status": "ARRIVED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: ON_GOING",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "ON_GOING"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Trip started",
+          "status": "ON_GOING",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: COMPLETED",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "COMPLETED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Trip completed",
+          "payment_mode": "CASH",
+          "status": "COMPLETED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 2: request",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-biz-2",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "data": {
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "payment_mode": "CASH",
+            "request_id": "req-biz-2",
+            "status": "REQUESTED",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000002"
+          },
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Ride request sent",
+          "payment_mode": "CASH",
+          "request_id": "req-biz-2",
+          "status": "REQUESTED",
+          "success": true,
+          "trip_id": "amt_id_000002"
+        }
+      }
+    },
+    {
+      "step": "issue: the driver reports a problem",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/issues",
+        "body": {
+          "driverId": "<driverId>",
+          "issueText": "The map takes long to load on the trip screen"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "createdAt": "<date>",
+            "driverId": "<driverId>",
+            "imageUrls": [],
+            "issueId": "<id10>",
+            "issueText": "The map takes long to load on the trip screen",
+            "status": "issue submitted",
+            "updatedAt": "<date>"
+          },
+          "message": "Issue report submitted successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "business: read",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "business: overview",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/overview",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "business": {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": {
+                "country": "IN",
+                "currency": "INR",
+                "timezone": "Asia/Kolkata"
+              },
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            },
+            "counts": {
+              "activeCategories": 1,
+              "activeRegions": 1,
+              "categories": 1,
+              "fareRules": 1,
+              "pricedCategories": 1,
+              "regions": 1
+            },
+            "setup": {
+              "complete": false,
+              "nextStep": {
+                "done": false,
+                "key": "confirm",
+                "path": "/",
+                "title": "Confirm setup"
+              },
+              "percent": 75,
+              "ready": true,
+              "steps": [
+                {
+                  "done": true,
+                  "key": "regions",
+                  "path": "/regions",
+                  "title": "Country and service regions"
+                },
+                {
+                  "done": true,
+                  "key": "categories",
+                  "path": "/categories",
+                  "title": "Vehicle categories"
+                },
+                {
+                  "done": true,
+                  "key": "pricing",
+                  "path": "/pricing",
+                  "title": "Pricing and fare rules"
+                },
+                {
+                  "done": false,
+                  "key": "confirm",
+                  "path": "/",
+                  "title": "Confirm setup"
+                }
+              ],
+              "warnings": []
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "settings: nothing to update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/settings",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "name": "Nothing to update"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "settings: too short",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/settings",
+        "body": {
+          "name": "x"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "name": "Business name is required (2 to 80 characters)"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "settings: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/settings",
+        "body": {
+          "appName": "Contract Rides",
+          "supportEmail": "help@contract.test",
+          "supportPhone": "+911234567890"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "Contract Rides",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "help@contract.test",
+            "supportPhone": "+911234567890"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "market: invalid",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "ZZ"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "currency": "Choose a valid currency",
+            "timezone": "Choose a valid time zone"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "market: save",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "Contract Rides",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "help@contract.test",
+            "supportPhone": "+911234567890"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: complete",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/setup/complete",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "complete": true,
+            "nextStep": null,
+            "percent": 100,
+            "ready": true,
+            "steps": [
+              {
+                "done": true,
+                "key": "regions",
+                "path": "/regions",
+                "title": "Country and service regions"
+              },
+              {
+                "done": true,
+                "key": "categories",
+                "path": "/categories",
+                "title": "Vehicle categories"
+              },
+              {
+                "done": true,
+                "key": "pricing",
+                "path": "/pricing",
+                "title": "Pricing and fare rules"
+              },
+              {
+                "done": true,
+                "key": "confirm",
+                "path": "/",
+                "title": "Confirm setup"
+              }
+            ],
+            "warnings": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "regions: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/regions",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "center": {
+                "lat": 18.5204,
+                "lng": 73.8567
+              },
+              "city": "Pune",
+              "country": "IN",
+              "createdAt": "<date>",
+              "id": "<rg_3>",
+              "radiusKm": 30,
+              "state": "Maharashtra",
+              "updatedAt": "<date>",
+              "zoneName": "All areas"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "regions: locate",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions/locate",
+        "body": {
+          "lat": 18.5204,
+          "lng": 73.8567
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "distanceKm": 0,
+            "inside": true,
+            "region": {
+              "active": true,
+              "center": {
+                "lat": 18.5204,
+                "lng": 73.8567
+              },
+              "city": "Pune",
+              "country": "IN",
+              "createdAt": "<date>",
+              "id": "<rg_3>",
+              "radiusKm": 30,
+              "state": "Maharashtra",
+              "updatedAt": "<date>",
+              "zoneName": "All areas"
+            },
+            "serviceAreasSet": true
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "regions: update, invalid",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/business/regions/<rg_3>",
+        "body": {
+          "active": "maybe"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "active": "active must be true or false"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "regions: update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/business/regions/<rg_3>",
+        "body": {
+          "center": {
+            "lat": 18.5204,
+            "lng": 73.8567
+          },
+          "radiusKm": 35,
+          "zoneName": "Pune and suburbs"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "center": {
+              "lat": 18.5204,
+              "lng": 73.8567
+            },
+            "city": "Pune",
+            "country": "IN",
+            "createdAt": "<date>",
+            "id": "<rg_3>",
+            "radiusKm": 35,
+            "state": "Maharashtra",
+            "updatedAt": "<date>",
+            "zoneName": "Pune and suburbs"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "regions: add a second city",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 19.9975,
+              "lng": 73.7898,
+              "name": "Nashik"
+            }
+          ],
+          "radiusKm": 20,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 19.9975,
+                  "lng": 73.7898
+                },
+                "city": "Nashik",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_11>",
+                "radiusKm": 20,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "regions: deactivate the second city",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/business/regions/<rg_11>",
+        "body": {
+          "active": false
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": false,
+            "center": {
+              "lat": 19.9975,
+              "lng": 73.7898
+            },
+            "city": "Nashik",
+            "country": "IN",
+            "createdAt": "<date>",
+            "id": "<rg_11>",
+            "radiusKm": 20,
+            "state": "Maharashtra",
+            "updatedAt": "<date>",
+            "zoneName": "All areas"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "regions: list after changes",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/regions",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "center": {
+                "lat": 18.5204,
+                "lng": 73.8567
+              },
+              "city": "Pune",
+              "country": "IN",
+              "createdAt": "<date>",
+              "id": "<rg_3>",
+              "radiusKm": 35,
+              "state": "Maharashtra",
+              "updatedAt": "<date>",
+              "zoneName": "Pune and suburbs"
+            },
+            {
+              "active": false,
+              "center": {
+                "lat": 19.9975,
+                "lng": 73.7898
+              },
+              "city": "Nashik",
+              "country": "IN",
+              "createdAt": "<date>",
+              "id": "<rg_11>",
+              "radiusKm": 20,
+              "state": "Maharashtra",
+              "updatedAt": "<date>",
+              "zoneName": "All areas"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "categories: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/categories",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "createdAt": "<date>",
+              "description": "",
+              "icon": "car",
+              "id": "<vc_4>",
+              "imageUrl": "",
+              "luggageCapacity": null,
+              "name": "Sedan",
+              "passengerCapacity": 4,
+              "regionIds": [
+                "<rg_3>"
+              ],
+              "rideType": "economy",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "categories: create, invalid",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "name": "Name is required (2 to 40 characters)",
+            "passengerCapacity": "Passenger capacity must be a whole number from 1 to 20",
+            "regionIds": "Choose at least one region where this category is available",
+            "rideType": "Choose a ride type"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "categories: create",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Mini",
+          "passengerCapacity": 3,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_12>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "name": "Mini",
+            "passengerCapacity": 3,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "categories: update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/business/categories/<vc_12>",
+        "body": {
+          "name": "Mini Plus"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_12>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "name": "Mini Plus",
+            "passengerCapacity": 3,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "categories: list after changes",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/categories",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "createdAt": "<date>",
+              "description": "",
+              "icon": "car",
+              "id": "<vc_4>",
+              "imageUrl": "",
+              "luggageCapacity": null,
+              "name": "Sedan",
+              "passengerCapacity": 4,
+              "regionIds": [
+                "<rg_3>"
+              ],
+              "rideType": "economy",
+              "updatedAt": "<date>"
+            },
+            {
+              "active": true,
+              "createdAt": "<date>",
+              "description": "",
+              "icon": "car",
+              "id": "<vc_12>",
+              "imageUrl": "",
+              "luggageCapacity": null,
+              "name": "Mini Plus",
+              "passengerCapacity": 3,
+              "regionIds": [
+                "<rg_3>"
+              ],
+              "rideType": "economy",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "fares: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/fare-rules",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "additionalCharges": [],
+              "baseFare": 40,
+              "bookingFee": 5,
+              "categoryId": "<vc_4>",
+              "createdAt": "<date>",
+              "currency": "INR",
+              "id": "<fr_5>",
+              "minimumFare": 70,
+              "perKm": 12,
+              "perMinute": 1,
+              "regionId": "<rg_3>",
+              "surge": {
+                "enabled": false,
+                "maxMultiplier": 1
+              },
+              "taxes": [],
+              "updatedAt": "<date>",
+              "waitingFreeMinutes": 3,
+              "waitingPerMinute": 1.5
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "fares: save, invalid",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": -1,
+          "categoryId": "<vc_4>",
+          "regionId": "<rg_3>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "baseFare": "Base fare must be a number from 0 to 1,000,000",
+            "bookingFee": "Booking fee must be a number from 0 to 1,000,000",
+            "minimumFare": "Minimum fare must be a number from 0 to 1,000,000",
+            "perKm": "Price per km must be a number from 0 to 1,000,000",
+            "perMinute": "Price per minute must be a number from 0 to 1,000,000",
+            "waitingFreeMinutes": "Free waiting must be 0 to 120 minutes",
+            "waitingPerMinute": "Waiting charge per minute must be a number from 0 to 1,000,000"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "fares: save for the second category",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 30,
+          "bookingFee": 4,
+          "categoryId": "<vc_12>",
+          "minimumFare": 60,
+          "perKm": 10,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 30,
+            "bookingFee": 4,
+            "categoryId": "<vc_12>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_13>",
+            "minimumFare": 60,
+            "perKm": 10,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "fares: preview",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/fare-preview",
+        "body": {
+          "rule": {
+            "baseFare": 40,
+            "bookingFee": 5,
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "trip": {
+            "distanceKm": 8.5,
+            "durationMin": 22,
+            "waitingMin": 4
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "currency": "INR",
+            "discount": 0,
+            "fare": 165.5,
+            "fees": [
+              {
+                "amount": 5,
+                "key": "booking",
+                "label": "Booking fee"
+              }
+            ],
+            "feesTotal": 5,
+            "lines": [
+              {
+                "amount": 40,
+                "key": "base",
+                "label": "Base fare"
+              },
+              {
+                "amount": 102,
+                "key": "distance",
+                "label": "Distance (8.5 km)"
+              },
+              {
+                "amount": 22,
+                "key": "time",
+                "label": "Time (22 min)"
+              },
+              {
+                "amount": 1.5,
+                "key": "waiting",
+                "label": "Waiting (4 min)"
+              }
+            ],
+            "multiplier": 1,
+            "taxes": [],
+            "taxesTotal": 0,
+            "total": 170.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "fares: delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admin/business/fare-rules/<fr_13>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<fr_13>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "policies: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/cancellation-policies",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "policies: save, invalid",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/cancellation-policies",
+        "body": {
+          "categoryId": "<vc_4>",
+          "driver": {},
+          "regionId": "<rg_3>",
+          "rider": {
+            "freeCancellationMinutes": 999
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "driver.graceCancellations": "Free driver cancellations per day must be a whole number from 0 to 50",
+            "driver.penaltyFee": "Driver cancellation penalty must be 0 or more",
+            "rider.feeAfterDriverArrived": "Rider fee after the driver arrived must be 0 or more",
+            "rider.feeAfterWindow": "Rider fee after the free window must be 0 or more",
+            "rider.freeCancellationMinutes": "Free cancellation window must be a whole number from 0 to 60",
+            "rider.noShowFee": "No-show fee must be 0 or more"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "policies: save",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/cancellation-policies",
+        "body": {
+          "categoryId": "<vc_4>",
+          "conditions": "Contract conditions",
+          "driver": {
+            "graceCancellations": 2,
+            "penaltyFee": 25
+          },
+          "regionId": "<rg_3>",
+          "rider": {
+            "feeAfterDriverArrived": 40,
+            "feeAfterWindow": 20,
+            "freeCancellationMinutes": 3,
+            "noShowFee": 50
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "categoryId": "<vc_4>",
+            "conditions": "Contract conditions",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "driver": {
+              "graceCancellations": 2,
+              "penaltyFee": 25
+            },
+            "id": "<cp_14>",
+            "regionId": "<rg_3>",
+            "rider": {
+              "feeAfterDriverArrived": 40,
+              "feeAfterWindow": 20,
+              "freeCancellationMinutes": 3,
+              "noShowFee": 50
+            },
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "policies: delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admin/business/cancellation-policies/<cp_14>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<cp_14>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "requirements: read",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/requirements",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": [
+              {
+                "label": "Driving licence",
+                "locked": true,
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "type": "DRIVING_LICENCE"
+              },
+              {
+                "label": "Identity document",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "type": "IDENTITY"
+              },
+              {
+                "label": "Address proof",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "ADDRESS_PROOF"
+              },
+              {
+                "label": "Profile photo",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": true,
+                "type": "PROFILE_PHOTO"
+              },
+              {
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "OTHER"
+              }
+            ],
+            "vehicle": [
+              {
+                "label": "Registration certificate",
+                "locked": true,
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "type": "REGISTRATION_CERTIFICATE"
+              },
+              {
+                "label": "Insurance",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "type": "INSURANCE"
+              },
+              {
+                "label": "Pollution certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "POLLUTION_CERTIFICATE"
+              },
+              {
+                "label": "Permit",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "PERMIT"
+              },
+              {
+                "label": "Fitness certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "FITNESS_CERTIFICATE"
+              },
+              {
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "OTHER"
+              }
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "requirements: unknown type",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/requirements",
+        "body": {
+          "driver": {
+            "NOPE": true
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "driver.NOPE": "Unknown document type"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "requirements: locked item cannot be optional",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/requirements",
+        "body": {
+          "driver": {
+            "DRIVING_LICENCE": false
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "driver.DRIVING_LICENCE": "Driving licence is always required"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "requirements: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/requirements",
+        "body": {
+          "driver": {
+            "ADDRESS_PROOF": true
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": [
+              {
+                "label": "Driving licence",
+                "locked": true,
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "type": "DRIVING_LICENCE"
+              },
+              {
+                "label": "Identity document",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "type": "IDENTITY"
+              },
+              {
+                "label": "Address proof",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "ADDRESS_PROOF"
+              },
+              {
+                "label": "Profile photo",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": true,
+                "type": "PROFILE_PHOTO"
+              },
+              {
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "OTHER"
+              }
+            ],
+            "vehicle": [
+              {
+                "label": "Registration certificate",
+                "locked": true,
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "type": "REGISTRATION_CERTIFICATE"
+              },
+              {
+                "label": "Insurance",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "type": "INSURANCE"
+              },
+              {
+                "label": "Pollution certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "POLLUTION_CERTIFICATE"
+              },
+              {
+                "label": "Permit",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "PERMIT"
+              },
+              {
+                "label": "Fitness certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "FITNESS_CERTIFICATE"
+              },
+              {
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "OTHER"
+              }
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride settings: read",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/ride-settings",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "requireEligibleDrivers": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride settings: invalid",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/ride-settings",
+        "body": {
+          "requireEligibleDrivers": "yes"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "requireEligibleDrivers": "Must be on or off"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride settings: update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/ride-settings",
+        "body": {
+          "requireEligibleDrivers": true
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "requireEligibleDrivers": true
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "availability",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/availability",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "activeAccounts": 1,
+            "blockedBy": {},
+            "eligible": 1,
+            "notEligible": 0,
+            "online": 1,
+            "onlineEligible": 1,
+            "onlineLive": 1,
+            "onlineNoSignal": 0,
+            "onlineNotEligible": 0,
+            "onlineStale": 0,
+            "settings": {
+              "requireEligibleDrivers": true
+            },
+            "totalDrivers": 1,
+            "truncated": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "accountStatus": "ACTIVE",
+                "currentTripId": null,
+                "eligible": true,
+                "eligibleCategoryId": "<vc_4>",
+                "id": "<driverId>",
+                "lastLocationAt": "<date>",
+                "lastSeenAt": "<date>",
+                "locationAgeSeconds": "<volatile>",
+                "name": "Dee Driver",
+                "online": true,
+                "operatingRegionId": "<rg_3>",
+                "phone": "+919811111111",
+                "photoUrl": null,
+                "position": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "presence": "LIVE",
+                "registeredAt": "<date>",
+                "vehicle": {
+                  "categoryId": "<vc_4>",
+                  "id": "<veh_6>",
+                  "make": "Maruti",
+                  "model": "Dzire",
+                  "registrationNumber": "MH12AB1234",
+                  "status": "ACTIVE"
+                },
+                "verificationStatus": "APPROVED",
+                "wentOfflineReason": null
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: list filtered",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers?status=ACTIVE&q=Dee",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "accountStatus": "ACTIVE",
+                "currentTripId": null,
+                "eligible": true,
+                "eligibleCategoryId": "<vc_4>",
+                "id": "<driverId>",
+                "lastLocationAt": "<date>",
+                "lastSeenAt": "<date>",
+                "locationAgeSeconds": "<volatile>",
+                "name": "Dee Driver",
+                "online": true,
+                "operatingRegionId": "<rg_3>",
+                "phone": "+919811111111",
+                "photoUrl": null,
+                "position": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "presence": "LIVE",
+                "registeredAt": "<date>",
+                "vehicle": {
+                  "categoryId": "<vc_4>",
+                  "id": "<veh_6>",
+                  "make": "Maruti",
+                  "model": "Dzire",
+                  "registrationNumber": "MH12AB1234",
+                  "status": "ACTIVE"
+                },
+                "verificationStatus": "APPROVED",
+                "wentOfflineReason": null
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: one",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": true
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": {
+              "colour": null,
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "type": "Sedan"
+            },
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": "<date>",
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": true,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": {
+              "lat": 18.5204,
+              "lng": 73.8567
+            },
+            "presence": "LIVE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY",
+                "ADDRESS_PROOF"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: unknown",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/drv_missing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Driver not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drivers: create, invalid",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "eligibleCategoryId": "Choose the vehicle category this driver is eligible for",
+            "fullName": "Full name is required (2 to 80 characters)",
+            "operatingRegionId": "Choose the region this driver operates in",
+            "phone": "Enter the phone number with its country code, for example +919876543210"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drivers: update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "2 Main Road",
+            "state": "Maharashtra"
+          },
+          "fullName": "Dee Driver Jr"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: suspend without a reason",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/status",
+        "body": {
+          "status": "SUSPENDED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "reason": "Give a reason for the suspension (at least 5 characters)"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drivers: suspend",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/status",
+        "body": {
+          "reason": "Documents under review",
+          "status": "SUSPENDED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "SUSPENDED",
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: reactivate",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/status",
+        "body": {
+          "status": "ACTIVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: history",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>/history",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "action": "ACCOUNT_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "SUSPENDED",
+              "id": "<id15>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": "ACTIVE"
+            },
+            {
+              "action": "ACCOUNT_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "ACTIVE",
+              "id": "<id16>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "Documents under review",
+              "to": "SUSPENDED"
+            },
+            {
+              "action": "PROFILE_UPDATED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Changed: firstName, lastName, address",
+              "from": null,
+              "id": "<id17>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": null
+            },
+            {
+              "action": "VEHICLE_ASSIGNED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Vehicle MH12AB1234",
+              "from": null,
+              "id": "<id18>",
+              "kind": "ASSIGNMENT",
+              "reason": "",
+              "to": "<veh_6>"
+            },
+            {
+              "action": "CREATED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Added from the dashboard",
+              "from": null,
+              "id": "<id19>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": "ACTIVE"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: documents",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "canReview": true,
+            "canView": true,
+            "requirements": [
+              {
+                "document": null,
+                "label": "Driving licence",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "photo": false,
+                "type": "DRIVING_LICENCE"
+              },
+              {
+                "document": null,
+                "label": "Identity document",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "photo": false,
+                "type": "IDENTITY"
+              },
+              {
+                "document": null,
+                "label": "Address proof",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "ADDRESS_PROOF"
+              },
+              {
+                "document": null,
+                "label": "Profile photo",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": true,
+                "type": "PROFILE_PHOTO"
+              },
+              {
+                "document": null,
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "OTHER"
+              }
+            ],
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY",
+                "ADDRESS_PROOF"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: unassign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/unassign-vehicle",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "ok": true
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drivers: assign the vehicle again",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_20>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "categoryId": "<vc_4>",
+                "categoryName": "Sedan",
+                "colour": "White",
+                "createdAt": "<date>",
+                "driver": {
+                  "accountStatus": "ACTIVE",
+                  "id": "<driverId>",
+                  "name": "Dee Driver Jr",
+                  "phone": "+919811111111"
+                },
+                "id": "<veh_6>",
+                "make": "Maruti",
+                "model": "Dzire",
+                "operatingRegionId": "<rg_3>",
+                "regionName": "Pune (Pune and suburbs)",
+                "registrationNumber": "MH12AB1234",
+                "status": "ACTIVE",
+                "verificationStatus": "APPROVED",
+                "year": 2021
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: one",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles/<veh_6>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "categoryId": "<vc_4>",
+            "categoryName": "Sedan",
+            "colour": "White",
+            "createdAt": "<date>",
+            "driver": {
+              "accountStatus": "ACTIVE",
+              "id": "<driverId>",
+              "name": "Dee Driver Jr",
+              "phone": "+919811111111"
+            },
+            "id": "<veh_6>",
+            "luggageCapacity": 2,
+            "make": "Maruti",
+            "model": "Dzire",
+            "operatingRegionId": "<rg_3>",
+            "operational": false,
+            "passengerCapacity": 4,
+            "regionName": "Pune (Pune and suburbs)",
+            "registrationNumber": "MH12AB1234",
+            "status": "ACTIVE",
+            "verification": {
+              "expired": [],
+              "missing": [
+                "REGISTRATION_CERTIFICATE",
+                "INSURANCE"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "year": 2021
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: create, invalid",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "categoryId": "Choose a vehicle category",
+            "make": "Make is required (40 characters at most)",
+            "model": "Model is required (40 characters at most)",
+            "passengerCapacity": "Passenger capacity must be a whole number from 1 to 20",
+            "registrationNumber": "Enter the registration number (4 to 15 letters and digits)"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "vehicles: create a second",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "Grey",
+          "luggageCapacity": 2,
+          "make": "Hyundai",
+          "model": "Aura",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH14CD5678",
+          "status": "ACTIVE",
+          "year": 2022
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_21>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: duplicate registration",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "Grey",
+          "luggageCapacity": 2,
+          "make": "Hyundai",
+          "model": "Aura",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH14CD5678",
+          "status": "ACTIVE",
+          "year": 2022
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "registrationNumber": "Already registered in this business"
+          },
+          "message": "A vehicle with this registration number already exists",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "vehicles: update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/business/vehicles/<veh_21>",
+        "body": {
+          "colour": "Silver"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_21>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: deactivate",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles/<veh_21>/status",
+        "body": {
+          "status": "INACTIVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_21>",
+            "status": "INACTIVE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: history",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles/<veh_21>/history",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "action": "VEHICLE_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "ACTIVE",
+              "id": "<id22>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": "INACTIVE"
+            },
+            {
+              "action": "PROFILE_UPDATED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Changed: colour",
+              "from": null,
+              "id": "<id23>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": null
+            },
+            {
+              "action": "CREATED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Added from the dashboard",
+              "from": null,
+              "id": "<id24>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": "ACTIVE"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: documents",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles/<veh_21>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "canReview": true,
+            "canView": true,
+            "requirements": [
+              {
+                "document": null,
+                "label": "Registration certificate",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "photo": false,
+                "type": "REGISTRATION_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Insurance",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "photo": false,
+                "type": "INSURANCE"
+              },
+              {
+                "document": null,
+                "label": "Pollution certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "POLLUTION_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Permit",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "PERMIT"
+              },
+              {
+                "document": null,
+                "label": "Fitness certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "FITNESS_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "OTHER"
+              }
+            ],
+            "verification": {
+              "expired": [],
+              "missing": [
+                "REGISTRATION_CERTIFICATE",
+                "INSURANCE"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: assign a driver who already has a vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles/<veh_21>/assign-driver",
+        "body": {
+          "driverId": "<driverId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "conflict": "driver"
+          },
+          "message": "This driver already has a vehicle assigned. Reassign to move it.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "vehicles: free the driver first",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/unassign-vehicle",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "ok": true
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: assign a driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles/<veh_21>/assign-driver",
+        "body": {
+          "driverId": "<driverId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_25>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: unassign the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles/<veh_21>/unassign-driver",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "ok": true
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicles: list after changes",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "categoryId": "<vc_4>",
+                "categoryName": "Sedan",
+                "colour": "Silver",
+                "createdAt": "<date>",
+                "driver": null,
+                "id": "<veh_21>",
+                "make": "Hyundai",
+                "model": "Aura",
+                "operatingRegionId": "<rg_3>",
+                "regionName": "Pune (Pune and suburbs)",
+                "registrationNumber": "MH14CD5678",
+                "status": "INACTIVE",
+                "verificationStatus": "INCOMPLETE",
+                "year": 2022
+              },
+              {
+                "categoryId": "<vc_4>",
+                "categoryName": "Sedan",
+                "colour": "White",
+                "createdAt": "<date>",
+                "driver": null,
+                "id": "<veh_6>",
+                "make": "Maruti",
+                "model": "Dzire",
+                "operatingRegionId": "<rg_3>",
+                "regionName": "Pune (Pune and suburbs)",
+                "registrationNumber": "MH12AB1234",
+                "status": "ACTIVE",
+                "verificationStatus": "APPROVED",
+                "year": 2021
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 2
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "riders: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/riders",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "accountStatus": "ACTIVE",
+                "email": "rae@contract.test",
+                "id": "<userId>",
+                "lastActiveAt": "<date>",
+                "name": "Rae Rider",
+                "phone": "+919800000001",
+                "phoneVerified": true,
+                "registeredAt": "<date>",
+                "suspendedAt": null,
+                "suspendedReason": null,
+                "trips": {
+                  "cancelled": 0,
+                  "completed": 1,
+                  "total": 2
+                }
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "riders: one",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/riders/<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "email": "rae@contract.test",
+            "id": "<userId>",
+            "lastActiveAt": "<date>",
+            "name": "Rae Rider",
+            "phone": "+919800000001",
+            "phoneVerified": true,
+            "recentTrips": [
+              {
+                "cancelledBy": null,
+                "categoryId": "<vc_4>",
+                "currency": "INR",
+                "distanceKm": 16.9,
+                "driver": {
+                  "id": "<driverId>",
+                  "name": "Dee Driver Jr"
+                },
+                "drop": "Hinjewadi, Pune",
+                "fare": 294.8,
+                "fareBasis": "ESTIMATE",
+                "id": "amt_id_000002",
+                "paymentMode": "CASH",
+                "pickup": "Shivajinagar, Pune",
+                "regionId": "<rg_3>",
+                "requestedAt": "<date>",
+                "rider": {
+                  "id": "<userId>",
+                  "name": null,
+                  "phone": null
+                },
+                "status": "REQUESTED",
+                "statusGroup": "searching"
+              },
+              {
+                "cancelledBy": null,
+                "categoryId": "<vc_4>",
+                "currency": "INR",
+                "distanceKm": 16.9,
+                "driver": {
+                  "id": "<driverId>",
+                  "name": "Dee Driver Jr"
+                },
+                "drop": "Hinjewadi, Pune",
+                "fare": 294.8,
+                "fareBasis": "ESTIMATE",
+                "id": "amt_id_000001",
+                "paymentMode": "CASH",
+                "pickup": "Shivajinagar, Pune",
+                "regionId": "<rg_3>",
+                "requestedAt": "<date>",
+                "rider": {
+                  "id": "<userId>",
+                  "name": null,
+                  "phone": null
+                },
+                "status": "COMPLETED",
+                "statusGroup": "completed"
+              }
+            ],
+            "registeredAt": "<date>",
+            "suspendedAt": null,
+            "suspendedReason": null,
+            "trips": {
+              "cancelled": 0,
+              "completed": 1,
+              "total": 2
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "riders: unknown",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/riders/9999999999",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Rider not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "riders: suspend without a reason",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/riders/<userId>/status",
+        "body": {
+          "status": "SUSPENDED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "reason": "Give a reason of at least 5 characters"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "riders: suspend",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/riders/<userId>/status",
+        "body": {
+          "reason": "Abusive behaviour",
+          "status": "SUSPENDED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "SUSPENDED",
+            "id": "<userId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "riders: activate",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/riders/<userId>/status",
+        "body": {
+          "status": "ACTIVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "id": "<userId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "trips: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/trips",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "cancelledBy": null,
+                "categoryId": "<vc_4>",
+                "currency": "INR",
+                "distanceKm": 16.9,
+                "driver": {
+                  "id": "<driverId>",
+                  "name": "Dee Driver Jr"
+                },
+                "drop": "Hinjewadi, Pune",
+                "fare": 294.8,
+                "fareBasis": "ESTIMATE",
+                "id": "amt_id_000002",
+                "paymentMode": "CASH",
+                "pickup": "Shivajinagar, Pune",
+                "regionId": "<rg_3>",
+                "requestedAt": "<date>",
+                "rider": {
+                  "id": "<userId>",
+                  "name": "Rae Rider",
+                  "phone": "+919800000001"
+                },
+                "status": "REQUESTED",
+                "statusGroup": "searching"
+              },
+              {
+                "cancelledBy": null,
+                "categoryId": "<vc_4>",
+                "currency": "INR",
+                "distanceKm": 16.9,
+                "driver": {
+                  "id": "<driverId>",
+                  "name": "Dee Driver Jr"
+                },
+                "drop": "Hinjewadi, Pune",
+                "fare": 294.8,
+                "fareBasis": "ESTIMATE",
+                "id": "amt_id_000001",
+                "paymentMode": "CASH",
+                "pickup": "Shivajinagar, Pune",
+                "regionId": "<rg_3>",
+                "requestedAt": "<date>",
+                "rider": {
+                  "id": "<userId>",
+                  "name": "Rae Rider",
+                  "phone": "+919800000001"
+                },
+                "status": "COMPLETED",
+                "statusGroup": "completed"
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 2
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "trips: list filtered",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/trips?status=COMPLETED",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "cancelledBy": null,
+                "categoryId": "<vc_4>",
+                "currency": "INR",
+                "distanceKm": 16.9,
+                "driver": {
+                  "id": "<driverId>",
+                  "name": "Dee Driver Jr"
+                },
+                "drop": "Hinjewadi, Pune",
+                "fare": 294.8,
+                "fareBasis": "ESTIMATE",
+                "id": "amt_id_000001",
+                "paymentMode": "CASH",
+                "pickup": "Shivajinagar, Pune",
+                "regionId": "<rg_3>",
+                "requestedAt": "<date>",
+                "rider": {
+                  "id": "<userId>",
+                  "name": "Rae Rider",
+                  "phone": "+919800000001"
+                },
+                "status": "COMPLETED",
+                "statusGroup": "completed"
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "trips: one",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/trips/amt_id_000001",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "cancellation": null,
+            "cancelledBy": null,
+            "category": {
+              "id": "<vc_4>",
+              "name": "Sedan"
+            },
+            "categoryId": "<vc_4>",
+            "currency": "INR",
+            "distanceKm": 16.9,
+            "driver": {
+              "id": "<driverId>",
+              "name": "Dee Driver Jr"
+            },
+            "drop": "Hinjewadi, Pune",
+            "dropPoint": {
+              "lat": 18.5912,
+              "lng": 73.7389
+            },
+            "events": [],
+            "fare": 294.8,
+            "fareBasis": "ESTIMATE",
+            "fareDetail": {
+              "amount": 294.8,
+              "basis": "ESTIMATE",
+              "breakdown": {
+                "fare": 289.8,
+                "fees": [
+                  {
+                    "amount": 5,
+                    "key": "booking",
+                    "label": "Booking fee"
+                  }
+                ],
+                "feesTotal": 5,
+                "lines": [
+                  {
+                    "amount": 40,
+                    "key": "base",
+                    "label": "Base fare"
+                  },
+                  {
+                    "amount": 202.8,
+                    "key": "distance",
+                    "label": "Distance (16.9 km)"
+                  },
+                  {
+                    "amount": 47,
+                    "key": "time",
+                    "label": "Time (47 min)"
+                  }
+                ],
+                "taxes": [],
+                "taxesTotal": 0,
+                "total": 294.8
+              },
+              "currency": "INR",
+              "estimatedDurationMin": 47,
+              "source": "BUSINESS_RULES"
+            },
+            "id": "amt_id_000001",
+            "note": "",
+            "payment": {
+              "available": false,
+              "status": null
+            },
+            "paymentMode": "CASH",
+            "pickup": "Shivajinagar, Pune",
+            "pickupPoint": {
+              "lat": 18.5314,
+              "lng": 73.8446
+            },
+            "rating": null,
+            "region": {
+              "id": "<rg_3>",
+              "name": "Pune · Pune and suburbs"
+            },
+            "regionId": "<rg_3>",
+            "rejectReason": "",
+            "requestedAt": "<date>",
+            "rider": {
+              "id": "<userId>",
+              "name": "Rae Rider",
+              "phone": "+919800000001"
+            },
+            "status": "COMPLETED",
+            "statusGroup": "completed",
+            "timeline": [
+              {
+                "at": "<date>",
+                "label": "Ride requested"
+              },
+              {
+                "at": "<date>",
+                "label": "Driver responded"
+              },
+              {
+                "at": "<date>",
+                "label": "Driver on the way"
+              },
+              {
+                "at": "<date>",
+                "label": "Driver arrived"
+              },
+              {
+                "at": "<date>",
+                "label": "Trip started"
+              },
+              {
+                "at": "<date>",
+                "label": "Trip completed"
+              }
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "trips: unknown",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/trips/amt_id_999999",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Trip not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "trips: cancel without a reason",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/trips/amt_id_000002/cancel",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "reason": "Give a reason of at least 5 characters"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "trips: cancel an open request",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/trips/amt_id_000002/cancel",
+        "body": {
+          "reason": "Cancelled by support"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "amt_id_000002",
+            "status": "CANCELLED_BY_USER"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "trips: cancel a completed trip",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/trips/amt_id_000001/cancel",
+        "body": {
+          "reason": "Cancelled by support"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "This trip can no longer be cancelled (it is completed).",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "stats",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/stats",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "drivers": {
+              "activeAccounts": 1,
+              "eligible": 0,
+              "online": 0,
+              "onlineEligible": 0,
+              "onlineLive": 0,
+              "onlineNoSignal": 0,
+              "onlineNotEligible": 0,
+              "onlineStale": 0,
+              "partial": false,
+              "total": 1
+            },
+            "notAvailable": [
+              "payments",
+              "ratings"
+            ],
+            "revenue": {
+              "basis": "completed trip fares today (estimates until the final fare is recorded)",
+              "currency": "INR",
+              "partial": false,
+              "today": 294.8
+            },
+            "riders": {
+              "newThisWeek": 1,
+              "total": 1
+            },
+            "trips": {
+              "acceptanceRate": 50,
+              "active": 0,
+              "cancellationRate": 50,
+              "cancelledToday": 1,
+              "completedToday": 1,
+              "last7Days": [
+                {
+                  "cancelled": 0,
+                  "completed": 0,
+                  "date": "<day>",
+                  "requested": 0
+                },
+                {
+                  "cancelled": 0,
+                  "completed": 0,
+                  "date": "<day>",
+                  "requested": 0
+                },
+                {
+                  "cancelled": 0,
+                  "completed": 0,
+                  "date": "<day>",
+                  "requested": 0
+                },
+                {
+                  "cancelled": 0,
+                  "completed": 0,
+                  "date": "<day>",
+                  "requested": 0
+                },
+                {
+                  "cancelled": 0,
+                  "completed": 0,
+                  "date": "<day>",
+                  "requested": 0
+                },
+                {
+                  "cancelled": 0,
+                  "completed": 0,
+                  "date": "<day>",
+                  "requested": 0
+                },
+                {
+                  "cancelled": 1,
+                  "completed": 1,
+                  "date": "<day>",
+                  "requested": 2
+                }
+              ],
+              "partial": false,
+              "requestedToday": 2,
+              "searching": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "alerts",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/alerts",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "alerts": [
+              {
+                "count": 1,
+                "detail": "Riders cannot book these until a fare rule is saved.",
+                "id": "config.category_no_price",
+                "items": [
+                  {
+                    "id": "<vc_12>",
+                    "kind": "category",
+                    "label": "Mini Plus"
+                  }
+                ],
+                "link": "/pricing",
+                "more": 0,
+                "severity": "warning",
+                "title": "Vehicle categories without pricing",
+                "type": "PRICING"
+              },
+              {
+                "count": 1,
+                "detail": "Assign an approved vehicle so they can take rides.",
+                "id": "drivers.no_vehicle",
+                "items": [
+                  {
+                    "id": "<driverId>",
+                    "kind": "driver",
+                    "label": "Dee Driver Jr"
+                  }
+                ],
+                "link": "/drivers",
+                "more": 0,
+                "severity": "info",
+                "title": "Verified drivers without a vehicle",
+                "type": "DRIVER"
+              }
+            ],
+            "counts": {
+              "critical": 0,
+              "info": 1,
+              "warning": 1
+            },
+            "generatedAt": "<volatile>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "live map",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/live-map",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "counts": {
+              "activeTrips": 0,
+              "eligibleLive": 0,
+              "live": 0,
+              "noSignal": 0,
+              "online": 0,
+              "searching": 0,
+              "stale": 0
+            },
+            "drivers": [],
+            "freshSeconds": 60,
+            "generatedAt": "<volatile>",
+            "partial": false,
+            "refreshSeconds": 10,
+            "regions": [
+              {
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "id": "<rg_3>",
+                "name": "Pune · Pune and suburbs",
+                "radiusKm": 35
+              }
+            ],
+            "staleOfflineSeconds": 180,
+            "trips": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "reports: summary",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/reports/summary",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "byCategory": [
+              {
+                "cancelled": 1,
+                "completed": 1,
+                "fares": 294.8,
+                "id": "<vc_4>",
+                "name": "Sedan",
+                "requested": 2,
+                "unanswered": 0
+              }
+            ],
+            "byDay": [
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 0,
+                "completed": 0,
+                "date": "<day>",
+                "fares": 0,
+                "requested": 0,
+                "unanswered": 0
+              },
+              {
+                "cancelled": 1,
+                "completed": 1,
+                "date": "<day>",
+                "fares": 294.8,
+                "requested": 2,
+                "unanswered": 0
+              }
+            ],
+            "byRegion": [
+              {
+                "cancelled": 1,
+                "completed": 1,
+                "fares": 294.8,
+                "id": "<rg_3>",
+                "name": "Pune · Pune and suburbs",
+                "requested": 2,
+                "unanswered": 0
+              }
+            ],
+            "currency": "INR",
+            "drivers": [
+              {
+                "acceptanceRate": 100,
+                "accepted": 1,
+                "cancelled": 0,
+                "completed": 1,
+                "declined": 0,
+                "fares": 294.8,
+                "id": "<driverId>",
+                "name": "Dee Driver Jr",
+                "noResponse": 0,
+                "offered": 1
+              }
+            ],
+            "finance": {
+              "basis": "estimates",
+              "bookingFees": 5,
+              "byPaymentMode": [
+                {
+                  "fares": 294.8,
+                  "mode": "CASH",
+                  "trips": 1
+                }
+              ],
+              "completedTrips": 1,
+              "estimatedFares": 1,
+              "grossFares": 294.8,
+              "taxes": 0,
+              "unavailable": [
+                "payments received",
+                "platform commission",
+                "business and driver earnings",
+                "refunds"
+              ]
+            },
+            "fromDay": "2026-09-09",
+            "partial": false,
+            "range": {
+              "from": "<date>",
+              "timezone": "Asia/Kolkata",
+              "to": "<date>"
+            },
+            "rides": {
+              "avgDistanceKm": 16.9,
+              "avgFare": 294.8,
+              "avgResponseMinutes": "<volatile>",
+              "avgTripMinutes": "<volatile>",
+              "cancellationRate": 50,
+              "cancelled": 1,
+              "cancelledByDrivers": 0,
+              "cancelledByRiders": 1,
+              "completed": 1,
+              "completionRate": 50,
+              "noDriver": 0,
+              "noDriverRate": 0,
+              "requested": 2,
+              "stillOpen": 0
+            },
+            "rowLimit": 20000,
+            "statusGroups": [
+              {
+                "group": "searching",
+                "trips": 0
+              },
+              {
+                "group": "active",
+                "trips": 0
+              },
+              {
+                "group": "completed",
+                "trips": 1
+              },
+              {
+                "group": "cancelled",
+                "trips": 1
+              },
+              {
+                "group": "unanswered",
+                "trips": 0
+              },
+              {
+                "group": "other",
+                "trips": 0
+              }
+            ],
+            "toDay": "2026-10-08"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "export: trips csv",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/export/trips.csv",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "text/csv",
+        "body": "Trip ID,Requested at (UTC),Status,Rider,Rider phone,Driver,Category,Region,Pickup,Destination,Distance km,Fare,Currency,Fare basis,Payment mode,Driver responded at (UTC),Started at (UTC),Completed at (UTC),Cancelled by,Cancellation reason\r\namt_id_000002,<date>,CANCELLED_BY_USER,Rae Rider,'+919800000001,Dee Driver Jr,Sedan,Pune,\"Shivajinagar, Pune\",\"Hinjewadi, Pune\",16.9,294.8,INR,ESTIMATE,CASH,,,,"
+      }
+    },
+    {
+      "step": "export: riders csv",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/export/riders.csv",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "text/csv",
+        "body": "Rider ID,Name,Phone,Email,Phone verified,Account status,Joined (UTC),Last active (UTC),Trips,Completed trips\r\n<userId>,Rae Rider,'+919800000001,rae@contract.test,Yes,ACTIVE,<date>,<date>,2,1\r\n"
+      }
+    },
+    {
+      "step": "export: drivers csv",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/export/drivers.csv",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "text/csv",
+        "body": "Driver ID,Name,Phone,Email,Account status,Verification,Documents valid until (UTC),Region,Eligible category,Online,Last seen (UTC),Registered (UTC)\r\n<driverId>,Dee Driver Jr,'+919811111111,dee@contract.test,ACTIVE,APPROVED,,Pune,Sedan,No,<date>,<date>\r\n"
+      }
+    },
+    {
+      "step": "support: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/support/issues",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [
+              {
+                "createdAt": "<date>",
+                "driverId": "<driverId>",
+                "driverName": "Dee Driver Jr",
+                "driverPhone": "+919811111111",
+                "id": "<id10>",
+                "imageCount": 0,
+                "noteCount": 0,
+                "reporterId": "<driverId>",
+                "reporterType": "driver",
+                "resolvedAt": null,
+                "status": "issue submitted",
+                "statusLabel": "New",
+                "text": "The map takes long to load on the trip screen",
+                "tripId": null,
+                "updatedAt": "<date>"
+              }
+            ],
+            "open": 1,
+            "page": 1,
+            "pageSize": 20,
+            "total": 1
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "support: one",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/support/issues/<id10>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "createdAt": "<date>",
+            "driverId": "<driverId>",
+            "driverName": "Dee Driver Jr",
+            "driverPhone": "+919811111111",
+            "id": "<id10>",
+            "imageCount": 0,
+            "imageUrls": [],
+            "noteCount": 0,
+            "notes": [],
+            "reporterId": "<driverId>",
+            "reporterType": "driver",
+            "resolvedAt": null,
+            "status": "issue submitted",
+            "statusLabel": "New",
+            "text": "The map takes long to load on the trip screen",
+            "tripId": null,
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "support: update, invalid",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/support/issues/<id10>",
+        "body": {
+          "status": "FLYING"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "status": "Choose New, In progress or Resolved"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "support: reply and resolve",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/support/issues/<id10>",
+        "body": {
+          "note": "We have fixed the map speed",
+          "status": "complete"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<id10>",
+            "status": "complete"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "support: unknown",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/support/issues/<id26>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Issue not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "audit: business",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/audit",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "facets": {
+              "actions": [
+                "auth.login",
+                "auth.password_changed",
+                "business.market_set",
+                "business.requirements_updated",
+                "business.ride_settings_updated",
+                "business.settings_updated",
+                "cancellation_policy.deleted",
+                "cancellation_policy.saved",
+                "category.created",
+                "category.updated",
+                "driver.account_status_changed",
+                "driver.created",
+                "driver.profile_updated",
+                "driver.vehicle_assigned",
+                "driver.vehicle_unassigned",
+                "export.drivers",
+                "export.riders",
+                "export.trips",
+                "fare_rule.deleted",
+                "fare_rule.saved",
+                "region.created",
+                "region.deactivated",
+                "region.updated",
+                "rider.status_changed",
+                "setup.completed",
+                "support.issue_updated",
+                "trip.cancelled_by_admin",
+                "user.created",
+                "vehicle.created",
+                "vehicle.driver_assigned",
+                "vehicle.driver_unassigned",
+                "vehicle.profile_updated",
+                "vehicle.vehicle_status_changed"
+              ],
+              "actors": [
+                "admin@contract.test",
+                "owner@contract.test"
+              ],
+              "targetTypes": [
+                "admin_user",
+                "business",
+                "cancellation_policy",
+                "category",
+                "driver",
+                "export",
+                "fare_rule",
+                "issue",
+                "region",
+                "rider",
+                "trip",
+                "vehicle"
+              ]
+            },
+            "items": [
+              {
+                "action": "support.issue_updated",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "issue submitted",
+                  "noted": "true",
+                  "to": "complete"
+                },
+                "id": "<id27>",
+                "targetId": "<id10>",
+                "targetType": "issue",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "export.drivers",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "rows": "1"
+                },
+                "id": "<id28>",
+                "targetId": null,
+                "targetType": "export",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "export.riders",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "rows": "1"
+                },
+                "id": "<id29>",
+                "targetId": null,
+                "targetType": "export",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "export.trips",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "<day>",
+                  "rows": "2",
+                  "to": "<day>"
+                },
+                "id": "<id30>",
+                "targetId": null,
+                "targetType": "export",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "trip.cancelled_by_admin",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "REQUESTED",
+                  "reason": "Cancelled by support"
+                },
+                "id": "<id31>",
+                "targetId": "amt_id_000002",
+                "targetType": "trip",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "rider.status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "SUSPENDED",
+                  "to": "ACTIVE"
+                },
+                "id": "<id32>",
+                "targetId": "<userId>",
+                "targetType": "rider",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "rider.status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "ACTIVE",
+                  "reason": "Abusive behaviour",
+                  "to": "SUSPENDED"
+                },
+                "id": "<id33>",
+                "targetId": "<userId>",
+                "targetType": "rider",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.driver_unassigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "<driverId>",
+                  "kind": "ASSIGNMENT"
+                },
+                "id": "<id34>",
+                "targetId": "<veh_21>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.vehicle_unassigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "<veh_21>",
+                  "kind": "ASSIGNMENT"
+                },
+                "id": "<id35>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.driver_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Driver Dee Driver Jr",
+                  "kind": "ASSIGNMENT",
+                  "to": "<driverId>"
+                },
+                "id": "<id36>",
+                "targetId": "<veh_21>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.vehicle_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Vehicle MH14CD5678",
+                  "kind": "ASSIGNMENT",
+                  "to": "<veh_21>"
+                },
+                "id": "<id37>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.driver_unassigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "<driverId>",
+                  "kind": "ASSIGNMENT"
+                },
+                "id": "<id38>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.vehicle_unassigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "<veh_6>",
+                  "kind": "ASSIGNMENT"
+                },
+                "id": "<id39>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.vehicle_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "ACTIVE",
+                  "kind": "ACCOUNT_STATUS",
+                  "to": "INACTIVE"
+                },
+                "id": "<id40>",
+                "targetId": "<veh_21>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.profile_updated",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Changed: colour",
+                  "kind": "ACCOUNT_STATUS"
+                },
+                "id": "<id41>",
+                "targetId": "<veh_21>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Added from the dashboard",
+                  "kind": "ACCOUNT_STATUS",
+                  "to": "ACTIVE"
+                },
+                "id": "<id42>",
+                "targetId": "<veh_21>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.driver_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Driver Dee Driver Jr",
+                  "kind": "ASSIGNMENT",
+                  "to": "<driverId>"
+                },
+                "id": "<id43>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.vehicle_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Vehicle MH12AB1234",
+                  "kind": "ASSIGNMENT",
+                  "to": "<veh_6>"
+                },
+                "id": "<id44>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.driver_unassigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "<driverId>",
+                  "kind": "ASSIGNMENT"
+                },
+                "id": "<id45>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.vehicle_unassigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "<veh_6>",
+                  "kind": "ASSIGNMENT"
+                },
+                "id": "<id46>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 48
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "audit: csv",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/audit.csv",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "text/csv",
+        "body": "When (UTC),Who,Action,Target type,Target,Details\r\n<date>,admin@contract.test,support.issue_updated,issue,<id10>,from: issue submitted; to: complete; noted: true\r\n<date>,admin@contract.test,export.drivers,export,,rows: 1\r\n<date>,admin@contract.test,export.riders,export,,rows: 1\r\n<date>,admin@contract.test,export.trips,export,,rows: 2; from: <day>; to: <day>\r\n<date>,admin@contract.test,trip.cancelle"
+      }
+    },
+    {
+      "step": "permissions: no tenant selected",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "Contract Rides",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "help@contract.test",
+            "supportPhone": "+911234567890"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "permissions: no session",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    }
+  ]
+}

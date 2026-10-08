@@ -66,6 +66,9 @@ automet-89e4b-firebase-adminsdk-fbsvc-973c0f0fdd.json
 !package.json
 !package-lock.json
 !tsconfig.json
+# the contract suite's golden answers: fake test data only (no live data, no credentials), and the suite needs them
+!test/contract/snapshots/
+!test/contract/snapshots/*.json
 
 # TLS keys must never be committed (Render terminates TLS)
 ssl/

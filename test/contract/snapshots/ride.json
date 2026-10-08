@@ -1,0 +1,3475 @@
+{
+  "scenario": "ride",
+  "steps": [
+    {
+      "step": "setup: platform owner signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: list businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "admin@contract.test",
+          "name": "Client Admin",
+          "role": "client_admin",
+          "tenantId": "<defaultAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "admin@contract.test",
+            "id": "<a_2>",
+            "mustChangePassword": true,
+            "name": "Client Admin",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "admin@contract.test",
+          "password": "<tempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": true,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<tempPassword>",
+          "newPassword": "Client-Admin-Pass-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": false,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: market",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: region",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "name": "Pune"
+            }
+          ],
+          "radiusKm": 30,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "city": "Pune",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_3>",
+                "radiusKm": 30,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: vehicle category",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Sedan",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_4>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "name": "Sedan",
+            "passengerCapacity": 4,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: fare rule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 40,
+          "bookingFee": 5,
+          "categoryId": "<vc_4>",
+          "minimumFare": 70,
+          "perKm": 12,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 40,
+            "bookingFee": 5,
+            "categoryId": "<vc_4>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_5>",
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "1 Main Road",
+            "state": "Maharashtra"
+          },
+          "dateOfBirth": "1990-04-02",
+          "eligibleCategoryId": "<vc_4>",
+          "email": "dee@contract.test",
+          "fullName": "Dee Driver",
+          "operatingRegionId": "<rg_3>",
+          "phone": "+919811111111"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "White",
+          "luggageCapacity": 2,
+          "make": "Maruti",
+          "model": "Dzire",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH12AB1234",
+          "status": "ACTIVE",
+          "year": 2021
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_6>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: assign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_7>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: the driver is now eligible",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": null,
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "rider: register",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/register",
+        "body": {
+          "email": "rae@contract.test",
+          "name": "Rae Rider",
+          "phone": "+919800000001"
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "Verify using the OTP sent to your phone."
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id8>",
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": null,
+              "email": "rae@contract.test",
+              "fcmToken": null,
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id8>",
+              "isLoggedin": false,
+              "isPhoneVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<defaultAppId>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "User registered successfully. OTP sent for verification.",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "rider: verify OTP",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "device_id": "rider-device-1",
+          "fcm_id": "rider-fcm-1",
+          "otp": "<riderOtp>",
+          "userId": "<userId>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "tokenExpiresIn": "7d"
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id8>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deviceId": "rider-device-1",
+              "email": "rae@contract.test",
+              "fcmToken": "rider-fcm-1",
+              "firstName": "Rae",
+              "fullName": "Rae Rider",
+              "id": "<id8>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<defaultAppId>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: login",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/login",
+        "body": {
+          "device_id": "driver-device-1",
+          "fcm_id": "driver-fcm-1",
+          "phoneNumber": "+919811111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": false,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "OTP sent to your registered phone number. Please verify to complete login."
+            }
+          },
+          "message": "OTP sent to your registered phone number",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: verify OTP",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/verify",
+        "body": {
+          "device_id": "driver-device-1",
+          "driverId": "<driverId>",
+          "fcm_id": "driver-fcm-1",
+          "otp": "<driverOtp>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": false,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": null,
+              "vehicleNumber": null,
+              "vehicleRegistrationImages": [],
+              "vehicleType": null,
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "lastActive": "<date>",
+              "tokenExpiresIn": "7d"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: vehicle details",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/vehicle-details",
+        "body": {
+          "driverId": "<driverId>",
+          "isVehicleAdded": true,
+          "vehicleModel": "Dzire",
+          "vehicleNumber": "MH12AB1234",
+          "vehicleType": "Sedan"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "updatedFields": [
+              "vehicleType",
+              "vehicleNumber",
+              "vehicleModel",
+              "isVehicleAdded"
+            ]
+          },
+          "message": "Vehicle details updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: go online",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/online-status",
+        "body": {
+          "driverId": "<driverId>",
+          "isOnline": true,
+          "onlineAs": 0
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": true,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "statusInfo": {
+              "isOnline": true,
+              "lastActive": "<date>",
+              "onlineAs": 0,
+              "onlineAsText": "Public"
+            },
+            "updateTime": "<date>"
+          },
+          "message": "Driver online status updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: position",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/location",
+        "body": {
+          "accuracy": 10,
+          "driverId": "<driverId>",
+          "lat": 18.5204,
+          "lng": 73.8567
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "available": {
+              "code": null,
+              "message": null,
+              "ok": true
+            },
+            "freshSeconds": 60,
+            "inServiceArea": true,
+            "isOnline": true,
+            "nextHeartbeatSeconds": 10,
+            "region": {
+              "city": "Pune",
+              "regionId": "<rg_3>",
+              "zoneName": "All areas"
+            },
+            "serverTime": "<volatile>"
+          },
+          "message": "Location received",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "before any ride: nothing pushed yet",
+      "pushes": []
+    },
+    {
+      "step": "estimate: no session",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/estimate",
+        "body": {
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "estimate: bad coordinates",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/estimate",
+        "body": {
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_latitude": 120,
+          "pickup_longitude": 73.8446
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "message": "Valid pickup_latitude, pickup_longitude, drop_latitude and drop_longitude are required.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "estimate: for a driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/estimate",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "breakdown": {
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "category_id": "<vc_4>",
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "region_id": "<rg_3>",
+            "vehicle_type": "Sedan"
+          },
+          "message": "Fare estimate",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "estimate: for a category",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/estimate",
+        "body": {
+          "category_id": "<vc_4>",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "breakdown": {
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "category_id": "<vc_4>",
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "region_id": "<rg_3>",
+            "vehicle_type": "Sedan"
+          },
+          "message": "Fare estimate",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "estimate: outside every service area",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/estimate",
+        "body": {
+          "category_id": "<vc_4>",
+          "drop_latitude": 28.7,
+          "drop_longitude": 77.1,
+          "pickup_latitude": 28.61,
+          "pickup_longitude": 77.2
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 422,
+        "contentType": "application/json",
+        "body": {
+          "error": "OUTSIDE_SERVICE_AREA",
+          "message": "Sorry, this service is not available at the pickup location.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "request: missing fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "message": "Missing required fields: request_id, user_id, driver_id, pickup_address, drop_address",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "request: same pickup and drop",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5314,
+          "drop_longitude": 73.8446,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-0",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "message": "Pickup and drop locations must be different.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "request: unknown driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "1111111111",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-0",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver_id": "1111111111"
+          },
+          "message": "Driver not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "request: acting as another rider is refused",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-0",
+          "ride_note": "Two bags",
+          "user_id": "2222222222"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "user_id does not match authenticated user"
+          },
+          "message": "user_id does not match authenticated user",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: request",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-1",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "data": {
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "payment_mode": "CASH",
+            "request_id": "req-contract-1",
+            "status": "REQUESTED",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000001"
+          },
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Ride request sent",
+          "payment_mode": "CASH",
+          "request_id": "req-contract-1",
+          "status": "REQUESTED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: the driver is pushed the request",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Shivajinagar, Pune → Hinjewadi, Pune",
+            "channel_id": "driver_notifications",
+            "currency": "INR",
+            "distance": "16.9",
+            "drop_address": "Hinjewadi, Pune",
+            "drop_lat": "18.5912",
+            "drop_lng": "73.7389",
+            "estimated_duration": "47",
+            "fare": "294.8",
+            "payment_mode": "CASH",
+            "pickup_address": "Shivajinagar, Pune",
+            "pickup_lat": "18.5314",
+            "pickup_lng": "73.8446",
+            "request_id": "req-contract-1",
+            "ride_note": "Two bags",
+            "rider_name": "Rae Rider",
+            "title": "New ride request",
+            "trip_id": "amt_id_000001",
+            "type": "RIDE_REQUEST"
+          },
+          "token": "driver-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 1: a second request to the same driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-2",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "request_id": "req-contract-1",
+            "status": "REQUESTED",
+            "trip_id": "amt_id_000001"
+          },
+          "message": "An active trip request already exists for this user and driver.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: rider active ride",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/active?user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active_ride": {
+              "arrived_at": null,
+              "cancel_stage": null,
+              "cancellation_reason": null,
+              "cancelled_at": null,
+              "cancelled_by": null,
+              "category_id": "<vc_4>",
+              "completed_at": null,
+              "created_at": "<date>",
+              "currency": "INR",
+              "distance_km": 16.9,
+              "driver_id": "<driverId>",
+              "driver_on_the_way_at": null,
+              "driver_response": null,
+              "drop": {
+                "address": "Hinjewadi, Pune",
+                "lat": 18.5912,
+                "lng": 73.7389
+              },
+              "estimated_duration_min": 47,
+              "fare": 294.8,
+              "fare_basis": "ESTIMATE",
+              "fare_breakdown": {
+                "fare": 289.8,
+                "fees": [
+                  {
+                    "amount": 5,
+                    "key": "booking",
+                    "label": "Booking fee"
+                  }
+                ],
+                "feesTotal": 5,
+                "lines": [
+                  {
+                    "amount": 40,
+                    "key": "base",
+                    "label": "Base fare"
+                  },
+                  {
+                    "amount": 202.8,
+                    "key": "distance",
+                    "label": "Distance (16.9 km)"
+                  },
+                  {
+                    "amount": 47,
+                    "key": "time",
+                    "label": "Time (47 min)"
+                  }
+                ],
+                "taxes": [],
+                "taxesTotal": 0,
+                "total": 294.8
+              },
+              "fare_source": "BUSINESS_RULES",
+              "payment_mode": "CASH",
+              "pickup": {
+                "address": "Shivajinagar, Pune",
+                "lat": 18.5314,
+                "lng": 73.8446
+              },
+              "push_message_id": "projects/contract/messages/fake-1",
+              "push_sent": true,
+              "push_sent_at": "<date>",
+              "push_status": "DELIVERED",
+              "region_id": "<rg_3>",
+              "reject_reason": null,
+              "request_id": "req-contract-1",
+              "requested_at": "<date>",
+              "responded_at": null,
+              "ride_note": "Two bags",
+              "started_at": null,
+              "status": "REQUESTED",
+              "tenant_id": "<defaultAppId>",
+              "timeout_at": "<date>",
+              "trip_id": "amt_id_000001",
+              "updated_at": "<date>",
+              "user_id": "<userId>"
+            }
+          },
+          "message": "Active ride found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 1: driver active ride",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/active?driver_id=<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active_ride": {
+              "arrived_at": null,
+              "cancel_stage": null,
+              "cancellation_reason": null,
+              "cancelled_at": null,
+              "cancelled_by": null,
+              "category_id": "<vc_4>",
+              "completed_at": null,
+              "created_at": "<date>",
+              "currency": "INR",
+              "distance_km": 16.9,
+              "driver_id": "<driverId>",
+              "driver_on_the_way_at": null,
+              "driver_response": null,
+              "drop": {
+                "address": "Hinjewadi, Pune",
+                "lat": 18.5912,
+                "lng": 73.7389
+              },
+              "estimated_duration_min": 47,
+              "fare": 294.8,
+              "fare_basis": "ESTIMATE",
+              "fare_breakdown": {
+                "fare": 289.8,
+                "fees": [
+                  {
+                    "amount": 5,
+                    "key": "booking",
+                    "label": "Booking fee"
+                  }
+                ],
+                "feesTotal": 5,
+                "lines": [
+                  {
+                    "amount": 40,
+                    "key": "base",
+                    "label": "Base fare"
+                  },
+                  {
+                    "amount": 202.8,
+                    "key": "distance",
+                    "label": "Distance (16.9 km)"
+                  },
+                  {
+                    "amount": 47,
+                    "key": "time",
+                    "label": "Time (47 min)"
+                  }
+                ],
+                "taxes": [],
+                "taxesTotal": 0,
+                "total": 294.8
+              },
+              "fare_source": "BUSINESS_RULES",
+              "payment_mode": "CASH",
+              "pickup": {
+                "address": "Shivajinagar, Pune",
+                "lat": 18.5314,
+                "lng": 73.8446
+              },
+              "push_message_id": "projects/contract/messages/fake-1",
+              "push_sent": true,
+              "push_sent_at": "<date>",
+              "push_status": "DELIVERED",
+              "region_id": "<rg_3>",
+              "reject_reason": null,
+              "request_id": "req-contract-1",
+              "requested_at": "<date>",
+              "responded_at": null,
+              "ride_note": "Two bags",
+              "started_at": null,
+              "status": "REQUESTED",
+              "tenant_id": "<defaultAppId>",
+              "timeout_at": "<date>",
+              "trip_id": "amt_id_000001",
+              "updated_at": "<date>",
+              "user_id": "<userId>"
+            }
+          },
+          "message": "Active ride found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 1: details before accept",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/details?trip_id=amt_id_000001&user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "arrived_at": null,
+            "cancel_stage": null,
+            "cancellation_reason": null,
+            "cancelled_at": null,
+            "cancelled_by": null,
+            "category_id": "<vc_4>",
+            "completed_at": null,
+            "created_at": "<date>",
+            "currency": "INR",
+            "distance_km": 16.9,
+            "driver": {
+              "driver_id": "<driverId>",
+              "email": "dee@contract.test",
+              "first_name": "Dee",
+              "full_name": "Dee Driver",
+              "last_name": "Driver",
+              "phone": "+919811111111",
+              "profile_photo": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "total_rides": 0,
+              "vehicle_color": null,
+              "vehicle_model": "Dzire",
+              "vehicle_number": "MH12AB1234",
+              "vehicle_type": "Sedan"
+            },
+            "driver_id": "<driverId>",
+            "driver_on_the_way_at": null,
+            "driver_response": null,
+            "drop": {
+              "address": "Hinjewadi, Pune",
+              "lat": 18.5912,
+              "lng": 73.7389
+            },
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_breakdown": {
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "pickup": {
+              "address": "Shivajinagar, Pune",
+              "lat": 18.5314,
+              "lng": 73.8446
+            },
+            "push_message_id": "projects/contract/messages/fake-1",
+            "push_sent": true,
+            "push_sent_at": "<date>",
+            "push_status": "DELIVERED",
+            "region_id": "<rg_3>",
+            "reject_reason": null,
+            "request_id": "req-contract-1",
+            "requested_at": "<date>",
+            "responded_at": null,
+            "ride_note": "Two bags",
+            "started_at": null,
+            "status": "REQUESTED",
+            "tenant_id": "<defaultAppId>",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000001",
+            "updated_at": "<date>",
+            "user_id": "<userId>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 1: driver responds with a bad value",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/driver-response",
+        "body": {
+          "driver_id": "<driverId>",
+          "response": "MAYBE",
+          "trip_id": "amt_id_000001"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "message": "response must be one of: ACCEPTED, REJECTED, REJECTED_WITH_REASON (accept/reject variants are supported)",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: another driver may not answer",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/driver-response",
+        "body": {
+          "driver_id": "3333333333",
+          "response": "ACCEPTED",
+          "trip_id": "amt_id_000001"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "driver_id does not match authenticated driver"
+          },
+          "message": "driver_id does not match authenticated driver",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: driver accepts",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/driver-response",
+        "body": {
+          "driver_id": "<driverId>",
+          "response": "ACCEPTED",
+          "trip_id": "amt_id_000001"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Ride accepted",
+          "request_id": "req-contract-1",
+          "status": "ACCEPTED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: the rider is told it was accepted",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Driver accepted your ride: Shivajinagar, Pune → Hinjewadi, Pune",
+            "channel_id": "user_notifications",
+            "driver_id": "<driverId>",
+            "drop_address": "Hinjewadi, Pune",
+            "drop_lat": "18.5912",
+            "drop_lng": "73.7389",
+            "message": "Driver accepted your request",
+            "pickup_address": "Shivajinagar, Pune",
+            "pickup_lat": "18.5314",
+            "pickup_lng": "73.8446",
+            "reject_reason": "",
+            "request_id": "req-contract-1",
+            "ride_note": "Two bags",
+            "status": "ACCEPTED",
+            "title": "Ride accepted",
+            "trip_id": "amt_id_000001",
+            "type": "ride_request_accepted"
+          },
+          "token": "rider-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 1: accept again",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/driver-response",
+        "body": {
+          "driver_id": "<driverId>",
+          "response": "ACCEPTED",
+          "trip_id": "amt_id_000001"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Driver accepted your request",
+          "request_id": "req-contract-1",
+          "status": "ACCEPTED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: status without a session",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "ARRIVED"
+        }
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: status out of order",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "COMPLETED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "current_status": "ACCEPTED",
+            "trip_id": "amt_id_000001"
+          },
+          "message": "Cannot set status to COMPLETED from ACCEPTED. Allowed previous: ON_GOING",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: status unknown",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "FLYING"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "allowed": [
+              "DRIVER_ON_THE_WAY",
+              "ARRIVED",
+              "ON_GOING",
+              "COMPLETED"
+            ]
+          },
+          "message": "status must be one of: DRIVER_ON_THE_WAY, ARRIVED, ON_GOING, COMPLETED",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: status DRIVER_ON_THE_WAY",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "DRIVER_ON_THE_WAY"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Driver is on the way",
+          "status": "DRIVER_ON_THE_WAY",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: the rider is told DRIVER_ON_THE_WAY",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Driver is on the way",
+            "channel_id": "user_notifications",
+            "status": "DRIVER_ON_THE_WAY",
+            "title": "Ride update",
+            "trip_id": "amt_id_000001",
+            "type": "ride_status_updated"
+          },
+          "token": "rider-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 1: status ARRIVED",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "ARRIVED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Driver has arrived",
+          "status": "ARRIVED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: the rider is told ARRIVED",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Driver has arrived",
+            "channel_id": "user_notifications",
+            "status": "ARRIVED",
+            "title": "Ride update",
+            "trip_id": "amt_id_000001",
+            "type": "ride_status_updated"
+          },
+          "token": "rider-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 1: status ON_GOING",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "ON_GOING"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Trip started",
+          "status": "ON_GOING",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: the rider is told ON_GOING",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Trip started",
+            "channel_id": "user_notifications",
+            "status": "ON_GOING",
+            "title": "Ride update",
+            "trip_id": "amt_id_000001",
+            "type": "ride_status_updated"
+          },
+          "token": "rider-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 1: status COMPLETED",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000001/status",
+        "body": {
+          "status": "COMPLETED"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Trip completed",
+          "payment_mode": "CASH",
+          "status": "COMPLETED",
+          "success": true,
+          "trip_id": "amt_id_000001"
+        }
+      }
+    },
+    {
+      "step": "ride 1: the rider is told COMPLETED",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Trip completed",
+            "channel_id": "user_notifications",
+            "currency": "INR",
+            "distance_km": "16.9",
+            "fare": "294.8",
+            "payment_mode": "CASH",
+            "status": "COMPLETED",
+            "title": "Ride update",
+            "trip_id": "amt_id_000001",
+            "type": "ride_status_updated"
+          },
+          "token": "rider-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 1: details when completed (rider)",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/details?trip_id=amt_id_000001&user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "arrived_at": "<date>",
+            "cancel_stage": null,
+            "cancellation_reason": null,
+            "cancelled_at": null,
+            "cancelled_by": null,
+            "category_id": "<vc_4>",
+            "completed_at": "<date>",
+            "created_at": "<date>",
+            "currency": "INR",
+            "distance_km": 16.9,
+            "driver": {
+              "driver_id": "<driverId>",
+              "email": "dee@contract.test",
+              "first_name": "Dee",
+              "full_name": "Dee Driver",
+              "last_name": "Driver",
+              "phone": "+919811111111",
+              "profile_photo": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "total_rides": 0,
+              "vehicle_color": null,
+              "vehicle_model": "Dzire",
+              "vehicle_number": "MH12AB1234",
+              "vehicle_type": "Sedan"
+            },
+            "driver_id": "<driverId>",
+            "driver_on_the_way_at": "<date>",
+            "driver_response": "ACCEPTED",
+            "drop": {
+              "address": "Hinjewadi, Pune",
+              "lat": 18.5912,
+              "lng": 73.7389
+            },
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_breakdown": {
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "pickup": {
+              "address": "Shivajinagar, Pune",
+              "lat": 18.5314,
+              "lng": 73.8446
+            },
+            "push_message_id": "projects/contract/messages/fake-1",
+            "push_sent": true,
+            "push_sent_at": "<date>",
+            "push_status": "DELIVERED",
+            "region_id": "<rg_3>",
+            "reject_reason": null,
+            "request_id": "req-contract-1",
+            "requested_at": "<date>",
+            "responded_at": "<date>",
+            "ride_note": "Two bags",
+            "started_at": "<date>",
+            "status": "COMPLETED",
+            "tenant_id": "<defaultAppId>",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000001",
+            "updated_at": "<date>",
+            "user_id": "<userId>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 1: details when completed (driver)",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/details?trip_id=amt_id_000001&driver_id=<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "arrived_at": "<date>",
+            "cancel_stage": null,
+            "cancellation_reason": null,
+            "cancelled_at": null,
+            "cancelled_by": null,
+            "category_id": "<vc_4>",
+            "completed_at": "<date>",
+            "created_at": "<date>",
+            "currency": "INR",
+            "distance_km": 16.9,
+            "driver_id": "<driverId>",
+            "driver_on_the_way_at": "<date>",
+            "driver_response": "ACCEPTED",
+            "drop": {
+              "address": "Hinjewadi, Pune",
+              "lat": 18.5912,
+              "lng": 73.7389
+            },
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_breakdown": {
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "pickup": {
+              "address": "Shivajinagar, Pune",
+              "lat": 18.5314,
+              "lng": 73.8446
+            },
+            "push_message_id": "projects/contract/messages/fake-1",
+            "push_sent": true,
+            "push_sent_at": "<date>",
+            "push_status": "DELIVERED",
+            "region_id": "<rg_3>",
+            "reject_reason": null,
+            "request_id": "req-contract-1",
+            "requested_at": "<date>",
+            "responded_at": "<date>",
+            "ride_note": "Two bags",
+            "started_at": "<date>",
+            "status": "COMPLETED",
+            "tenant_id": "<defaultAppId>",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000001",
+            "updated_at": "<date>",
+            "user": {
+              "email": "rae@contract.test",
+              "first_name": "Rae",
+              "full_name": "Rae Rider",
+              "is_phone_verified": true,
+              "last_name": "Rider",
+              "phone": "+919800000001",
+              "profile_photo": null,
+              "user_id": "<userId>"
+            },
+            "user_id": "<userId>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 1: the trip",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/amt_id_000001",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "trip_id": "amt_id_000001"
+          },
+          "message": "Trip not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: timeline",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/amt_id_000001/timeline",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "trip_id": "amt_id_000001"
+          },
+          "message": "Trip not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: the rider history",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides?user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "allowedCollections": [
+              "drivers",
+              "users",
+              "admins",
+              "driver_faqs",
+              "driver_issues",
+              "drivers_notification"
+            ]
+          },
+          "message": "Collection 'v1' is not allowed",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 1: no active ride now",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/active?user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active_ride": null
+          },
+          "message": "No active ride found",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 2: request",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-3",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "data": {
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "payment_mode": "CASH",
+            "request_id": "req-contract-3",
+            "status": "REQUESTED",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000002"
+          },
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Ride request sent",
+          "payment_mode": "CASH",
+          "request_id": "req-contract-3",
+          "status": "REQUESTED",
+          "success": true,
+          "trip_id": "amt_id_000002"
+        }
+      }
+    },
+    {
+      "step": "ride 2: the driver is pushed the request",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Shivajinagar, Pune → Hinjewadi, Pune",
+            "channel_id": "driver_notifications",
+            "currency": "INR",
+            "distance": "16.9",
+            "drop_address": "Hinjewadi, Pune",
+            "drop_lat": "18.5912",
+            "drop_lng": "73.7389",
+            "estimated_duration": "47",
+            "fare": "294.8",
+            "payment_mode": "CASH",
+            "pickup_address": "Shivajinagar, Pune",
+            "pickup_lat": "18.5314",
+            "pickup_lng": "73.8446",
+            "request_id": "req-contract-3",
+            "ride_note": "Two bags",
+            "rider_name": "Rae Rider",
+            "title": "New ride request",
+            "trip_id": "amt_id_000002",
+            "type": "RIDE_REQUEST"
+          },
+          "token": "driver-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 2: driver rejects with a reason",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000002/reject",
+        "body": {
+          "driver_id": "<driverId>",
+          "rejected_reason": "Too far"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Ride rejected",
+          "rejected_by": "DRIVER",
+          "request_id": "req-contract-3",
+          "status": "REJECTED_WITH_REASON",
+          "success": true,
+          "trip_id": "amt_id_000002"
+        }
+      }
+    },
+    {
+      "step": "ride 2: the rider is told it was declined",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Driver declined: Too far",
+            "channel_id": "user_notifications",
+            "driver_id": "<driverId>",
+            "drop_address": "Hinjewadi, Pune",
+            "drop_lat": "18.5912",
+            "drop_lng": "73.7389",
+            "message": "Driver rejected the request",
+            "pickup_address": "Shivajinagar, Pune",
+            "pickup_lat": "18.5314",
+            "pickup_lng": "73.8446",
+            "reject_reason": "Too far",
+            "request_id": "req-contract-3",
+            "ride_note": "Two bags",
+            "status": "REJECTED_WITH_REASON",
+            "title": "Ride rejected",
+            "trip_id": "amt_id_000002",
+            "type": "ride_request_rejected"
+          },
+          "token": "rider-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 2: details after the rejection",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/details?trip_id=amt_id_000002&user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "arrived_at": null,
+            "cancel_stage": null,
+            "cancellation_reason": null,
+            "cancelled_at": null,
+            "cancelled_by": null,
+            "category_id": "<vc_4>",
+            "completed_at": null,
+            "created_at": "<date>",
+            "currency": "INR",
+            "distance_km": 16.9,
+            "driver": {
+              "driver_id": "<driverId>",
+              "email": "dee@contract.test",
+              "first_name": "Dee",
+              "full_name": "Dee Driver",
+              "last_name": "Driver",
+              "phone": "+919811111111",
+              "profile_photo": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "total_rides": 0,
+              "vehicle_color": null,
+              "vehicle_model": "Dzire",
+              "vehicle_number": "MH12AB1234",
+              "vehicle_type": "Sedan"
+            },
+            "driver_id": "<driverId>",
+            "driver_on_the_way_at": null,
+            "driver_response": "REJECTED_WITH_REASON",
+            "drop": {
+              "address": "Hinjewadi, Pune",
+              "lat": 18.5912,
+              "lng": 73.7389
+            },
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_breakdown": {
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "pickup": {
+              "address": "Shivajinagar, Pune",
+              "lat": 18.5314,
+              "lng": 73.8446
+            },
+            "push_message_id": "projects/contract/messages/fake-7",
+            "push_sent": true,
+            "push_sent_at": "<date>",
+            "push_status": "DELIVERED",
+            "region_id": "<rg_3>",
+            "reject_reason": "Too far",
+            "request_id": "req-contract-3",
+            "requested_at": "<date>",
+            "responded_at": "<date>",
+            "ride_note": "Two bags",
+            "started_at": null,
+            "status": "REJECTED_WITH_REASON",
+            "tenant_id": "<defaultAppId>",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000002",
+            "updated_at": "<date>",
+            "user_id": "<userId>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 3: request",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-4",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "data": {
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "payment_mode": "CASH",
+            "request_id": "req-contract-4",
+            "status": "REQUESTED",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000003"
+          },
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Ride request sent",
+          "payment_mode": "CASH",
+          "request_id": "req-contract-4",
+          "status": "REQUESTED",
+          "success": true,
+          "trip_id": "amt_id_000003"
+        }
+      }
+    },
+    {
+      "step": "ride 3: the driver is pushed the request",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Shivajinagar, Pune → Hinjewadi, Pune",
+            "channel_id": "driver_notifications",
+            "currency": "INR",
+            "distance": "16.9",
+            "drop_address": "Hinjewadi, Pune",
+            "drop_lat": "18.5912",
+            "drop_lng": "73.7389",
+            "estimated_duration": "47",
+            "fare": "294.8",
+            "payment_mode": "CASH",
+            "pickup_address": "Shivajinagar, Pune",
+            "pickup_lat": "18.5314",
+            "pickup_lng": "73.8446",
+            "request_id": "req-contract-4",
+            "ride_note": "Two bags",
+            "rider_name": "Rae Rider",
+            "title": "New ride request",
+            "trip_id": "amt_id_000003",
+            "type": "RIDE_REQUEST"
+          },
+          "token": "driver-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 3: cancel without a trip id",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/cancel-request",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "message": "Missing required field: trip_id",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 3: rider cancels the request",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/cancel-request",
+        "body": {
+          "cancelled_by": "USER",
+          "trip_id": "amt_id_000003"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "status": "CANCELLED_BY_USER",
+            "trip_id": "amt_id_000003"
+          },
+          "message": "Trip cancelled by user",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "ride 3: the driver is told it was cancelled",
+      "pushes": []
+    },
+    {
+      "step": "ride 3: cancel again",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/cancel-request",
+        "body": {
+          "cancelled_by": "USER",
+          "trip_id": "amt_id_000003"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "current_status": "CANCELLED_BY_USER",
+            "trip_id": "amt_id_000003"
+          },
+          "message": "Cannot cancel trip with status: CANCELLED_BY_USER. Only REQUESTED trips can be cancelled via this endpoint.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "ride 4: request",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-5",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "currency": "INR",
+          "data": {
+            "currency": "INR",
+            "distance_km": 16.9,
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "payment_mode": "CASH",
+            "request_id": "req-contract-5",
+            "status": "REQUESTED",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000004"
+          },
+          "distance_km": 16.9,
+          "estimated_duration_min": 47,
+          "fare": 294.8,
+          "fare_basis": "ESTIMATE",
+          "message": "Ride request sent",
+          "payment_mode": "CASH",
+          "request_id": "req-contract-5",
+          "status": "REQUESTED",
+          "success": true,
+          "trip_id": "amt_id_000004"
+        }
+      }
+    },
+    {
+      "step": "ride 4: the driver is pushed the request",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Shivajinagar, Pune → Hinjewadi, Pune",
+            "channel_id": "driver_notifications",
+            "currency": "INR",
+            "distance": "16.9",
+            "drop_address": "Hinjewadi, Pune",
+            "drop_lat": "18.5912",
+            "drop_lng": "73.7389",
+            "estimated_duration": "47",
+            "fare": "294.8",
+            "payment_mode": "CASH",
+            "pickup_address": "Shivajinagar, Pune",
+            "pickup_lat": "18.5314",
+            "pickup_lng": "73.8446",
+            "request_id": "req-contract-5",
+            "ride_note": "Two bags",
+            "rider_name": "Rae Rider",
+            "title": "New ride request",
+            "trip_id": "amt_id_000004",
+            "type": "RIDE_REQUEST"
+          },
+          "token": "driver-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 4: driver accepts through the rides API",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/rides/amt_id_000004/accept",
+        "body": {
+          "driver_id": "<driverId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Ride accepted by driver",
+          "request_id": "req-contract-5",
+          "status": "ACCEPTED",
+          "success": true,
+          "trip_id": "amt_id_000004"
+        }
+      }
+    },
+    {
+      "step": "ride 4: the rider is told it was accepted",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "Driver accepted your ride: Shivajinagar, Pune → Hinjewadi, Pune",
+            "channel_id": "user_notifications",
+            "driver_id": "<driverId>",
+            "drop_address": "Hinjewadi, Pune",
+            "drop_lat": "18.5912",
+            "drop_lng": "73.7389",
+            "message": "Driver accepted your request",
+            "pickup_address": "Shivajinagar, Pune",
+            "pickup_lat": "18.5314",
+            "pickup_lng": "73.8446",
+            "reject_reason": "",
+            "request_id": "req-contract-5",
+            "ride_note": "Two bags",
+            "status": "ACCEPTED",
+            "title": "Ride accepted",
+            "trip_id": "amt_id_000004",
+            "type": "ride_request_accepted"
+          },
+          "token": "rider-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 4: rider cancels the accepted ride",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/rides/cancel",
+        "body": {
+          "cancel_reason": "Changed my plans",
+          "cancel_stage": "after_accept",
+          "ride_id": "amt_id_000004",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "message": "Ride cancelled after driver acceptance",
+          "request_id": "req-contract-5",
+          "status": "CANCELLED_BY_USER_AFTER_ACCEPTANCE",
+          "success": true,
+          "trip_id": "amt_id_000004"
+        }
+      }
+    },
+    {
+      "step": "ride 4: the driver is told it was cancelled",
+      "pushes": [
+        {
+          "android": {
+            "priority": "high"
+          },
+          "data": {
+            "body": "User cancelled the ride.",
+            "cancel_stage": "after_accept",
+            "cancellation_reason": "",
+            "channel_id": "driver_notifications",
+            "request_id": "req-contract-5",
+            "status": "CANCELLED_BY_USER_AFTER_ACCEPTANCE",
+            "title": "Ride cancelled",
+            "trip_id": "amt_id_000004",
+            "type": "ride_cancelled_by_user",
+            "user_id": "<userId>"
+          },
+          "token": "driver-fcm-1"
+        }
+      ]
+    },
+    {
+      "step": "ride 4: details after the cancel",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/details?trip_id=amt_id_000004&user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "arrived_at": null,
+            "cancel_stage": "after_accept",
+            "cancellation_reason": null,
+            "cancelled_at": "<date>",
+            "cancelled_by": "USER",
+            "category_id": "<vc_4>",
+            "completed_at": null,
+            "created_at": "<date>",
+            "currency": "INR",
+            "distance_km": 16.9,
+            "driver": {
+              "driver_id": "<driverId>",
+              "email": "dee@contract.test",
+              "first_name": "Dee",
+              "full_name": "Dee Driver",
+              "last_name": "Driver",
+              "phone": "+919811111111",
+              "profile_photo": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "total_rides": 0,
+              "vehicle_color": null,
+              "vehicle_model": "Dzire",
+              "vehicle_number": "MH12AB1234",
+              "vehicle_type": "Sedan"
+            },
+            "driver_id": "<driverId>",
+            "driver_on_the_way_at": null,
+            "driver_response": "CANCELLED_BY_USER_AFTER_ACCEPTANCE",
+            "drop": {
+              "address": "Hinjewadi, Pune",
+              "lat": 18.5912,
+              "lng": 73.7389
+            },
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_breakdown": {
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "pickup": {
+              "address": "Shivajinagar, Pune",
+              "lat": 18.5314,
+              "lng": 73.8446
+            },
+            "push_message_id": "projects/contract/messages/fake-10",
+            "push_sent": true,
+            "push_sent_at": "<date>",
+            "push_status": "DELIVERED",
+            "region_id": "<rg_3>",
+            "reject_reason": null,
+            "request_id": "req-contract-5",
+            "requested_at": "<date>",
+            "responded_at": "<date>",
+            "ride_note": "Two bags",
+            "started_at": null,
+            "status": "CANCELLED_BY_USER_AFTER_ACCEPTANCE",
+            "tenant_id": "<defaultAppId>",
+            "timeout_at": "<date>",
+            "trip_id": "amt_id_000004",
+            "updated_at": "<date>",
+            "user_id": "<userId>"
+          },
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "the driver goes offline",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers/online-status",
+        "body": {
+          "driverId": "<driverId>",
+          "isOnline": false,
+          "onlineAs": 0
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": false,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastLocation": {
+                "coordinates": [
+                  73.8567,
+                  18.5204
+                ],
+                "type": "Point"
+              },
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": 10,
+              "locationHeading": null,
+              "locationRegionId": "<rg_3>",
+              "locationSpeedKph": null,
+              "locationUpdatedAt": "<date>",
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "INCOMPLETE",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "statusInfo": {
+              "isOnline": false,
+              "lastActive": "<date>",
+              "onlineAs": 0,
+              "onlineAsText": "Public"
+            },
+            "updateTime": "<date>"
+          },
+          "message": "Driver online status updated successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "request while the driver is offline",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/create-request",
+        "body": {
+          "driver_id": "<driverId>",
+          "drop_address": "Hinjewadi, Pune",
+          "drop_latitude": 18.5912,
+          "drop_longitude": 73.7389,
+          "pickup_address": "Shivajinagar, Pune",
+          "pickup_latitude": 18.5314,
+          "pickup_longitude": 73.8446,
+          "request_id": "req-contract-6",
+          "ride_note": "Two bags",
+          "user_id": "<userId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver_id": "<driverId>"
+          },
+          "message": "Driver is not online. Cannot send ride request.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "timeouts check needs the scheduler secret",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/trips/check-timeouts",
+        "body": {}
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Invalid scheduler secret"
+          },
+          "message": "Forbidden",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "unknown trip",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/amt_id_999999",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "trip_id": "amt_id_999999"
+          },
+          "message": "Trip not found",
+          "success": false
+        }
+      }
+    }
+  ]
+}

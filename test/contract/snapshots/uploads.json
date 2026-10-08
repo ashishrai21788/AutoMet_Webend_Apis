@@ -1,0 +1,3188 @@
+{
+  "scenario": "uploads",
+  "steps": [
+    {
+      "step": "setup: platform owner signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: list businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "admin@contract.test",
+          "name": "Client Admin",
+          "role": "client_admin",
+          "tenantId": "<defaultAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "admin@contract.test",
+            "id": "<a_2>",
+            "mustChangePassword": true,
+            "name": "Client Admin",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "admin@contract.test",
+          "password": "<tempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": true,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<tempPassword>",
+          "newPassword": "Client-Admin-Pass-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": false,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: market",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: region",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "name": "Pune"
+            }
+          ],
+          "radiusKm": 30,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "city": "Pune",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_3>",
+                "radiusKm": 30,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: vehicle category",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Sedan",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_4>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "name": "Sedan",
+            "passengerCapacity": 4,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: fare rule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 40,
+          "bookingFee": 5,
+          "categoryId": "<vc_4>",
+          "minimumFare": 70,
+          "perKm": 12,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 40,
+            "bookingFee": 5,
+            "categoryId": "<vc_4>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_5>",
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "1 Main Road",
+            "state": "Maharashtra"
+          },
+          "dateOfBirth": "1990-04-02",
+          "eligibleCategoryId": "<vc_4>",
+          "email": "dee@contract.test",
+          "fullName": "Dee Driver",
+          "operatingRegionId": "<rg_3>",
+          "phone": "+919811111111"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "White",
+          "luggageCapacity": 2,
+          "make": "Maruti",
+          "model": "Dzire",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH12AB1234",
+          "status": "ACTIVE",
+          "year": 2021
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_6>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: assign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_7>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: the driver is now eligible",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": null,
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logo: no session",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/logo"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "logo: no file",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/logo",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "file": "Choose a logo image"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "logo: not an image",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/logo",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "file": "The logo must be a JPEG, PNG or WebP image"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "logo: a PDF is not a logo",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/logo",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "file": "The logo must be a JPEG, PNG or WebP image"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "logo: too large",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/logo",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 413,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "file": "The logo is too large (1 MB at most)"
+          },
+          "message": "The logo is too large (1 MB at most)",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "logo: upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/logo",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "logoUrl": "https://images.contract.test/logo/<defaultAppId>-1"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logo: the business shows it",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "https://images.contract.test/logo/<defaultAppId>-1",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logo: replace",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/logo",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "logoUrl": "https://images.contract.test/logo/<defaultAppId>-2"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logo: the business shows the new one",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "https://images.contract.test/logo/<defaultAppId>-2",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logo: remove",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admin/business/logo",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "logoUrl": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logo: the business after removal",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "logo: audit",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/audit",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "facets": {
+              "actions": [
+                "auth.login",
+                "auth.password_changed",
+                "business.logo_removed",
+                "business.logo_updated",
+                "business.market_set",
+                "category.created",
+                "driver.created",
+                "driver.vehicle_assigned",
+                "fare_rule.saved",
+                "region.created",
+                "user.created",
+                "vehicle.created",
+                "vehicle.driver_assigned"
+              ],
+              "actors": [
+                "admin@contract.test",
+                "owner@contract.test"
+              ],
+              "targetTypes": [
+                "admin_user",
+                "business",
+                "category",
+                "driver",
+                "fare_rule",
+                "region",
+                "vehicle"
+              ]
+            },
+            "items": [
+              {
+                "action": "business.logo_removed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": null,
+                "id": "<id8>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "business.logo_updated",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "bytes": "44",
+                  "type": "image/jpeg"
+                },
+                "id": "<id9>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "business.logo_updated",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "bytes": "48",
+                  "type": "image/png"
+                },
+                "id": "<id10>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.driver_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Driver Dee Driver",
+                  "kind": "ASSIGNMENT",
+                  "to": "<driverId>"
+                },
+                "id": "<id11>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.vehicle_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Vehicle MH12AB1234",
+                  "kind": "ASSIGNMENT",
+                  "to": "<veh_6>"
+                },
+                "id": "<id12>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Added from the dashboard",
+                  "kind": "ACCOUNT_STATUS",
+                  "to": "ACTIVE"
+                },
+                "id": "<id13>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Added from the dashboard",
+                  "kind": "ACCOUNT_STATUS",
+                  "to": "ACTIVE"
+                },
+                "id": "<id14>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "fare_rule.saved",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "category": "Sedan",
+                  "regionId": "<rg_3>"
+                },
+                "id": "<id15>",
+                "targetId": "<fr_5>",
+                "targetType": "fare_rule",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "category.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "name": "Sedan"
+                },
+                "id": "<id16>",
+                "targetId": "<vc_4>",
+                "targetType": "category",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "region.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "count": "1",
+                  "state": "Maharashtra"
+                },
+                "id": "<id17>",
+                "targetId": "<rg_3>",
+                "targetType": "region",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "business.market_set",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "country": "IN",
+                  "currency": "INR",
+                  "timezone": "Asia/Kolkata"
+                },
+                "id": "<id18>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "auth.password_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": null,
+                "id": "<id19>",
+                "targetId": null,
+                "targetType": null,
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "auth.login",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": null,
+                "id": "<id20>",
+                "targetId": null,
+                "targetType": null,
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "user.created",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "details": {
+                  "email": "admin@contract.test",
+                  "role": "client_admin"
+                },
+                "id": "<id21>",
+                "targetId": "<a_2>",
+                "targetType": "admin_user",
+                "tenantId": "<defaultAppId>"
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 14
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "requirements: what is needed",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/requirements",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": [
+              {
+                "label": "Driving licence",
+                "locked": true,
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "type": "DRIVING_LICENCE"
+              },
+              {
+                "label": "Identity document",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "type": "IDENTITY"
+              },
+              {
+                "label": "Address proof",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "ADDRESS_PROOF"
+              },
+              {
+                "label": "Profile photo",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": true,
+                "type": "PROFILE_PHOTO"
+              },
+              {
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "OTHER"
+              }
+            ],
+            "vehicle": [
+              {
+                "label": "Registration certificate",
+                "locked": true,
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "type": "REGISTRATION_CERTIFICATE"
+              },
+              {
+                "label": "Insurance",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "type": "INSURANCE"
+              },
+              {
+                "label": "Pollution certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "POLLUTION_CERTIFICATE"
+              },
+              {
+                "label": "Permit",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "PERMIT"
+              },
+              {
+                "label": "Fitness certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "type": "FITNESS_CERTIFICATE"
+              },
+              {
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "type": "OTHER"
+              }
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: list (none yet)",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "canReview": true,
+            "canView": true,
+            "requirements": [
+              {
+                "document": null,
+                "label": "Driving licence",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "photo": false,
+                "type": "DRIVING_LICENCE"
+              },
+              {
+                "document": null,
+                "label": "Identity document",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "photo": false,
+                "type": "IDENTITY"
+              },
+              {
+                "document": null,
+                "label": "Address proof",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "ADDRESS_PROOF"
+              },
+              {
+                "document": null,
+                "label": "Profile photo",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": true,
+                "type": "PROFILE_PHOTO"
+              },
+              {
+                "document": null,
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "OTHER"
+              }
+            ],
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: unknown driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/drv_missing/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Driver not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: unknown type",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "type": "Choose a document type"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: no file",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "file": "Choose a file to upload"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: not a document type",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "file": "Only JPEG, PNG, WebP or PDF files are accepted"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: licence needs a number",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "number": "Driving licence number is required"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: licence needs a valid expiry",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "expiryDate": "Enter a valid expiry date"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: submit the licence",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "document": {
+              "effectiveStatus": "SUBMITTED",
+              "expiryDate": "2030-01-01",
+              "fileName": "licence front.pdf",
+              "id": "<doc_22>",
+              "mime": "application/pdf",
+              "number": "MH12 2020 1234567",
+              "rejectionReason": "",
+              "reviewedAt": null,
+              "reviewedBy": null,
+              "status": "SUBMITTED",
+              "submittedAt": "<date>",
+              "type": "DRIVING_LICENCE",
+              "version": 1,
+              "viewable": true
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: a photo must be an image",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "file": "A photo must be a JPEG, PNG or WebP image"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: submit a profile photo",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "document": {
+              "effectiveStatus": "APPROVED",
+              "expiryDate": null,
+              "fileName": "me.png",
+              "id": "<doc_23>",
+              "mime": "image/png",
+              "number": "",
+              "rejectionReason": "",
+              "reviewedAt": null,
+              "reviewedBy": null,
+              "status": "APPROVED",
+              "submittedAt": "<date>",
+              "type": "PROFILE_PHOTO",
+              "version": 1,
+              "viewable": true
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: submit the identity document",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "document": {
+              "effectiveStatus": "SUBMITTED",
+              "expiryDate": null,
+              "fileName": "id.jpg",
+              "id": "<doc_24>",
+              "mime": "image/jpeg",
+              "number": "ABCDE1234F",
+              "rejectionReason": "",
+              "reviewedAt": null,
+              "reviewedBy": null,
+              "status": "SUBMITTED",
+              "submittedAt": "<date>",
+              "type": "IDENTITY",
+              "version": 1,
+              "viewable": true
+            },
+            "verificationStatus": "PENDING_REVIEW"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "canReview": true,
+            "canView": true,
+            "requirements": [
+              {
+                "document": {
+                  "effectiveStatus": "SUBMITTED",
+                  "expiryDate": "2030-01-01",
+                  "fileName": "licence front.pdf",
+                  "id": "<doc_22>",
+                  "mime": "application/pdf",
+                  "number": "MH12 2020 1234567",
+                  "rejectionReason": "",
+                  "reviewedAt": null,
+                  "reviewedBy": null,
+                  "status": "SUBMITTED",
+                  "submittedAt": "<date>",
+                  "type": "DRIVING_LICENCE",
+                  "version": 1,
+                  "viewable": true
+                },
+                "label": "Driving licence",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "photo": false,
+                "type": "DRIVING_LICENCE"
+              },
+              {
+                "document": {
+                  "effectiveStatus": "SUBMITTED",
+                  "expiryDate": null,
+                  "fileName": "id.jpg",
+                  "id": "<doc_24>",
+                  "mime": "image/jpeg",
+                  "number": "ABCDE1234F",
+                  "rejectionReason": "",
+                  "reviewedAt": null,
+                  "reviewedBy": null,
+                  "status": "SUBMITTED",
+                  "submittedAt": "<date>",
+                  "type": "IDENTITY",
+                  "version": 1,
+                  "viewable": true
+                },
+                "label": "Identity document",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "photo": false,
+                "type": "IDENTITY"
+              },
+              {
+                "document": null,
+                "label": "Address proof",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "ADDRESS_PROOF"
+              },
+              {
+                "document": {
+                  "effectiveStatus": "APPROVED",
+                  "expiryDate": null,
+                  "fileName": "me.png",
+                  "id": "<doc_23>",
+                  "mime": "image/png",
+                  "number": "",
+                  "rejectionReason": "",
+                  "reviewedAt": null,
+                  "reviewedBy": null,
+                  "status": "APPROVED",
+                  "submittedAt": "<date>",
+                  "type": "PROFILE_PHOTO",
+                  "version": 1,
+                  "viewable": true
+                },
+                "label": "Profile photo",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": true,
+                "type": "PROFILE_PHOTO"
+              },
+              {
+                "document": null,
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "OTHER"
+              }
+            ],
+            "verification": {
+              "expired": [],
+              "missing": [],
+              "pending": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "rejected": []
+            },
+            "verificationStatus": "PENDING_REVIEW"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: signed link",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/driver-documents/<doc_22>/url",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "expiresInSeconds": 300,
+            "fileName": "licence front.pdf",
+            "mime": "application/pdf",
+            "url": "https://files.contract.test/files?key=automet%2F<defaultAppId>%2Fdriver-documents%2Ffile-1&exp=<ts>&sig=<sig>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: link to an unknown document",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/driver-documents/doc_missing/url",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Document not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: review, nothing chosen",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_22>/review",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "decision": "Choose approve or reject"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: reject needs a reason",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_24>/review",
+        "body": {
+          "decision": "REJECT"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "reason": "Give a reason the driver can understand (at least 5 characters)"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: approve the licence",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_22>/review",
+        "body": {
+          "decision": "APPROVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "documentStatus": "APPROVED",
+            "verificationStatus": "PENDING_REVIEW"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: approve again",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_22>/review",
+        "body": {
+          "decision": "APPROVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "This document is already approved",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: reject the identity document",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_24>/review",
+        "body": {
+          "decision": "REJECT",
+          "reason": "The photo is too blurry to read"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "documentStatus": "REJECTED",
+            "verificationStatus": "REJECTED"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: review a rejected one",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_24>/review",
+        "body": {
+          "decision": "APPROVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "This document was rejected. It needs to be resubmitted before it can be reviewed again.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "driver documents: resubmit the identity document",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "document": {
+              "effectiveStatus": "SUBMITTED",
+              "expiryDate": null,
+              "fileName": "id-clear.png",
+              "id": "<doc_24>",
+              "mime": "image/png",
+              "number": "ABCDE1234F",
+              "rejectionReason": "",
+              "reviewedAt": null,
+              "reviewedBy": null,
+              "status": "SUBMITTED",
+              "submittedAt": "<date>",
+              "type": "IDENTITY",
+              "version": 2,
+              "viewable": true
+            },
+            "verificationStatus": "PENDING_REVIEW"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: approve the identity document",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_24>/review",
+        "body": {
+          "decision": "APPROVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "documentStatus": "APPROVED",
+            "verificationStatus": "APPROVED"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: list after review",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "canReview": true,
+            "canView": true,
+            "requirements": [
+              {
+                "document": {
+                  "effectiveStatus": "APPROVED",
+                  "expiryDate": "2030-01-01",
+                  "fileName": "licence front.pdf",
+                  "id": "<doc_22>",
+                  "mime": "application/pdf",
+                  "number": "MH12 2020 1234567",
+                  "rejectionReason": "",
+                  "reviewedAt": "<date>",
+                  "reviewedBy": "<a_2>",
+                  "status": "APPROVED",
+                  "submittedAt": "<date>",
+                  "type": "DRIVING_LICENCE",
+                  "version": 1,
+                  "viewable": true
+                },
+                "label": "Driving licence",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "photo": false,
+                "type": "DRIVING_LICENCE"
+              },
+              {
+                "document": {
+                  "effectiveStatus": "APPROVED",
+                  "expiryDate": null,
+                  "fileName": "id-clear.png",
+                  "id": "<doc_24>",
+                  "mime": "image/png",
+                  "number": "ABCDE1234F",
+                  "rejectionReason": "",
+                  "reviewedAt": "<date>",
+                  "reviewedBy": "<a_2>",
+                  "status": "APPROVED",
+                  "submittedAt": "<date>",
+                  "type": "IDENTITY",
+                  "version": 2,
+                  "viewable": true
+                },
+                "label": "Identity document",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "photo": false,
+                "type": "IDENTITY"
+              },
+              {
+                "document": null,
+                "label": "Address proof",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "ADDRESS_PROOF"
+              },
+              {
+                "document": {
+                  "effectiveStatus": "APPROVED",
+                  "expiryDate": null,
+                  "fileName": "me.png",
+                  "id": "<doc_23>",
+                  "mime": "image/png",
+                  "number": "",
+                  "rejectionReason": "",
+                  "reviewedAt": null,
+                  "reviewedBy": null,
+                  "status": "APPROVED",
+                  "submittedAt": "<date>",
+                  "type": "PROFILE_PHOTO",
+                  "version": 1,
+                  "viewable": true
+                },
+                "label": "Profile photo",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": true,
+                "type": "PROFILE_PHOTO"
+              },
+              {
+                "document": null,
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "OTHER"
+              }
+            ],
+            "verification": {
+              "expired": [],
+              "missing": [],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "APPROVED"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: the record after documents",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": null,
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": "https://files.contract.test/files?key=automet%2F<defaultAppId>%2Fdriver-documents%2Ffile-2&exp=<ts>&sig=<sig>",
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "APPROVED",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: history",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>/history",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "action": "VERIFICATION_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "PENDING_REVIEW",
+              "id": "<id25>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "APPROVED"
+            },
+            {
+              "action": "DOCUMENT_APPROVED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Identity document",
+              "from": "SUBMITTED",
+              "id": "<id26>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "APPROVED"
+            },
+            {
+              "action": "VERIFICATION_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "REJECTED",
+              "id": "<id27>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "PENDING_REVIEW"
+            },
+            {
+              "action": "DOCUMENT_RESUBMITTED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Identity document",
+              "from": null,
+              "id": "<id28>",
+              "kind": "DOCUMENT",
+              "reason": "",
+              "to": "SUBMITTED"
+            },
+            {
+              "action": "VERIFICATION_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "PENDING_REVIEW",
+              "id": "<id29>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "REJECTED"
+            },
+            {
+              "action": "DOCUMENT_REJECTED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Identity document",
+              "from": "SUBMITTED",
+              "id": "<id30>",
+              "kind": "VERIFICATION",
+              "reason": "The photo is too blurry to read",
+              "to": "REJECTED"
+            },
+            {
+              "action": "DOCUMENT_APPROVED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Driving licence",
+              "from": "SUBMITTED",
+              "id": "<id31>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "APPROVED"
+            },
+            {
+              "action": "VERIFICATION_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "INCOMPLETE",
+              "id": "<id32>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "PENDING_REVIEW"
+            },
+            {
+              "action": "DOCUMENT_SUBMITTED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Identity document",
+              "from": null,
+              "id": "<id33>",
+              "kind": "DOCUMENT",
+              "reason": "",
+              "to": "SUBMITTED"
+            },
+            {
+              "action": "DOCUMENT_SUBMITTED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Profile photo",
+              "from": null,
+              "id": "<id34>",
+              "kind": "DOCUMENT",
+              "reason": "",
+              "to": "APPROVED"
+            },
+            {
+              "action": "VERIFICATION_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "APPROVED",
+              "id": "<id35>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "INCOMPLETE"
+            },
+            {
+              "action": "DOCUMENT_SUBMITTED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Driving licence",
+              "from": null,
+              "id": "<id36>",
+              "kind": "DOCUMENT",
+              "reason": "",
+              "to": "SUBMITTED"
+            },
+            {
+              "action": "VEHICLE_ASSIGNED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Vehicle MH12AB1234",
+              "from": null,
+              "id": "<id37>",
+              "kind": "ASSIGNMENT",
+              "reason": "",
+              "to": "<veh_6>"
+            },
+            {
+              "action": "CREATED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Added from the dashboard",
+              "from": null,
+              "id": "<id38>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": "ACTIVE"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver documents: revoke an approval",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/driver-documents/<doc_22>/review",
+        "body": {
+          "decision": "REJECT",
+          "reason": "Licence number does not match the card"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "documentStatus": "REJECTED",
+            "verificationStatus": "REJECTED"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "driver: the record after the revocation",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": null,
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": false,
+              "reasons": [
+                {
+                  "code": "DRIVER_NOT_VERIFIED",
+                  "message": "The driver is not verified"
+                }
+              ]
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": "https://files.contract.test/files?key=automet%2F<defaultAppId>%2Fdriver-documents%2Ffile-2&exp=<ts>&sig=<sig>",
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [],
+              "pending": [],
+              "rejected": [
+                "DRIVING_LICENCE"
+              ]
+            },
+            "verificationStatus": "REJECTED",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle documents: list",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles/<veh_6>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "canReview": true,
+            "canView": true,
+            "requirements": [
+              {
+                "document": null,
+                "label": "Registration certificate",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "photo": false,
+                "type": "REGISTRATION_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Insurance",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "photo": false,
+                "type": "INSURANCE"
+              },
+              {
+                "document": null,
+                "label": "Pollution certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "POLLUTION_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Permit",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "PERMIT"
+              },
+              {
+                "document": null,
+                "label": "Fitness certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "FITNESS_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "OTHER"
+              }
+            ],
+            "verification": {
+              "expired": [],
+              "missing": [
+                "REGISTRATION_CERTIFICATE",
+                "INSURANCE"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle documents: unknown vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles/veh_missing/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Vehicle not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "vehicle documents: submit",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles/<veh_6>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "document": {
+              "effectiveStatus": "SUBMITTED",
+              "expiryDate": "2030-06-30",
+              "fileName": "vehicle.pdf",
+              "id": "<doc_39>",
+              "mime": "application/pdf",
+              "number": "MH12AB1234",
+              "rejectionReason": "",
+              "reviewedAt": null,
+              "reviewedBy": null,
+              "status": "SUBMITTED",
+              "submittedAt": "<date>",
+              "type": "INSURANCE",
+              "version": 1,
+              "viewable": true
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle documents: an expired one is refused",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles/<veh_6>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "expiryDate": "This document has already expired"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "vehicle documents: signed link",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicle-documents/<doc_39>/url",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "expiresInSeconds": 300,
+            "fileName": "vehicle.pdf",
+            "mime": "application/pdf",
+            "url": "https://files.contract.test/files?key=automet%2F<defaultAppId>%2Fvehicle-documents%2Ffile-5&exp=<ts>&sig=<sig>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle documents: approve",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicle-documents/<doc_39>/review",
+        "body": {
+          "decision": "APPROVE"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "documentStatus": "APPROVED",
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle documents: list after review",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles/<veh_6>/documents",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "canReview": true,
+            "canView": true,
+            "requirements": [
+              {
+                "document": null,
+                "label": "Registration certificate",
+                "mandatory": true,
+                "needsExpiry": false,
+                "needsNumber": true,
+                "photo": false,
+                "type": "REGISTRATION_CERTIFICATE"
+              },
+              {
+                "document": {
+                  "effectiveStatus": "APPROVED",
+                  "expiryDate": "2030-06-30",
+                  "fileName": "vehicle.pdf",
+                  "id": "<doc_39>",
+                  "mime": "application/pdf",
+                  "number": "MH12AB1234",
+                  "rejectionReason": "",
+                  "reviewedAt": "<date>",
+                  "reviewedBy": "<a_2>",
+                  "status": "APPROVED",
+                  "submittedAt": "<date>",
+                  "type": "INSURANCE",
+                  "version": 1,
+                  "viewable": true
+                },
+                "label": "Insurance",
+                "mandatory": true,
+                "needsExpiry": true,
+                "needsNumber": true,
+                "photo": false,
+                "type": "INSURANCE"
+              },
+              {
+                "document": null,
+                "label": "Pollution certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "POLLUTION_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Permit",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "PERMIT"
+              },
+              {
+                "document": null,
+                "label": "Fitness certificate",
+                "mandatory": false,
+                "needsExpiry": true,
+                "needsNumber": false,
+                "photo": false,
+                "type": "FITNESS_CERTIFICATE"
+              },
+              {
+                "document": null,
+                "label": "Other document",
+                "mandatory": false,
+                "needsExpiry": false,
+                "needsNumber": false,
+                "photo": false,
+                "type": "OTHER"
+              }
+            ],
+            "verification": {
+              "expired": [],
+              "missing": [
+                "REGISTRATION_CERTIFICATE"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle: the record after documents",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles/<veh_6>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "categoryId": "<vc_4>",
+            "categoryName": "Sedan",
+            "colour": "White",
+            "createdAt": "<date>",
+            "driver": {
+              "accountStatus": "ACTIVE",
+              "id": "<driverId>",
+              "name": "Dee Driver",
+              "phone": "+919811111111"
+            },
+            "id": "<veh_6>",
+            "luggageCapacity": 2,
+            "make": "Maruti",
+            "model": "Dzire",
+            "operatingRegionId": "<rg_3>",
+            "operational": false,
+            "passengerCapacity": 4,
+            "regionName": "Pune",
+            "registrationNumber": "MH12AB1234",
+            "status": "ACTIVE",
+            "verification": {
+              "expired": [],
+              "missing": [
+                "REGISTRATION_CERTIFICATE"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "year": 2021
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle: history",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/vehicles/<veh_6>/history",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "action": "DOCUMENT_APPROVED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Insurance",
+              "from": "SUBMITTED",
+              "id": "<id40>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "APPROVED"
+            },
+            {
+              "action": "VERIFICATION_STATUS_CHANGED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "",
+              "from": "APPROVED",
+              "id": "<id41>",
+              "kind": "VERIFICATION",
+              "reason": "",
+              "to": "INCOMPLETE"
+            },
+            {
+              "action": "DOCUMENT_SUBMITTED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Insurance",
+              "from": null,
+              "id": "<id42>",
+              "kind": "DOCUMENT",
+              "reason": "",
+              "to": "SUBMITTED"
+            },
+            {
+              "action": "DRIVER_ASSIGNED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Driver Dee Driver",
+              "from": null,
+              "id": "<id43>",
+              "kind": "ASSIGNMENT",
+              "reason": "",
+              "to": "<driverId>"
+            },
+            {
+              "action": "CREATED",
+              "actor": "admin@contract.test",
+              "at": "<date>",
+              "detail": "Added from the dashboard",
+              "from": null,
+              "id": "<id44>",
+              "kind": "ACCOUNT_STATUS",
+              "reason": "",
+              "to": "ACTIVE"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "audit: documents",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/audit",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "facets": {
+              "actions": [
+                "auth.login",
+                "auth.password_changed",
+                "business.logo_removed",
+                "business.logo_updated",
+                "business.market_set",
+                "category.created",
+                "driver.created",
+                "driver.document_approved",
+                "driver.document_rejected",
+                "driver.document_resubmitted",
+                "driver.document_submitted",
+                "driver.vehicle_assigned",
+                "driver.verification_status_changed",
+                "driver_document.viewed",
+                "fare_rule.saved",
+                "region.created",
+                "user.created",
+                "vehicle.created",
+                "vehicle.document_approved",
+                "vehicle.document_submitted",
+                "vehicle.driver_assigned",
+                "vehicle.verification_status_changed",
+                "vehicle_document.viewed"
+              ],
+              "actors": [
+                "admin@contract.test",
+                "owner@contract.test"
+              ],
+              "targetTypes": [
+                "admin_user",
+                "business",
+                "category",
+                "driver",
+                "driver_document",
+                "fare_rule",
+                "region",
+                "vehicle",
+                "vehicle_document"
+              ]
+            },
+            "items": [
+              {
+                "action": "vehicle.document_approved",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Insurance",
+                  "from": "SUBMITTED",
+                  "kind": "VERIFICATION",
+                  "to": "APPROVED"
+                },
+                "id": "<id45>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle_document.viewed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "type": "INSURANCE"
+                },
+                "id": "<id46>",
+                "targetId": "<doc_39>",
+                "targetType": "vehicle_document",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.verification_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "APPROVED",
+                  "kind": "VERIFICATION",
+                  "to": "INCOMPLETE"
+                },
+                "id": "<id47>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.document_submitted",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Insurance",
+                  "kind": "DOCUMENT",
+                  "to": "SUBMITTED"
+                },
+                "id": "<id48>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.verification_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "APPROVED",
+                  "kind": "VERIFICATION",
+                  "to": "REJECTED"
+                },
+                "id": "<id49>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_rejected",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Driving licence",
+                  "from": "APPROVED",
+                  "kind": "VERIFICATION",
+                  "reason": "Licence number does not match the card",
+                  "to": "REJECTED"
+                },
+                "id": "<id50>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.verification_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "PENDING_REVIEW",
+                  "kind": "VERIFICATION",
+                  "to": "APPROVED"
+                },
+                "id": "<id51>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_approved",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Identity document",
+                  "from": "SUBMITTED",
+                  "kind": "VERIFICATION",
+                  "to": "APPROVED"
+                },
+                "id": "<id52>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.verification_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "REJECTED",
+                  "kind": "VERIFICATION",
+                  "to": "PENDING_REVIEW"
+                },
+                "id": "<id53>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_resubmitted",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Identity document",
+                  "kind": "DOCUMENT",
+                  "to": "SUBMITTED"
+                },
+                "id": "<id54>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.verification_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "PENDING_REVIEW",
+                  "kind": "VERIFICATION",
+                  "to": "REJECTED"
+                },
+                "id": "<id55>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_rejected",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Identity document",
+                  "from": "SUBMITTED",
+                  "kind": "VERIFICATION",
+                  "reason": "The photo is too blurry to read",
+                  "to": "REJECTED"
+                },
+                "id": "<id56>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_approved",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Driving licence",
+                  "from": "SUBMITTED",
+                  "kind": "VERIFICATION",
+                  "to": "APPROVED"
+                },
+                "id": "<id57>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver_document.viewed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "type": "DRIVING_LICENCE"
+                },
+                "id": "<id58>",
+                "targetId": "<doc_22>",
+                "targetType": "driver_document",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.verification_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "INCOMPLETE",
+                  "kind": "VERIFICATION",
+                  "to": "PENDING_REVIEW"
+                },
+                "id": "<id59>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_submitted",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Identity document",
+                  "kind": "DOCUMENT",
+                  "to": "SUBMITTED"
+                },
+                "id": "<id60>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_submitted",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Profile photo",
+                  "kind": "DOCUMENT",
+                  "to": "APPROVED"
+                },
+                "id": "<id61>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.verification_status_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "from": "APPROVED",
+                  "kind": "VERIFICATION",
+                  "to": "INCOMPLETE"
+                },
+                "id": "<id62>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.document_submitted",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Driving licence",
+                  "kind": "DOCUMENT",
+                  "to": "SUBMITTED"
+                },
+                "id": "<id63>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "business.logo_removed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": null,
+                "id": "<id8>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 33
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "eligibility after documents",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/availability",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "activeAccounts": 1,
+            "blockedBy": {
+              "DRIVER_NOT_VERIFIED": 1,
+              "VEHICLE_NOT_VERIFIED": 1
+            },
+            "eligible": 0,
+            "notEligible": 1,
+            "online": 0,
+            "onlineEligible": 0,
+            "onlineLive": 0,
+            "onlineNoSignal": 0,
+            "onlineNotEligible": 0,
+            "onlineStale": 0,
+            "settings": {
+              "requireEligibleDrivers": false
+            },
+            "totalDrivers": 1,
+            "truncated": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "images: upload without a file",
+      "request": {
+        "method": "POST",
+        "path": "/api/images/upload"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Please provide an image file in the request"
+          },
+          "message": "No image file provided",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "images: upload a text file",
+      "request": {
+        "method": "POST",
+        "path": "/api/images/upload"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "error": "Only image files are allowed!",
+          "message": "Only image files are allowed.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "images: upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/images/upload"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "bytes": 48,
+            "folder": "contract-folder",
+            "format": "png",
+            "height": 1,
+            "public_id": "contract-folder/image-1",
+            "uploadedAt": "<date>",
+            "url": "https://images.contract.test/contract-folder/image-1.png",
+            "width": 1
+          },
+          "message": "Image uploaded successfully to Cloudinary",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "images: upload, default folder",
+      "request": {
+        "method": "POST",
+        "path": "/api/images/upload"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "bytes": 48,
+            "folder": "driver-documents",
+            "format": "png",
+            "height": 1,
+            "public_id": "driver-documents/image-2",
+            "uploadedAt": "<date>",
+            "url": "https://images.contract.test/driver-documents/image-2.png",
+            "width": 1
+          },
+          "message": "Image uploaded successfully to Cloudinary",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "images: delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/images/delete/contract-folder%2Fimage-1"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "deletedAt": "<date>",
+            "public_id": "contract-folder/image-1",
+            "result": "ok"
+          },
+          "message": "Image deleted successfully from Cloudinary",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "images: delete one that is not there",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/images/delete/missing"
+      },
+      "response": {
+        "status": 500,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Unknown error occurred",
+            "public_id": "missing"
+          },
+          "message": "Failed to delete image from Cloudinary",
+          "success": false
+        }
+      }
+    }
+  ]
+}
