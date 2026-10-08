@@ -196,3 +196,31 @@ milliseconds can get in on Mongo; Postgres creates its constraint before the tab
 for the Mongo index so the answer is stable). (3) Pre-existing, reproduced exactly: the open generic collections
 (`driver_faqs`, `driver_issues`, `drivers_notification`) accept create / update / delete with no sign-in, and every record needs
 `name` and `phone`; `/api/Driver_Faqs` is a separate collection from `/api/driver_faqs` (Mongo collection names are case-sensitive).
+
+## 12. Choosing the database (MongoDB or PostgreSQL)
+
+One setting decides it, read once when the server starts:
+
+| | MongoDB (the default) | PostgreSQL |
+|---|---|---|
+| `DB_ENGINE` | `mongo` (or not set at all) | `postgres` |
+| Connection | `MONGODB_USERNAME`, `MONGODB_PASSWORD`, `MONGODB_CLUSTER`, `DB_NAME` | `DATABASE_URL` (a Postgres connection string) |
+| Tables / collections | created by MongoDB on first use | created by the server on start-up, or beforehand with `npm run db:setup` |
+
+**To switch:** change `DB_ENGINE` (and make sure the matching connection values are set), then restart the server. On Render that is
+Environment, edit the variable, Save; Render redeploys. **To go back:** set `DB_ENGINE=mongo` (or delete the variable) and restart.
+Nothing else changes: the API, the apps and the dashboard are the same. The two databases are separate and are NOT kept in sync:
+data written while the server runs on one engine is not in the other.
+
+**Local development:** put the values in `.env` (copy `.env.example`). Start with `npm run dev` as usual.
+
+**Setting up a Postgres database:** `npm run db:setup` creates AutoMet's tables and indexes (safe to repeat, leaves existing rows alone).
+`npm run db:setup -- --reset` first drops AutoMet's own tables, for a throw-away test database only; it refuses to run if the database holds
+any table that AutoMet does not create.
+
+**Supabase notes:** use the connection string from Project Settings, Database. The direct host (`db.<project>.supabase.co:5432`) is IPv6-only,
+so a host without IPv6 (Render's free network) must use the session pooler string instead (see docs/DEPLOY_CHECKLIST.md for the pooler format).
+Keep `PG_POOL_MAX` below the project's connection limit.
+
+**Start-up check:** the log says `PostgreSQL connected` (or `MongoDB connected`), and `/health` reports `dbConnected: true`.
+An unknown value stops the server at start with `DB_ENGINE must be one of mongo, postgres`.
