@@ -1,0 +1,25 @@
+# Keeps the free Render service awake. Render's free tier sleeps after 15 idle minutes, and the first request after
+# that waits ~50 seconds (and shows "Cannot reach the server" in the dashboard). A ping every 10 minutes prevents it.
+#
+# This repository is public, so scheduled GitHub Actions runs are free. GitHub schedules are best-effort: a run can be
+# late by a few minutes. If you move to a paid Render instance, delete this file.
+name: Keep the API warm
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /health
+        run: |
+          # --retry covers the ~50 second wake-up when the service was asleep
+          curl --silent --show-error --fail --max-time 90 --retry 3 --retry-delay 15 --retry-all-errors \
+            --output /dev/null --write-out 'HTTP %{http_code} in %{time_total}s\n' \
+            https://automet-webend-apis.onrender.com/health
