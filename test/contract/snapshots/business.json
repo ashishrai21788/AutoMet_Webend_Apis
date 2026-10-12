@@ -4985,7 +4985,7 @@
                 "refunds"
               ]
             },
-            "fromDay": "2026-09-09",
+            "fromDay": "<day>",
             "partial": false,
             "range": {
               "from": "<date>",
@@ -5035,7 +5035,7 @@
                 "trips": 0
               }
             ],
-            "toDay": "2026-10-08"
+            "toDay": "<day>"
           },
           "message": "OK",
           "success": true

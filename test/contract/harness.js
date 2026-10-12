@@ -36,7 +36,7 @@ const JWT = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
 const LONGHEX = /^[0-9a-f]{32,}$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // date-only values under these keys are calendar days that move with today's date (reports, stats, created-on days)
-const CALENDAR_KEYS = new Set(['createdAt', 'date', 'from', 'to']);
+const CALENDAR_KEYS = new Set(['createdAt', 'date', 'from', 'to', 'fromDay', 'toDay']);
 const VOLATILE_KEYS = new Set(['timestamp', 'serverTime', 'generatedAt', 'uptime', 'requestId', 'responseTime', 'latencyMs', 'temporaryPassword', 'memoryUsage', 'locationAgeSeconds', 'totalRequests', 'durationMs', 'ageSeconds', 'avgResponseMinutes', 'avgTripMinutes']); // the last three are measured elapsed time
 
 function makeNormaliser() {
