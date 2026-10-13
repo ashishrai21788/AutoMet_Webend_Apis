@@ -9,6 +9,7 @@ const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { priceTrip, loadPricingConfig } = require('../lib/tripPricing');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
+const { findDriverConflict } = require('../lib/driverBusy');
 
 const DRIVER_RESPONSE_TIMEOUT_MS = (Number(process.env.TRIP_DRIVER_RESPONSE_TIMEOUT_SECONDS) || 60) * 1000;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -230,6 +231,17 @@ exports.createRequest = async (req, res) => {
         success: false,
         message: 'An active trip request already exists for this user and driver.',
         data: { trip_id: duplicate.trip_id, request_id: duplicate.request_id, status: duplicate.status }
+      });
+    }
+
+    // A driver is offered one ride at a time: refuse while they are on another trip or another rider's request is pending.
+    const driverConflict = await findDriverConflict(TripDetails, driverId, { includePending: true });
+    if (driverConflict) {
+      return res.status(409).json({
+        success: false,
+        message: 'This driver is busy with another ride. Please choose another driver.',
+        error: 'DRIVER_BUSY',
+        data: { code: 'DRIVER_BUSY', driver_id: driverId }
       });
     }
 
@@ -594,6 +606,19 @@ exports.driverResponse = async (req, res) => {
       return res.status(200).json(result);
     }
 
+    if (response === 'ACCEPTED') {
+      // never accept a second trip while another one is in progress (the client is not trusted to enforce this)
+      const conflict = await findDriverConflict(TripDetails, driverId, { exceptTripId: trip.trip_id });
+      if (conflict) {
+        return res.status(409).json({
+          success: false,
+          message: 'You are already on another ride. Finish it before accepting a new one.',
+          error: 'DRIVER_BUSY',
+          data: { code: 'DRIVER_BUSY', trip_id: tripId, active_trip_id: conflict.trip_id }
+        });
+      }
+    }
+
     const newStatus = response;
     const update = {
       status: newStatus,
@@ -604,7 +629,25 @@ exports.driverResponse = async (req, res) => {
     if (rejectReason && (newStatus === 'REJECTED' || newStatus === 'REJECTED_WITH_REASON')) {
       update.reject_reason = rejectReason;
     }
-    await TripDetails.updateOne({ trip_id: tripId }, { $set: update });
+    // Conditional claim: the write only happens while the trip is still REQUESTED. Without it a rider's cancellation (or a
+    // double tap, or the timeout sweeper) landing between the read above and this write was silently overwritten, and the
+    // rider was told "accepted" for a ride they had cancelled.
+    const claimedTrip = await TripDetails.findOneAndUpdate(
+      { trip_id: tripId, status: 'REQUESTED' },
+      { $set: update },
+      { new: true }
+    );
+    if (!claimedTrip) {
+      const current = await TripDetails.findOne({ trip_id: tripId });
+      const currentStatus = current ? current.status : 'UNKNOWN';
+      return res.status(200).json({
+        success: currentStatus === 'ACCEPTED',
+        trip_id: tripId,
+        request_id: requestId,
+        status: currentStatus,
+        message: buildTripMessageByStatus(currentStatus)
+      });
+    }
 
     const success = newStatus === 'ACCEPTED';
     const message = success ? 'Driver accepted your request' : 'Driver rejected the request';
