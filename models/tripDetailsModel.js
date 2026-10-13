@@ -64,6 +64,9 @@ const tripDetailsSchema = new mongoose.Schema({
   cancel_stage: { type: String, default: null, enum: ['before_accept', 'after_accept', null], trim: true },
   cancelled_by: { type: String, default: null, enum: ['USER', 'DRIVER', 'ADMIN', null], trim: true },
 
+  // Wrong start-code attempts for this trip (see lib/tripStartOtp.js). The code itself is derived, never stored.
+  start_otp_attempts: { type: Number, default: 0, min: 0 },
+
   // The rider's rating of the driver for this trip. Written once, after the trip is COMPLETED (POST /api/v1/rides/rating).
   rider_rating: {
     stars: { type: Number, default: null, min: 1, max: 5 },

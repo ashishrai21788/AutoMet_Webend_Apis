@@ -1704,6 +1704,11 @@
               "requested_at": "<date>",
               "responded_at": null,
               "ride_note": "Two bags",
+              "rider_rating": {
+                "comment": null,
+                "rated_at": null,
+                "stars": null
+              },
               "started_at": null,
               "status": "REQUESTED",
               "tenant_id": "<defaultAppId>",
@@ -1800,6 +1805,11 @@
               "requested_at": "<date>",
               "responded_at": null,
               "ride_note": "Two bags",
+              "rider_rating": {
+                "comment": null,
+                "rated_at": null,
+                "stars": null
+              },
               "started_at": null,
               "status": "REQUESTED",
               "tenant_id": "<defaultAppId>",
@@ -1910,6 +1920,11 @@
             "requested_at": "<date>",
             "responded_at": null,
             "ride_note": "Two bags",
+            "rider_rating": {
+              "comment": null,
+              "rated_at": null,
+              "stars": null
+            },
             "started_at": null,
             "status": "REQUESTED",
             "tenant_id": "<defaultAppId>",
@@ -2382,6 +2397,11 @@
             "requested_at": "<date>",
             "responded_at": "<date>",
             "ride_note": "Two bags",
+            "rider_rating": {
+              "comment": null,
+              "rated_at": null,
+              "stars": null
+            },
             "started_at": "<date>",
             "status": "COMPLETED",
             "tenant_id": "<defaultAppId>",
@@ -2475,6 +2495,11 @@
             "requested_at": "<date>",
             "responded_at": "<date>",
             "ride_note": "Two bags",
+            "rider_rating": {
+              "comment": null,
+              "rated_at": null,
+              "stars": null
+            },
             "started_at": "<date>",
             "status": "COMPLETED",
             "tenant_id": "<defaultAppId>",
@@ -2811,6 +2836,11 @@
             "requested_at": "<date>",
             "responded_at": "<date>",
             "ride_note": "Two bags",
+            "rider_rating": {
+              "comment": null,
+              "rated_at": null,
+              "stars": null
+            },
             "started_at": null,
             "status": "REJECTED_WITH_REASON",
             "tenant_id": "<defaultAppId>",
@@ -3250,6 +3280,11 @@
             "requested_at": "<date>",
             "responded_at": "<date>",
             "ride_note": "Two bags",
+            "rider_rating": {
+              "comment": null,
+              "rated_at": null,
+              "stars": null
+            },
             "started_at": null,
             "status": "CANCELLED_BY_USER_AFTER_ACCEPTANCE",
             "tenant_id": "<defaultAppId>",

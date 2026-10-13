@@ -7,6 +7,8 @@ const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { clearForDriver: clearTripRateLimitForDriver } = require('../lib/tripRateLimit');
 const { emitToDriver, emitToUser } = require('../config/socket');
 const { estimateTrip } = require('../lib/fare');
+const { findDriverConflict } = require('../lib/driverBusy');
+const tripStartOtp = require('../lib/tripStartOtp');
 
 const DRIVER_RESPONSE_TIMEOUT_SECONDS = Number(process.env.RIDE_REQUEST_TIMEOUT_SECONDS) || 60;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -327,10 +329,32 @@ exports.acceptRide = async (req, res) => {
           message: alreadySuccess ? 'Ride accepted by driver' : `Trip cannot be accepted. Current status: ${tripDetails.status}`
         });
       }
-      await TripDetails.updateOne(
+      const busyWith = await findDriverConflict(TripDetails, driverId, { exceptTripId: tripId });
+      if (busyWith) {
+        return res.status(409).json({
+          success: false,
+          message: 'You are already on another ride. Finish it before accepting a new one.',
+          error: 'DRIVER_BUSY',
+          data: { code: 'DRIVER_BUSY', trip_id: tripId, active_trip_id: busyWith.trip_id }
+        });
+      }
+      const acceptedTrip = await TripDetails.findOneAndUpdate(
         { trip_id: tripId, status: 'REQUESTED' },
-        { $set: { status: 'ACCEPTED', driver_response: 'ACCEPTED', responded_at: now, updated_at: now } }
+        { $set: { status: 'ACCEPTED', driver_response: 'ACCEPTED', responded_at: now, updated_at: now } },
+        { new: true }
       );
+      if (!acceptedTrip) {
+        // lost the race (cancelled, timed out or already answered): report the real state and notify nobody
+        const nowTrip = await TripDetails.findOne({ trip_id: tripId });
+        const nowStatus = nowTrip ? nowTrip.status : 'UNKNOWN';
+        return res.status(200).json({
+          success: nowStatus === 'ACCEPTED',
+          trip_id: tripId,
+          request_id: tripDetails.request_id,
+          status: nowStatus,
+          message: nowStatus === 'ACCEPTED' ? 'Ride accepted by driver' : `Trip cannot be accepted. Current status: ${nowStatus}`
+        });
+      }
       tripDetails.status = 'ACCEPTED';
       await notifyUserTripDetailsResponse(tripDetails, 'ACCEPTED', 'Driver accepted your request');
       return res.status(200).json({
@@ -578,8 +602,8 @@ exports.cancelRideByUser = async (req, res) => {
       clearTripRateLimitForDriver(driverId);
     }
     if (source === 'trip_details') {
-      await TripDetails.updateOne(
-        { _id: trip._id },
+      const cancelled = await TripDetails.findOneAndUpdate(
+        { _id: trip._id, status: trip.status },
         {
           $set: {
             status: newStatus,
@@ -590,8 +614,18 @@ exports.cancelRideByUser = async (req, res) => {
             cancelled_by: 'USER',
             updated_at: now
           }
-        }
+        },
+        { new: true }
       );
+      if (!cancelled) {
+        // the driver answered or the trip moved on after this cancel was validated: report it, change nothing
+        const latest = await TripDetails.findOne({ _id: trip._id });
+        return res.status(409).json({
+          success: false,
+          message: `The ride has just changed (now ${latest ? latest.status : 'unknown'}). Please check its status.`,
+          data: { ride_id: resolvedRideId, current_status: latest ? latest.status : null }
+        });
+      }
     } else {
       trip.status = newStatus;
       trip.cancellation_reason = cancellationReason || undefined;
@@ -851,7 +885,41 @@ exports.updateTripStatus = async (req, res) => {
           data: { trip_id: tripId, current_status: tripDetails.status }
         });
       }
-      await TripDetails.updateOne({ trip_id: tripId }, { $set: updatePayload });
+      if (status === 'ON_GOING') {
+        // Starting the trip needs the rider's 4-digit code (TRIP_START_OTP=on). A repeated tap on a trip that has already
+        // started (status already ON_GOING) never reaches here because the transition check above refuses it first.
+        const supplied = req.body && (req.body.otp ?? req.body.start_otp ?? req.body.code);
+        const verdict = tripStartOtp.check(tripDetails, supplied);
+        if (!verdict.ok) {
+          if (verdict.code === 'OTP_INVALID') {
+            await TripDetails.updateOne({ trip_id: tripId }, { $inc: { start_otp_attempts: 1 } });
+          }
+          return res.status(verdict.status).json({
+            success: false,
+            message: verdict.message,
+            error: verdict.code,
+            data: { code: verdict.code, trip_id: tripId }
+          });
+        }
+      }
+      const moved = await TripDetails.findOneAndUpdate(
+        { trip_id: tripId, status: tripDetails.status },
+        { $set: updatePayload },
+        { new: true }
+      );
+      if (!moved) {
+        // the trip changed (cancelled, or the same step was already applied) after it was read: do not overwrite it
+        const latest = await TripDetails.findOne({ trip_id: tripId });
+        const latestStatus = latest ? latest.status : 'UNKNOWN';
+        const alreadyThere = latestStatus === status; // a repeated tap on the same step is a success, not an error
+        return res.status(alreadyThere ? 200 : 409).json({
+          success: alreadyThere,
+          trip_id: tripId,
+          status: latestStatus,
+          message: alreadyThere ? (STATUS_MESSAGES[status] || status) : `Cannot set status to ${status}: the trip is now ${latestStatus}`,
+          data: { trip_id: tripId, current_status: latestStatus }
+        });
+      }
       // On completion make sure the trip has a fare (trips created before fares existed get one computed now).
       const fareInfo = status === 'COMPLETED' ? await ensureTripFare(tripDetails) : null;
       await notifyRiderRideStatusUpdated(tripDetails.user_id, tripId, status, fareInfo);
@@ -927,7 +995,7 @@ exports.getActiveRide = async (req, res) => {
       });
     }
 
-    const { _id, __v, ...rideRecord } = trip;
+    const { _id, __v, start_otp_attempts, ...rideRecord } = trip; // internal counter, never part of a payload
     res.status(200).json({
       success: true,
       message: 'Active ride found',
@@ -995,7 +1063,11 @@ exports.getRideDetails = async (req, res) => {
     if (isUser) {
       const driverDoc = await DriverModel.findOne({ driverId: trip.driver_id });
       data.driver = toDriverProfileForDisplay(driverDoc);
+      // The rider's start code (null unless TRIP_START_OTP=on and the driver is coming / has arrived). Never sent to the driver.
+      const startCode = tripStartOtp.codeForRider(trip);
+      if (startCode) data.start_otp = startCode; // absent unless the feature is on and a code is due
     }
+    delete data.start_otp_attempts;
 
     res.status(200).json({
       success: true,
@@ -1020,7 +1092,7 @@ exports.getTrip = async (req, res) => {
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
     }
-    const { _id, __v, ...rest } = trip;
+    const { _id, __v, start_otp_attempts, ...rest } = trip;
     res.status(200).json({ success: true, data: rest });
   } catch (error) {
     console.error('[getTrip]', error);
@@ -1050,7 +1122,7 @@ exports.listTrips = async (req, res) => {
     const limit = Math.min(Math.max(0, parseInt(req.query.limit, 10) || 20), 100);
     const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
     const trips = await Trip.find(query).sort({ requested_at: -1 }).skip(skip).limit(limit).lean();
-    const list = trips.map(({ _id, __v, ...t }) => t);
+    const list = trips.map(({ _id, __v, start_otp_attempts, ...t }) => t);
     res.status(200).json({
       success: true,
       data: list,
