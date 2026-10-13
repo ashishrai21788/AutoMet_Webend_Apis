@@ -499,6 +499,7 @@ setInterval(() => {
 // Start HTTP server
 httpServer.listen(PORT, HOST, () => {
   require('./services/driverPresenceSweeper').startDriverPresenceSweeper(); // takes drivers offline when their location goes quiet
+  require('./services/tripTimeoutSweeper').startTripTimeoutSweeper(); // expires ride requests the driver never answered
   require('./controllers/revenueController').startBillingJobs(); // invoice reminders and the lapse rule, every few hours
   console.log(`🚀 HTTP Server running on http://${HOST}:${PORT}`);
   logHardeningConfig();

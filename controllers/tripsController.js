@@ -638,32 +638,46 @@ exports.driverResponse = async (req, res) => {
  * POST /api/v1/trips/check-timeouts
  * Mark REQUESTED trips with timeout_at < now as NO_RESPONSE. Call from cron.
  */
-exports.checkTimeouts = async (req, res) => {
-  try {
-    const now = new Date();
-    const toUpdate = await TripDetails.find({ status: 'REQUESTED', timeout_at: { $lt: now } }).select('trip_id request_id user_id driver_id').lean();
-    const tripIds = toUpdate.map((t) => t.trip_id);
-    if (tripIds.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: 'Timeout check completed',
-        data: { marked_no_response: 0, timeout_seconds: DRIVER_RESPONSE_TIMEOUT_MS / 1000 }
-      });
-    }
-    await TripDetails.updateMany(
-      { trip_id: { $in: tripIds } },
-      { $set: { status: 'NO_RESPONSE', driver_response: 'NO_RESPONSE', updated_at: now } }
+/**
+ * Marks every REQUESTED trip whose driver-response window has passed as NO_RESPONSE and tells both apps.
+ * Used by the check-timeouts endpoint and by the in-process sweeper (services/tripTimeoutSweeper.js).
+ * Each trip is claimed with a conditional update, so two runs (or two server instances) never expire or notify the same
+ * trip twice. Returns how many trips this run expired.
+ */
+async function expireTimedOutRequests(now = new Date(), { limit = 200 } = {}) {
+  const due = await TripDetails.find({ status: 'REQUESTED', timeout_at: { $lt: now } })
+    .select('trip_id request_id user_id driver_id')
+    .limit(limit)
+    .lean();
+  let marked = 0;
+  for (const t of due) {
+    const claimed = await TripDetails.findOneAndUpdate(
+      { trip_id: t.trip_id, status: 'REQUESTED' },
+      { $set: { status: 'NO_RESPONSE', driver_response: 'NO_RESPONSE', updated_at: now } },
+      { new: true }
     );
-    for (const t of toUpdate) {
+    if (!claimed) continue; // answered, cancelled or expired by someone else in the meantime
+    marked += 1;
+    try {
       emitToUser(t.user_id, 'ride_request_timeout', { trip_id: t.trip_id, request_id: t.request_id, status: 'NO_RESPONSE', message: 'No response from driver' });
       await notifyUserRideTimeout(t.user_id, t);
       await notifyDriverRideTimeout(t.driver_id, t.trip_id, t.request_id);
+    } catch (e) {
+      console.warn('[trips expire] notify failed:', e.message, { trip_id: t.trip_id }); // the trip is already marked; a failed push must not undo that
     }
+  }
+  return marked;
+}
+exports.expireTimedOutRequests = expireTimedOutRequests;
+
+exports.checkTimeouts = async (req, res) => {
+  try {
+    const marked = await expireTimedOutRequests(new Date());
     res.status(200).json({
       success: true,
       message: 'Timeout check completed',
       data: {
-        marked_no_response: tripIds.length,
+        marked_no_response: marked,
         timeout_seconds: DRIVER_RESPONSE_TIMEOUT_MS / 1000
       }
     });

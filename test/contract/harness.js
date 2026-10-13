@@ -144,7 +144,7 @@ async function start({ engine = 'mongo', env: extra = {}, prepare = null, waitOw
     PORT: String(port), HOST: '127.0.0.1',
     // production behaviour, as Render runs it (the project's .env, which the test server never reads, sets AUTH_ENFORCEMENT=strict)
     NODE_ENV: 'production', AUTH_ENFORCEMENT: 'strict', SCHEDULER_SECRET: 'contract-scheduler-secret', JWT_SECRET: 'contract-test-secret-not-for-real-use',
-    DB_ENGINE: engine, DB_USE_URI: '1', MONGODB_URI: uri, DB_NAME: 'contract', RATE_LIMIT_DISABLED: '1',
+    DB_ENGINE: engine, DB_USE_URI: '1', MONGODB_URI: uri, DB_NAME: 'contract', RATE_LIMIT_DISABLED: '1', TRIP_TIMEOUT_SWEEP: 'off',
     ...(pg ? { DATABASE_URL: pg.url, ...(pg.db ? { PG_POOL_MAX: '1' } : {}) } : {}),
     ADMIN_BOOTSTRAP_EMAIL: 'owner@contract.test', ADMIN_BOOTSTRAP_PASSWORD: 'Contract-Owner-Pass-1', REQUIRE_PLATFORM_2FA: '0',
     ...extra
