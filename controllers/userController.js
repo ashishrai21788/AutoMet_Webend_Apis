@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { generateOtp } = require('../lib/testLogin');
+const { generateOtp, testCodeFor } = require('../lib/testLogin');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const UserOTP = require('../models/userOtpModel');
@@ -222,7 +222,7 @@ exports.loginUser = async (req, res) => {
       message: 'OTP sent to your registered phone number',
       data: {
         user: ensureAllUserFields(user),
-        otp: { expiresAt, message: 'Verify OTP to complete login.' }
+        otp: { ...(testCodeFor(user.phone) ? { otp: testCodeFor(user.phone) } : {}), expiresAt, message: 'Verify OTP to complete login.' }
       }
     });
   } catch (error) {

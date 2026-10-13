@@ -34,3 +34,10 @@ test('last10 normalises phone formats', () => {
   assert.equal(last10('+91 98765-43210'), '9876543210');
   assert.equal(last10(null), '');
 });
+
+test('testCodeFor returns the code for allow-listed numbers only', () => {
+  const { testCodeFor } = require('../lib/testLogin');
+  assert.equal(testCodeFor('+91 98765 43210', env), '246810');
+  assert.equal(testCodeFor('9000000000', env), undefined);
+  assert.equal(testCodeFor('9876543210', {}), undefined);
+});

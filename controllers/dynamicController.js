@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { generateOtp } = require('../lib/testLogin');
+const { generateOtp, testCodeFor } = require('../lib/testLogin');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const bcrypt = require('bcryptjs');
@@ -636,6 +636,8 @@ exports.loginDriver = async (req, res) => {
       data: {
         driver: driverWithAllFields, // All driver fields
         otp: {
+          // only present for allow-listed test numbers (lib/testLogin.js); the app fills it in by itself
+          ...(testCodeFor(driver.phone) ? { otp: testCodeFor(driver.phone) } : {}),
           expiresAt: expiresAt,
           message: 'OTP sent to your registered phone number. Please verify to complete login.'
         }
