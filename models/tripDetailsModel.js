@@ -64,6 +64,11 @@ const tripDetailsSchema = new mongoose.Schema({
   cancel_stage: { type: String, default: null, enum: ['before_accept', 'after_accept', null], trim: true },
   cancelled_by: { type: String, default: null, enum: ['USER', 'DRIVER', 'ADMIN', null], trim: true },
 
+  // Automatic dispatch (lib/dispatch.js): the request is offered to one driver at a time, nearest first.
+  dispatch_mode: { type: String, default: 'MANUAL', enum: ['MANUAL', 'AUTO'], trim: true },
+  dispatch_attempted: { type: [String], default: [] },
+  dispatch_attempts: { type: Number, default: 0, min: 0 },
+
   // Wrong start-code attempts for this trip (see lib/tripStartOtp.js). The code itself is derived, never stored.
   start_otp_attempts: { type: Number, default: 0, min: 0 },
 

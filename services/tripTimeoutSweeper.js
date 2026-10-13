@@ -16,7 +16,7 @@ async function sweepTimedOutRequests() {
 
 function startTripTimeoutSweeper({ intervalMs } = {}) {
   if (timer || process.env.TRIP_TIMEOUT_SWEEP === 'off') return;
-  const every = intervalMs || Math.max(5, Number(process.env.TRIP_TIMEOUT_SWEEP_SECONDS) || 15) * 1000;
+  const every = intervalMs || Math.max(3, Number(process.env.TRIP_TIMEOUT_SWEEP_SECONDS) || 5) * 1000;
   timer = setInterval(() => {
     if (running) return; // a slow run is never overlapped
     running = true;

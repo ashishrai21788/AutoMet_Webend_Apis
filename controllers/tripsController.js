@@ -10,6 +10,7 @@ const { priceTrip, loadPricingConfig } = require('../lib/tripPricing');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
 const { findDriverConflict } = require('../lib/driverBusy');
+const { dispatchConfig, rankCandidates, canReoffer } = require('../lib/dispatch');
 
 const DRIVER_RESPONSE_TIMEOUT_MS = (Number(process.env.TRIP_DRIVER_RESPONSE_TIMEOUT_SECONDS) || 60) * 1000;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -140,12 +141,114 @@ function buildTripMessageByStatus(status) {
  * POST /api/v1/trips/create-request
  * Create trip in trip_details, notify driver, wait up to 60s for response, return final status.
  */
+/**
+ * The nearest driver who can be offered this ride right now (automatic dispatch), or null.
+ * Candidates are the rider's business's online drivers, nearest first (lib/dispatch.js); the first one that is reachable,
+ * allowed to take rides and free of another ride wins. `exclude` holds drivers already offered this request.
+ */
+async function findAutoDriver(user, pickup, { exclude = [], vehicleType } = {}) {
+  const DriverModel = createModel('drivers');
+  const online = await DriverModel.find({ isOnline: true }).limit(500).lean();
+  const sameShop = [];
+  for (const d of online) {
+    if (await sameBusiness(user, d)) sameShop.push(d);
+  }
+  const ranked = rankCandidates(sameShop, pickup, { exclude, vehicleType });
+  for (const { driver, distanceKm } of ranked) {
+    if (!isDriverReachable(driver).reachable) continue;
+    if (await findDriverConflict(TripDetails, driver.driverId, { includePending: true })) continue;
+    if (!(await checkDriverAvailable(driver)).available) continue;
+    return { driver, distanceKm };
+  }
+  return null;
+}
+
+/** The push payload the driver app shows as "New Ride Request", built from a stored trip. */
+function ridePushPayload(trip, riderName) {
+  return {
+    request_id: trip.request_id,
+    pickup_address: trip.pickup.address,
+    drop_address: trip.drop.address,
+    pickup_lat: trip.pickup.lat,
+    pickup_lng: trip.pickup.lng,
+    drop_lat: trip.drop.lat,
+    drop_lng: trip.drop.lng,
+    ride_note: trip.ride_note || '',
+    rider_name: riderName || '',
+    distance: String(trip.distance_km),
+    estimated_duration: String(trip.estimated_duration_min),
+    fare: String(trip.fare),
+    currency: trip.currency,
+    payment_mode: trip.payment_mode || 'CASH'
+  };
+}
+
+/**
+ * Moves an automatically dispatched request that its driver rejected or ignored on to the next nearest driver.
+ * Returns true when another driver now holds the offer (the rider keeps waiting), false when it cannot be re-offered
+ * (not automatic, attempts used up, or nobody else is available), in which case the caller ends the request as usual.
+ * The move is a conditional write on the current driver, so a late answer, a cancellation or a second server instance
+ * cannot be overwritten or applied twice.
+ */
+async function reofferTrip(trip, now = new Date()) {
+  const cfg = dispatchConfig();
+  let current = trip;
+  while (canReoffer(current, cfg)) {
+    const user = await createModel('users').findOne({ userId: current.user_id }).lean();
+    if (!user) return false;
+    const previous = await createModel('drivers').findOne({ driverId: current.driver_id }).select('vehicleType').lean();
+    const attempted = Array.from(new Set([...(current.dispatch_attempted || []), current.driver_id]));
+    const next = await findAutoDriver(user, { lat: current.pickup.lat, lng: current.pickup.lng }, {
+      exclude: attempted,
+      vehicleType: previous && previous.vehicleType
+    });
+    if (!next) return false;
+
+    const nextId = next.driver.driverId;
+    const claimed = await TripDetails.findOneAndUpdate(
+      { trip_id: current.trip_id, status: 'REQUESTED', driver_id: current.driver_id },
+      { $set: {
+        driver_id: nextId,
+        dispatch_attempted: [...attempted, nextId],
+        dispatch_attempts: (current.dispatch_attempts || 0) + 1,
+        timeout_at: new Date(now.getTime() + cfg.offerSeconds * 1000),
+        driver_response: null,
+        push_sent: false,
+        updated_at: now
+      } },
+      { new: true }
+    );
+    if (!claimed) return true; // answered, cancelled or moved by someone else in the meantime: not ours to end
+    if (current.driver_id !== nextId) notifyDriverRideTimeout(current.driver_id, claimed.trip_id, claimed.request_id).catch(() => {});
+
+    const { fcmToken } = getDriverFcmInfo(next.driver);
+    const riderName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.fullName || null;
+    const push = await sendRideRequestPushWithRetry(fcmToken, claimed.trip_id, ridePushPayload(claimed, riderName), {
+      DriverModel: createModel('drivers'), driverId: nextId
+    });
+    if (push.success) {
+      await TripDetails.updateOne({ trip_id: claimed.trip_id }, { $set: { push_sent: true, push_sent_at: now, push_status: 'DELIVERED' } });
+      emitToDriver(nextId, 'ride_request_received', {
+        trip_id: claimed.trip_id, request_id: claimed.request_id, user_id: claimed.user_id, driver_id: nextId,
+        pickup: claimed.pickup, drop: claimed.drop, ride_note: claimed.ride_note,
+        requested_at: claimed.requested_at, timeout_at: claimed.timeout_at
+      });
+      return true;
+    }
+    current = claimed; // the push failed: try the next driver straight away
+  }
+  return false;
+}
+exports.reofferTrip = reofferTrip;
+
 exports.createRequest = async (req, res) => {
   try {
     const body = req.body || {};
     const requestId = body.request_id != null ? String(body.request_id).trim() : '';
     const userId = body.user_id != null ? String(body.user_id).trim() : '';
-    const driverId = body.driver_id != null ? String(body.driver_id).trim() : '';
+    let driverId = body.driver_id != null ? String(body.driver_id).trim() : '';
+    // No driver_id means automatic dispatch: the server picks the nearest free driver (lib/dispatch.js).
+    const autoDispatch = !driverId;
     const pickupAddress = body.pickup_address != null ? String(body.pickup_address).trim() : '';
     const pickupLat = body.pickup_latitude;
     const pickupLng = body.pickup_longitude;
@@ -154,10 +257,10 @@ exports.createRequest = async (req, res) => {
     const dropLng = body.drop_longitude;
     const rideNote = body.ride_note != null ? String(body.ride_note).trim() : null;
 
-    if (!requestId || !userId || !driverId || !pickupAddress || !dropAddress) {
+    if (!requestId || !userId || !pickupAddress || !dropAddress) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: request_id, user_id, driver_id, pickup_address, drop_address'
+        message: 'Missing required fields: request_id, user_id, pickup_address, drop_address'
       });
     }
     if (!isValidLat(pickupLat) || !isValidLng(pickupLng)) {
@@ -181,13 +284,33 @@ exports.createRequest = async (req, res) => {
 
     const UserModel = createModel('users');
     const DriverModel = createModel('drivers');
-    const [user, driver] = await Promise.all([
-      UserModel.findOne({ userId }).lean(),
-      DriverModel.findOne({ driverId }).lean()
-    ]);
+    const user = await UserModel.findOne({ userId }).lean();
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found', data: { user_id: userId } });
     }
+    if (autoDispatch) {
+      // one search at a time per rider
+      const mine = await TripDetails.findOne({ user_id: userId, status: { $in: ACTIVE_STATUSES } });
+      if (mine) {
+        return res.status(409).json({
+          success: false,
+          message: 'You already have a ride in progress.',
+          data: { trip_id: mine.trip_id, request_id: mine.request_id, status: mine.status }
+        });
+      }
+      const wantedType = body.vehicle_type != null ? String(body.vehicle_type).trim() : '';
+      const found = await findAutoDriver(user, { lat: pickupLat, lng: pickupLng }, { vehicleType: wantedType || undefined });
+      if (!found) {
+        return res.status(404).json({
+          success: false,
+          message: 'No drivers are available near you right now. Please try again in a moment.',
+          error: 'NO_DRIVERS_AVAILABLE',
+          data: { code: 'NO_DRIVERS_AVAILABLE' }
+        });
+      }
+      driverId = found.driver.driverId;
+    }
+    const driver = await DriverModel.findOne({ driverId }).lean();
     if (!driver) {
       return res.status(404).json({ success: false, message: 'Driver not found', data: { driver_id: driverId } });
     }
@@ -275,7 +398,7 @@ exports.createRequest = async (req, res) => {
 
     const { fcmToken: driverFcmToken } = getDriverFcmInfo(driver);
     const tripId = await getNextTripId();
-    const timeoutAt = new Date(now.getTime() + DRIVER_RESPONSE_TIMEOUT_MS);
+    const timeoutAt = new Date(now.getTime() + (autoDispatch ? dispatchConfig().offerSeconds * 1000 : DRIVER_RESPONSE_TIMEOUT_MS));
 
     // Create trip in DB BEFORE sending push so driver-response finds it
     const trip = await TripDetails.create({
@@ -298,6 +421,9 @@ exports.createRequest = async (req, res) => {
       tenant_id: tenant ? tenant.tenantId : null,
       payment_mode: 'CASH',
       status: 'REQUESTED',
+      dispatch_mode: autoDispatch ? 'AUTO' : 'MANUAL',
+      dispatch_attempted: [driverId],
+      dispatch_attempts: 1,
       requested_at: now,
       timeout_at: timeoutAt,
       push_sent: false
@@ -402,6 +528,12 @@ exports.estimate = async (req, res) => {
     if (driverId) {
       const driver = await createModel('drivers').findOne({ driverId }).select('vehicleType').lean();
       if (driver && driver.vehicleType) vehicleType = driver.vehicleType;
+    }
+
+    // Automatic dispatch has no chosen driver yet: price the trip for the vehicle type of the driver who would get it.
+    if (!driverId && !vehicleType && req.user) {
+      const nearest = await findAutoDriver(req.user, { lat: pickupLat, lng: pickupLng });
+      if (nearest && nearest.driver.vehicleType) vehicleType = nearest.driver.vehicleType;
     }
 
     // the business is the signed-in rider's, else the one named by the app (X-App-Id), else the default business
@@ -619,6 +751,13 @@ exports.driverResponse = async (req, res) => {
       }
     }
 
+    if (response !== 'ACCEPTED' && trip.dispatch_mode === 'AUTO') {
+      // The rider asked for any driver, not this one: pass the request on and keep the rider waiting.
+      if (await reofferTrip(trip, now)) {
+        return res.status(200).json({ success: true, trip_id: tripId, request_id: requestId, status: response, message: 'Ride rejected' });
+      }
+    }
+
     const newStatus = response;
     const update = {
       status: newStatus,
@@ -689,11 +828,18 @@ exports.driverResponse = async (req, res) => {
  */
 async function expireTimedOutRequests(now = new Date(), { limit = 200 } = {}) {
   const due = await TripDetails.find({ status: 'REQUESTED', timeout_at: { $lt: now } })
-    .select('trip_id request_id user_id driver_id')
+    .select('trip_id request_id user_id driver_id dispatch_mode dispatch_attempted dispatch_attempts pickup')
     .limit(limit)
     .lean();
   let marked = 0;
   for (const t of due) {
+    if (t.dispatch_mode === 'AUTO') {
+      try {
+        if (await reofferTrip(t, now)) continue; // another driver now holds the offer
+      } catch (e) {
+        console.warn('[trips dispatch] re-offer failed:', e.message, { trip_id: t.trip_id });
+      }
+    }
     const claimed = await TripDetails.findOneAndUpdate(
       { trip_id: t.trip_id, status: 'REQUESTED' },
       { $set: { status: 'NO_RESPONSE', driver_response: 'NO_RESPONSE', updated_at: now } },
