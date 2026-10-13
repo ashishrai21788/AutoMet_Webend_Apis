@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { generateOtp } = require('../lib/testLogin');
 const DriverOTP = require('../models/otpModel');
 const { createModel } = require('../models/dynamicModel');
 const jwt = require('jsonwebtoken');
@@ -52,8 +53,8 @@ exports.sendOTP = async (req, res) => {
     }
 
     // Generate 6-digit OTP
-    const otp = crypto.randomInt(100000, 1000000).toString();
-    
+    const otp = generateOtp(driver.phone);
+
     // Set expiration time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
@@ -152,7 +153,7 @@ exports.generateOTP = async (req, res) => {
     }
 
     // Generate 6-digit OTP
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp(driver.phone);
     
     // Set expiration time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -490,7 +491,7 @@ exports.resendOTP = async (req, res) => {
     }
 
     // Generate new 6-digit OTP
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp(driver.phone);
     
     // Set expiration time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);

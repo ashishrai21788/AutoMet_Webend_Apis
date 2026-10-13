@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { generateOtp } = require('../lib/testLogin');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const bcrypt = require('bcryptjs');
@@ -472,7 +473,7 @@ const createDriver = async (req, res, DriverModel) => {
     
     // Generate OTP for phone verification
     const DriverOTP = require('../models/otpModel');
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp(driver.phone);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
     const createdAt = new Date();
 
@@ -572,7 +573,7 @@ exports.loginDriver = async (req, res) => {
     }
 
     // Generate 6-digit OTP
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp(driver.phone);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
     const createdAt = new Date();
 

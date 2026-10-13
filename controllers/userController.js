@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { generateOtp } = require('../lib/testLogin');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const UserOTP = require('../models/userOtpModel');
@@ -127,7 +128,7 @@ exports.registerUser = async (req, res) => {
     await user.save();
 
     // Create OTP for phone verification
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp(user.phone);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     const otpRecord = new UserOTP({
@@ -194,7 +195,7 @@ exports.loginUser = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Your account is suspended. Please contact support.', error: 'ACCOUNT_SUSPENDED', data: null });
     }
 
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp(user.phone);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     let otpRecord = await UserOTP.findOne({ userId: user.userId, phoneNumber, isUsed: false });
@@ -491,7 +492,7 @@ exports.resendUserOtp = async (req, res) => {
       });
     }
 
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp(user.phone);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     await UserOTP.deleteMany({ userId });
