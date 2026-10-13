@@ -21,6 +21,12 @@ router.post(
   rideController.cancelRideByUser
 );
 
+router.post(
+  '/rating',
+  requireAuth({ roles: ['user'], enforceBodyUserId: true }),
+  rideController.rateDriver
+);
+
 router.get('/active', requireRideScopeQuery, rideController.getActiveRide);
 
 router.get('/details', requireRideScopeQuery, rideController.getRideDetails);

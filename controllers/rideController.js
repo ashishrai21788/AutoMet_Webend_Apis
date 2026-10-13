@@ -659,6 +659,61 @@ exports.cancelRideByUser = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/v1/rides/rating
+ * The rider rates the driver once, after the trip is COMPLETED.
+ * Body: { ride_id | trip_id, user_id, stars (1-5), comment? (max 300 characters) }
+ * 404 unknown trip · 403 not the rider's trip · 409 not completed yet / already rated · 400 bad input.
+ */
+exports.rateDriver = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const tripId = String(body.ride_id ?? body.trip_id ?? '').trim();
+    const userId = String(body.user_id ?? '').trim();
+    const stars = Number(body.stars);
+    const comment = body.comment == null ? null : String(body.comment).trim();
+
+    if (!tripId || !userId) {
+      return res.status(400).json({ success: false, message: 'Missing required fields: ride_id, user_id', data: { missingFields: { ride_id: !tripId, user_id: !userId } } });
+    }
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+      return res.status(400).json({ success: false, message: 'stars must be a whole number from 1 to 5', data: { stars: body.stars } });
+    }
+    if (comment && comment.length > 300) {
+      return res.status(400).json({ success: false, message: 'comment must be 300 characters or fewer', data: { length: comment.length } });
+    }
+
+    const trip = await TripDetails.findOne({ trip_id: tripId }).lean();
+    if (!trip) return res.status(404).json({ success: false, message: 'Ride not found', data: { ride_id: tripId } });
+    if (trip.user_id !== userId) {
+      return res.status(403).json({ success: false, message: 'You can only rate your own ride', data: { ride_id: tripId } });
+    }
+    if (trip.status !== 'COMPLETED') {
+      return res.status(409).json({ success: false, message: 'A ride can be rated once it is completed', data: { ride_id: tripId, status: trip.status } });
+    }
+    if (trip.rider_rating && trip.rider_rating.stars) {
+      return res.status(409).json({ success: false, message: 'This ride has already been rated', data: { ride_id: tripId, stars: trip.rider_rating.stars } });
+    }
+
+    const now = new Date();
+    // conditional write: two taps at once cannot both rate the ride
+    const rated = await TripDetails.findOneAndUpdate(
+      { trip_id: tripId, status: 'COMPLETED', 'rider_rating.stars': null },
+      { $set: { 'rider_rating.stars': stars, 'rider_rating.comment': comment || null, 'rider_rating.rated_at': now, updated_at: now } },
+      { new: true }
+    );
+    if (!rated) {
+      return res.status(409).json({ success: false, message: 'This ride has already been rated', data: { ride_id: tripId } });
+    }
+    await logTripEvent(tripId, 'RIDER_RATED_DRIVER', { stars, comment: comment || undefined, rated_at: now.toISOString() });
+
+    res.status(200).json({ success: true, message: 'Thanks for rating your ride', data: { ride_id: tripId, stars, comment: comment || null, rated_at: now.toISOString() } });
+  } catch (error) {
+    console.error('[rateDriver]', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to save the rating' });
+  }
+};
+
 const STATUS_TRANSITIONS = {
   DRIVER_ON_THE_WAY: ['ACCEPTED'],
   ARRIVED: ['DRIVER_ON_THE_WAY'],

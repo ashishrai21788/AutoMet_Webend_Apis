@@ -64,6 +64,13 @@ const tripDetailsSchema = new mongoose.Schema({
   cancel_stage: { type: String, default: null, enum: ['before_accept', 'after_accept', null], trim: true },
   cancelled_by: { type: String, default: null, enum: ['USER', 'DRIVER', 'ADMIN', null], trim: true },
 
+  // The rider's rating of the driver for this trip. Written once, after the trip is COMPLETED (POST /api/v1/rides/rating).
+  rider_rating: {
+    stars: { type: Number, default: null, min: 1, max: 5 },
+    comment: { type: String, default: null, trim: true, maxlength: 300 },
+    rated_at: { type: Date, default: null }
+  },
+
   requested_at: { type: Date, required: true, default: Date.now },
   responded_at: { type: Date, default: null },
   driver_on_the_way_at: { type: Date, default: null },
