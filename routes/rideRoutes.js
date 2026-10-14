@@ -34,6 +34,8 @@ router.get('/details', requireRideScopeQuery, rideController.getRideDetails);
 // A rider's or driver's own trips only: the list is scoped to the signed-in actor, and a single trip (or its
 // timeline) is refused to anyone who is not its rider or driver.
 router.get('/', requireRideScopeQuery, rideController.listTrips);
+// GET /api/v1/rides itself is answered by the generic /api/:collection/:id route (collection "v1"), so apps read the list here.
+router.get('/history', requireRideScopeQuery, rideController.listTrips);
 router.get('/:tripId/timeline', requireAuth({ roles: ['user', 'driver'] }), rideController.getTripTimeline);
 router.get('/:tripId', requireAuth({ roles: ['user', 'driver'] }), rideController.getTrip);
 
