@@ -1,5 +1,7 @@
 const crypto = require('crypto');
 const { generateOtp, testCodeFor } = require('../lib/testLogin');
+const { phoneVariants } = require('../lib/phoneVariants');
+const { effectiveTenantId } = require('../lib/appTenant');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const UserOTP = require('../models/userOtpModel');
@@ -182,7 +184,13 @@ exports.loginUser = async (req, res) => {
     }
 
     const UserModel = createModel('users');
-    const user = await UserModel.findOne({ phone: phoneNumber });
+    const candidates = await UserModel.find({ phone: { $in: phoneVariants(phoneNumber) } }).limit(5);
+    let user = candidates[0] || null;
+    if (candidates.length > 1 && req.appTenant) {
+      for (const candidate of candidates) {
+        if ((await effectiveTenantId(candidate)) === req.appTenant.tenantId) { user = candidate; break; }
+      }
+    }
 
     if (!user) {
       return res.status(404).json({

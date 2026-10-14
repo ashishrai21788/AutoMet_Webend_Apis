@@ -1,5 +1,7 @@
 const crypto = require('crypto');
 const { generateOtp, testCodeFor } = require('../lib/testLogin');
+const { phoneVariants } = require('../lib/phoneVariants');
+const { effectiveTenantId } = require('../lib/appTenant');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
 const bcrypt = require('bcryptjs');
@@ -560,7 +562,13 @@ exports.loginDriver = async (req, res) => {
 
     // Find driver by phone number
     const DriverModel = createModel('drivers');
-    const driver = await DriverModel.findOne({ phone: phoneNumber });
+    const candidates = await DriverModel.find({ phone: { $in: phoneVariants(phoneNumber) } }).limit(5);
+    let driver = candidates[0] || null;
+    if (candidates.length > 1 && req.appTenant) {
+      for (const candidate of candidates) {
+        if ((await effectiveTenantId(candidate)) === req.appTenant.tenantId) { driver = candidate; break; }
+      }
+    }
 
     if (!driver) {
       return res.status(404).json({
