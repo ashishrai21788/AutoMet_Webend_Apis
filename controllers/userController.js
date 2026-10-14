@@ -83,7 +83,7 @@ exports.registerUser = async (req, res) => {
 
     const UserModel = createModel('users');
 
-    const existingPhone = await UserModel.findOne({ phone: phoneTrim });
+    const existingPhone = await UserModel.findOne({ phone: { $in: phoneVariants(phoneTrim) } });
     if (existingPhone) {
       return res.status(400).json({
         success: false,

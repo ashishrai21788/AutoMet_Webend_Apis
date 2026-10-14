@@ -8,6 +8,11 @@ const driverLocationController = require('../controllers/driverLocationControlle
 
 // Driver Login Route - MUST come before dynamic routes
 router.post('/drivers/login', ...otpSendLimiters('driver-login'), dynamicController.loginDriver);
+// Driver self-registration (the same handler as POST /api/drivers, which older app builds still call)
+router.post('/drivers/register', ...otpSendLimiters('driver-register'), (req, res) => {
+  req.params.collectionName = 'drivers';
+  return dynamicController.createRecord(req, res);
+});
 
 // Driver Logout Route - MUST come before dynamic routes
 router.post(

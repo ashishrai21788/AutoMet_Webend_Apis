@@ -344,7 +344,7 @@ const createDriver = async (req, res, DriverModel) => {
 
     // Validate BOTH phoneNumber and email for uniqueness
     // Check for existing phone number first (priority)
-    const existingPhone = await DriverModel.findOne({ phone });
+    const existingPhone = await DriverModel.findOne({ phone: { $in: phoneVariants(phone) } });
     if (existingPhone) {
       return res.status(400).json({
         success: false,
