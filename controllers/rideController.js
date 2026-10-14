@@ -1095,7 +1095,7 @@ exports.getTrip = async (req, res) => {
     if (!tripId) {
       return res.status(400).json({ success: false, message: 'tripId is required' });
     }
-    const trip = await Trip.findOne({ trip_id: tripId }).lean();
+    const trip = (await TripDetails.findOne({ trip_id: tripId }).lean()) || (await Trip.findOne({ trip_id: tripId }).lean());
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
     }
@@ -1131,7 +1131,8 @@ exports.listTrips = async (req, res) => {
     }
     const limit = Math.min(Math.max(0, parseInt(req.query.limit, 10) || 20), 100);
     const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
-    const trips = await Trip.find(query).sort({ requested_at: -1 }).skip(skip).limit(limit).lean();
+    // trips are kept in trip_details (the booking record the apps and dispatch use)
+    const trips = await TripDetails.find(query).sort({ requested_at: -1 }).skip(skip).limit(limit).lean();
     const list = trips.map(({ _id, __v, start_otp_attempts, ...t }) => t);
     res.status(200).json({
       success: true,
