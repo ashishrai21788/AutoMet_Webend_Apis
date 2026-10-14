@@ -55,8 +55,8 @@ test('today and the week are counted from completed trips', async () => {
   assert.equal(d.week.trips, 3);
   assert.equal(d.week.earnings, 400.5);
   assert.ok(d.today.trips >= 0 && d.today.trips <= 2);
-  assert.equal(d.rating.average, 4.6);
-  assert.equal(d.rating.totalRides, 12);
+  assert.equal(d.rating.average, 4.6, 'with no rated trips the stored rating is used');
+  assert.equal(d.rating.totalRides, 4, 'completed trips are counted from the trips');
   assert.equal(d.lastTrip.tripId, 'T2');
 });
 
@@ -114,4 +114,15 @@ test('a driver with no vehicle and no trips gets an honest empty summary', async
 test('startOfDay is midnight in the given zone', () => {
   const noon = new Date('2026-10-14T06:30:00Z'); // 12:00 in India
   assert.equal(startOfDay(noon, 'Asia/Kolkata').toISOString(), '2026-10-13T18:30:00.000Z');
+});
+
+test('the rating is the average of what riders gave on the driver\'s trips', async () => {
+  await seed();
+  await db.TripDetails.create(trip('R1', 'COMPLETED', { completed_at: hoursAgo(5), rider_rating: { stars: 5 } }));
+  await db.TripDetails.create(trip('R2', 'COMPLETED', { completed_at: hoursAgo(4), rider_rating: { stars: 4 } }));
+  await db.TripDetails.create(trip('R3', 'COMPLETED', { completed_at: hoursAgo(3) })); // not rated
+  const d = (await call()).body.data;
+  assert.equal(d.rating.average, 4.5);
+  assert.equal(d.rating.ratedTrips, 2);
+  assert.equal(d.rating.totalRides, 3);
 });

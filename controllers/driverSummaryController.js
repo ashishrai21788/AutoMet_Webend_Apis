@@ -40,14 +40,18 @@ async function summary(req, res) {
 
   const fresh = (await createModel('drivers').findOne({ driverId: driver.driverId }).lean()) || driver;
   const [done, recent, assignment, region] = await Promise.all([
-    TripDetails.find({ driver_id: driver.driverId, status: 'COMPLETED', completed_at: { $gte: weekStart } }).sort({ completed_at: -1 }).lean(),
+    TripDetails.find({ driver_id: driver.driverId, status: 'COMPLETED' }).sort({ completed_at: -1 }).limit(1000).lean(),
     TripDetails.find({ driver_id: driver.driverId, requested_at: { $gte: monthAgo } }).lean(),
     req.data.findOne(DriverVehicleAssignment, { driverId: driver.driverId, active: true }),
     fresh.operatingRegionId ? req.data.findOne(ServiceRegion, { regionId: fresh.operatingRegionId }) : null
   ]);
 
-  const today = done.filter((t) => t.completed_at && new Date(t.completed_at) >= dayStart);
+  const week = done.filter((t) => t.completed_at && new Date(t.completed_at) >= weekStart);
+  const today = week.filter((t) => new Date(t.completed_at) >= dayStart);
   const sum = (rows) => round2(rows.reduce((s, t) => s + (Number(t.fare) || 0), 0));
+  // the rating is what riders gave on this driver's trips (stored on each trip, not kept as a counter that can drift)
+  const stars = done.map((t) => Number((t.rider_rating && t.rider_rating.stars) || t['rider_rating.stars'])).filter((n) => n >= 1 && n <= 5);
+  const average = stars.length ? Math.round((stars.reduce((a, b) => a + b, 0) / stars.length) * 10) / 10 : null;
 
   // acceptance over the last 30 days: of the requests this driver was offered, how many they took
   const answered = recent.filter((t) => t.status !== 'REQUESTED' && !(t.status === 'CANCELLED' && t.cancel_stage === 'before_accept' && t.cancelled_by === 'USER'));
@@ -83,8 +87,8 @@ async function summary(req, res) {
     generatedAt: now.toISOString(),
     currency,
     today: { trips: today.length, earnings: sum(today) },
-    week: { trips: done.length, earnings: sum(done) },
-    rating: { average: fresh.rating != null ? Number(fresh.rating) : null, totalRides: fresh.totalRides != null ? Number(fresh.totalRides) : 0 },
+    week: { trips: week.length, earnings: sum(week) },
+    rating: { average: average != null ? average : (Number(fresh.rating) > 0 ? Number(fresh.rating) : null), ratedTrips: stars.length, totalRides: done.length },
     acceptance: { offered: answered.length, accepted: accepted.length, ratePercent: answered.length ? Math.round((accepted.length / answered.length) * 100) : null },
     vehicle: vehicle ? {
       vehicleId: vehicle.vehicleId, registrationNumber: vehicle.registrationNumber, make: vehicle.make || '', model: vehicle.model || '',
