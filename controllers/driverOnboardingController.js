@@ -119,7 +119,8 @@ async function getState(req, res) {
     steps: {
       area: area,
       vehicle: !!vehicle,
-      documents: driverVerification.missing.length === 0 && (!vehicleVerification || vehicleVerification.missing.length === 0) && !!vehicle
+      // done only when every required document is in and none is rejected or expired (those need the driver's attention)
+      documents: !!vehicle && [driverVerification, vehicleVerification].every((x) => !x || (x.missing.length === 0 && x.rejected.length === 0 && x.expired.length === 0))
     }
   });
 }
@@ -190,7 +191,7 @@ async function saveVehicle(req, res) {
       return c.fail(res, 409, 'Your vehicle is already verified. Ask your business to change its details.');
     }
     if (value.registrationKey !== existing.registrationKey && (await req.data.exists(Vehicle, { registrationKey: value.registrationKey }))) {
-      return c.fail(res, 409, 'A vehicle with this registration number already exists', { registrationNumber: 'Already registered' });
+      return c.fail(res, 409, 'This registration number is already registered in this business. If it is your vehicle, ask your business to assign it to you.', { registrationNumber: 'Already registered' });
     }
     await req.data.update(Vehicle, { vehicleId: existing.vehicleId }, {
       registrationNumber: value.registrationNumber, registrationKey: value.registrationKey, make: value.make, model: value.model,
@@ -201,7 +202,7 @@ async function saveVehicle(req, res) {
   }
 
   if (await req.data.exists(Vehicle, { registrationKey: value.registrationKey })) {
-    return c.fail(res, 409, 'A vehicle with this registration number already exists', { registrationNumber: 'Already registered in this business' });
+    return c.fail(res, 409, 'This registration number is already registered in this business. If it is your vehicle, ask your business to assign it to you.', { registrationNumber: 'Already registered in this business' });
   }
   const vehicleId = c.newId('veh');
   try {
@@ -213,7 +214,7 @@ async function saveVehicle(req, res) {
       createdBy: driver.driverId, createdAt: new Date(), updatedAt: new Date()
     });
   } catch (e) {
-    if (c.DUP(e)) return c.fail(res, 409, 'A vehicle with this registration number already exists', { registrationNumber: 'Already registered in this business' });
+    if (c.DUP(e)) return c.fail(res, 409, 'This registration number is already registered in this business. If it is your vehicle, ask your business to assign it to you.', { registrationNumber: 'Already registered in this business' });
     throw e;
   }
   await c.record(req, { subjectType: 'vehicle', subjectId: vehicleId, kind: 'ACCOUNT_STATUS', action: 'CREATED', to: 'INACTIVE', detail: 'Added by the driver in the app' });

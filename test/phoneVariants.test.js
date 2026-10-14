@@ -19,3 +19,10 @@ test('empty input gives nothing', () => {
   assert.deepEqual(phoneVariants(''), []);
   assert.deepEqual(phoneVariants(null), []);
 });
+
+test('a number written with the national leading 0 is the same number', () => {
+  const { phoneVariants: variants, canonicalPhone: canonical } = require('../lib/phoneVariants');
+  assert.equal(canonical('09810000001'), '+919810000001');
+  assert.ok(variants('09810000001').includes('+919810000001'));
+  assert.ok(variants('+919810000001').includes('9810000001'));
+});
