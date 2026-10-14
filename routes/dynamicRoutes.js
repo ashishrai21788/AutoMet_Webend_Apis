@@ -5,9 +5,10 @@ const driverAnalyticsController = require('../controllers/driverAnalyticsControl
 const { requireAuth, blockSensitiveDynamicCrud } = require('../lib/authMiddleware');
 const { otpSendLimiters, createLimiter, clientIp } = require('../lib/rateLimit');
 const driverLocationController = require('../controllers/driverLocationController');
+const { businessOnboardingResponse } = require('../lib/driverOnboarding');
 
 // Driver Login Route - MUST come before dynamic routes
-router.post('/drivers/login', ...otpSendLimiters('driver-login'), dynamicController.loginDriver);
+router.post('/drivers/login', ...otpSendLimiters('driver-login'), businessOnboardingResponse(), dynamicController.loginDriver);
 // Driver self-registration (the same handler as POST /api/drivers, which older app builds still call)
 router.post('/drivers/register', ...otpSendLimiters('driver-register'), (req, res) => {
   req.params.collectionName = 'drivers';
@@ -38,10 +39,10 @@ router.post(
 );
 
 // Driver Current Status Route - MUST come before dynamic routes
-router.get('/drivers/status/:driverId', dynamicController.getDriverStatus);
+router.get('/drivers/status/:driverId', businessOnboardingResponse(), dynamicController.getDriverStatus);
 
 // Protected Driver Routes (require JWT token) - MUST come before dynamic routes
-router.get('/drivers/profile', dynamicController.verifyToken, dynamicController.getDriverProfile);
+router.get('/drivers/profile', dynamicController.verifyToken, businessOnboardingResponse(), dynamicController.getDriverProfile);
 
 // Update Driver Profile Route - MUST come before dynamic routes
 router.put(
