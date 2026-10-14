@@ -31,9 +31,11 @@ router.get('/active', requireRideScopeQuery, rideController.getActiveRide);
 
 router.get('/details', requireRideScopeQuery, rideController.getRideDetails);
 
-router.get('/', rideController.listTrips);
-router.get('/:tripId/timeline', rideController.getTripTimeline);
-router.get('/:tripId', rideController.getTrip);
+// A rider's or driver's own trips only: the list is scoped to the signed-in actor, and a single trip (or its
+// timeline) is refused to anyone who is not its rider or driver.
+router.get('/', requireRideScopeQuery, rideController.listTrips);
+router.get('/:tripId/timeline', requireAuth({ roles: ['user', 'driver'] }), rideController.getTripTimeline);
+router.get('/:tripId', requireAuth({ roles: ['user', 'driver'] }), rideController.getTrip);
 
 router.patch(
   '/:tripId/accept',

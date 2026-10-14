@@ -1082,6 +1082,13 @@ exports.getRideDetails = async (req, res) => {
 /**
  * GET /api/v1/rides/:tripId
  */
+/** True unless an authenticated actor is neither the rider nor the driver of [trip]. */
+function mayReadTrip(req, trip) {
+  const actor = req.authActorId;
+  if (!actor) return true; // enforcement is off (local development)
+  return trip.user_id === actor || trip.driver_id === actor;
+}
+
 exports.getTrip = async (req, res) => {
   try {
     const tripId = (req.params.tripId || '').trim();
@@ -1091,6 +1098,9 @@ exports.getTrip = async (req, res) => {
     const trip = await Trip.findOne({ trip_id: tripId }).lean();
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
+    }
+    if (!mayReadTrip(req, trip)) {
+      return res.status(403).json({ success: false, message: 'You can only view your own trips', data: null });
     }
     const { _id, __v, start_otp_attempts, ...rest } = trip;
     res.status(200).json({ success: true, data: rest });
@@ -1144,9 +1154,12 @@ exports.getTripTimeline = async (req, res) => {
     if (!tripId) {
       return res.status(400).json({ success: false, message: 'tripId is required' });
     }
-    const exists = await Trip.findOne({ trip_id: tripId }).select('trip_id').lean();
+    const exists = await Trip.findOne({ trip_id: tripId }).select('trip_id user_id driver_id').lean();
     if (!exists) {
       return res.status(404).json({ success: false, message: 'Trip not found', data: { trip_id: tripId } });
+    }
+    if (!mayReadTrip(req, exists)) {
+      return res.status(403).json({ success: false, message: 'You can only view your own trips', data: null });
     }
     const events = await TripEvent.find({ trip_id: tripId }).sort({ created_at: 1 }).lean();
     const timeline = events.map(({ _id, __v, ...e }) => ({ ...e, created_at: e.created_at }));
