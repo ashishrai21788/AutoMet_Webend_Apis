@@ -14,6 +14,11 @@ router.post(
   tripsController.estimate
 );
 router.post(
+  '/ride-options',
+  requireAuth({ roles: ['user'] }),
+  tripsController.rideOptions
+);
+router.post(
   '/cancel-request',
   requireAuth({ roles: ['user', 'driver'] }),
   tripsController.cancelRequest

@@ -118,3 +118,26 @@ No body. Finds all `REQUESTED` trips with `timeout_at < now`, sets status to `NO
 - `TRIP_DRIVER_RESPONSE_TIMEOUT_SECONDS` — driver response window in seconds (default: **60**).
 - `DRIVER_INACTIVE_MAX_MINUTES` — if driver has `lastActive`, reject if older than this many minutes (default: **30**). Set to `0` to disable.
 - `TRIP_RATE_LIMIT_SECONDS` — minimum seconds between trip requests to the same driver (default: **60**).
+
+## POST /api/v1/trips/ride-options
+
+The ride types (the business's vehicle categories) a rider can book for a trip, with fare, nearby drivers and ETA.
+Role: `user`. Body: `pickup_latitude`, `pickup_longitude`, `drop_latitude`, `drop_longitude`.
+
+Source of truth is the admin dashboard: service regions (centre point + radius), the categories offered in the
+pickup's region, and the fare rules. A category without a priced rule, or not offered in the region, is not returned.
+
+```json
+{ "success": true, "data": {
+  "service_available": true, "reason": null, "currency": "INR",
+  "region": { "region_id": "rg_…", "city": "Noida", "zone_name": "All areas" },
+  "options": [ { "category_id": "vc_…", "name": "Auto", "description": "", "ride_type": "economy",
+                 "icon": "car", "image_url": "", "passenger_capacity": 3, "luggage_capacity": null,
+                 "fare": 80.5, "currency": "INR", "distance_km": 4.2, "estimated_duration_min": 12,
+                 "drivers_nearby": 2, "eta_min": 3, "available": true } ] } }
+```
+
+`service_available` is false with `reason` `OUTSIDE_SERVICE_AREA`, `NO_RIDE_TYPES` or `NO_PRICED_RIDE_TYPES` when
+nothing can be booked. `POST /create-request` accepts `category_id` (and no `driver_id`) to dispatch by ride type; the
+fare and the nearest-driver search both use that category, and a rejected or ignored offer moves to the next driver of
+the same category.

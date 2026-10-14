@@ -10,7 +10,8 @@ const { priceTrip, loadPricingConfig } = require('../lib/tripPricing');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
 const { findDriverConflict } = require('../lib/driverBusy');
-const { dispatchConfig, rankCandidates, canReoffer } = require('../lib/dispatch');
+const { dispatchConfig, rankCandidates, canReoffer, etaMinutes } = require('../lib/dispatch');
+const { matchRegion, hasGeofence } = require('../lib/regionMatch');
 
 const DRIVER_RESPONSE_TIMEOUT_MS = (Number(process.env.TRIP_DRIVER_RESPONSE_TIMEOUT_SECONDS) || 60) * 1000;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -146,14 +147,20 @@ function buildTripMessageByStatus(status) {
  * Candidates are the rider's business's online drivers, nearest first (lib/dispatch.js); the first one that is reachable,
  * allowed to take rides and free of another ride wins. `exclude` holds drivers already offered this request.
  */
-async function findAutoDriver(user, pickup, { exclude = [], vehicleType } = {}) {
+async function findAutoDriver(user, pickup, { exclude = [], vehicleType, categoryId } = {}) {
   const DriverModel = createModel('drivers');
+  let categoryName;
+  if (categoryId) {
+    const config = await loadPricingConfig(await tenantForAccount(user));
+    const category = config.categories.find((c) => c.categoryId === categoryId);
+    categoryName = category ? category.name : undefined;
+  }
   const online = await DriverModel.find({ isOnline: true }).limit(500).lean();
   const sameShop = [];
   for (const d of online) {
     if (await sameBusiness(user, d)) sameShop.push(d);
   }
-  const ranked = rankCandidates(sameShop, pickup, { exclude, vehicleType });
+  const ranked = rankCandidates(sameShop, pickup, { exclude, vehicleType, categoryId, categoryName });
   for (const { driver, distanceKm } of ranked) {
     if (!isDriverReachable(driver).reachable) continue;
     if (await findDriverConflict(TripDetails, driver.driverId, { includePending: true })) continue;
@@ -200,7 +207,8 @@ async function reofferTrip(trip, now = new Date()) {
     const attempted = Array.from(new Set([...(current.dispatch_attempted || []), current.driver_id]));
     const next = await findAutoDriver(user, { lat: current.pickup.lat, lng: current.pickup.lng }, {
       exclude: attempted,
-      vehicleType: previous && previous.vehicleType
+      categoryId: current.category_id || undefined,
+      vehicleType: current.category_id ? undefined : previous && previous.vehicleType
     });
     if (!next) return false;
 
@@ -256,6 +264,8 @@ exports.createRequest = async (req, res) => {
     const dropLat = body.drop_latitude;
     const dropLng = body.drop_longitude;
     const rideNote = body.ride_note != null ? String(body.ride_note).trim() : null;
+    // the ride type the rider chose (a vehicle category of their business); priced and dispatched by that category
+    const requestedCategoryId = body.category_id != null ? String(body.category_id).trim() : '';
 
     if (!requestId || !userId || !pickupAddress || !dropAddress) {
       return res.status(400).json({
@@ -299,7 +309,10 @@ exports.createRequest = async (req, res) => {
         });
       }
       const wantedType = body.vehicle_type != null ? String(body.vehicle_type).trim() : '';
-      const found = await findAutoDriver(user, { lat: pickupLat, lng: pickupLng }, { vehicleType: wantedType || undefined });
+      const found = await findAutoDriver(user, { lat: pickupLat, lng: pickupLng }, {
+        vehicleType: wantedType || undefined,
+        categoryId: requestedCategoryId || undefined
+      });
       if (!found) {
         return res.status(404).json({
           success: false,
@@ -337,7 +350,8 @@ exports.createRequest = async (req, res) => {
     const pricing = priceTrip(await loadPricingConfig(tenant), {
       pickup: { lat: pickupLat, lng: pickupLng },
       drop: { lat: dropLat, lng: dropLng },
-      vehicleType: driver.vehicleType
+      vehicleType: driver.vehicleType,
+      categoryId: requestedCategoryId || undefined
     });
     if (!pricing.ok) {
       return res.status(pricing.status).json({ success: false, message: pricing.message, error: pricing.code, data: { driver_id: driverId } });
@@ -577,6 +591,96 @@ exports.estimate = async (req, res) => {
  * Body: trip_id, cancelled_by (USER | DRIVER)
  * Cancels a trip that is still in REQUESTED status (before driver accepts).
  */
+/**
+ * POST /api/v1/trips/ride-options
+ * Body: pickup_latitude, pickup_longitude, drop_latitude, drop_longitude.
+ * The ride types (the business's vehicle categories) this rider can book for this trip, each with its fare, how many
+ * drivers of that type are near the pickup and how soon the nearest one could arrive. Everything comes from what the
+ * business configured in the admin dashboard: service regions (centre point and radius), the categories offered in
+ * the pickup's region, and the fare rules. Nothing is stored.
+ */
+exports.rideOptions = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const pickup = { lat: Number(body.pickup_latitude), lng: Number(body.pickup_longitude) };
+    const drop = { lat: Number(body.drop_latitude), lng: Number(body.drop_longitude) };
+    if (!isValidLat(pickup.lat) || !isValidLng(pickup.lng) || !isValidLat(drop.lat) || !isValidLng(drop.lng)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid pickup_latitude, pickup_longitude, drop_latitude and drop_longitude are required.'
+      });
+    }
+
+    const user = req.user;
+    const tenant = user ? await tenantForAccount(user) : req.appTenant || null;
+    const config = await loadPricingConfig(tenant);
+    const answer = (extra) => res.status(200).json({
+      success: true,
+      message: 'Ride options',
+      data: { currency: (config.market && config.market.currency) || null, options: [], ...extra }
+    });
+
+    // service area: with regions that have a centre and radius the pickup must be inside one of them
+    let region = null;
+    if (hasGeofence(config.regions)) {
+      const match = matchRegion(config.regions, pickup);
+      if (!match) return answer({ service_available: false, reason: 'OUTSIDE_SERVICE_AREA', region: null });
+      region = match.region;
+    }
+    const regionInfo = region ? { region_id: region.regionId, city: region.city, zone_name: region.zoneName } : null;
+
+    const offered = config.categories.filter((c) => c.active && (!region || (c.regionIds || []).includes(region.regionId)));
+    if (!offered.length) return answer({ service_available: false, reason: 'NO_RIDE_TYPES', region: regionInfo });
+
+    // drivers of this business that are online, and which of them are already busy
+    const online = await createModel('drivers').find({ isOnline: true }).limit(500).lean();
+    const sameShop = [];
+    for (const d of online) {
+      if (user ? await sameBusiness(user, d) : true) sameShop.push(d);
+    }
+    const busyIds = new Set();
+    if (sameShop.length) {
+      const busy = await TripDetails.find({
+        driver_id: { $in: sameShop.map((d) => d.driverId) },
+        status: { $in: ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'] }
+      }).select('driver_id').lean();
+      busy.forEach((t) => busyIds.add(t.driver_id));
+    }
+    const free = sameShop.filter((d) => !busyIds.has(d.driverId));
+
+    const options = [];
+    for (const category of offered) {
+      const priced = priceTrip(config, { pickup, drop, categoryId: category.categoryId });
+      if (!priced.ok) continue; // not priced yet (or not offered here): the rider is not shown a ride they cannot book
+      const near = rankCandidates(free, pickup, { categoryId: category.categoryId, categoryName: category.name })
+        .filter((c) => Number.isFinite(c.distanceKm));
+      const nearest = near.length ? near[0].distanceKm : null;
+      const est = priced.estimate;
+      options.push({
+        category_id: category.categoryId,
+        name: category.name,
+        description: category.description || '',
+        ride_type: category.rideType,
+        icon: category.icon || 'car',
+        image_url: category.imageUrl || '',
+        passenger_capacity: category.passengerCapacity,
+        luggage_capacity: category.luggageCapacity == null ? null : category.luggageCapacity,
+        fare: est.fare,
+        currency: est.currency,
+        distance_km: est.distance_km,
+        estimated_duration_min: est.duration_min,
+        drivers_nearby: near.length,
+        eta_min: nearest == null ? null : etaMinutes(nearest),
+        available: near.length > 0
+      });
+    }
+    return answer({ service_available: options.length > 0, reason: options.length ? null : 'NO_PRICED_RIDE_TYPES', region: regionInfo, options });
+  } catch (error) {
+    console.error('[trips ride-options]', error);
+    return res.status(500).json({ success: false, message: 'Failed to load ride options' });
+  }
+};
+
 exports.cancelRequest = async (req, res) => {
   try {
     const body = req.body || {};

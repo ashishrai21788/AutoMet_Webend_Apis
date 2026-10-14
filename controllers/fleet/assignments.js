@@ -1,4 +1,5 @@
 const { DriverVehicleAssignment } = require('../../models/fleetModels');
+const { VehicleCategory } = require('../../models/businessModels');
 const c = require('./common');
 const { helpers: dh } = require('./drivers');
 const { helpers: vh } = require('./vehicles');
@@ -61,6 +62,14 @@ async function assign(req, { driverId, vehicleId, reassign }) {
   for (const old of ended) {
     await c.record(req, { subjectType: 'driver', subjectId: old.driverId, kind: 'ASSIGNMENT', action: 'VEHICLE_UNASSIGNED', detail: `Vehicle ${old.vehicleId} (reassigned)` });
     await c.record(req, { subjectType: 'vehicle', subjectId: old.vehicleId, kind: 'ASSIGNMENT', action: 'DRIVER_UNASSIGNED', detail: `Driver ${old.driverId} (reassigned)` });
+  }
+  try {
+    const category = await req.data.findOne(VehicleCategory, { categoryId: vehicle.categoryId });
+    if (category && category.name && driver.vehicleType !== category.name) {
+      await req.legacyData.update(dh.Driver(), { driverId: driver.driverId }, { vehicleType: category.name, updatedAt: now });
+    }
+  } catch (e) {
+    console.warn('[fleet] could not sync the driver vehicle type:', e.message); // the assignment itself already succeeded
   }
   await c.record(req, { subjectType: 'driver', subjectId: driver.driverId, kind: 'ASSIGNMENT', action: 'VEHICLE_ASSIGNED', to: vehicle.vehicleId, detail: `Vehicle ${vehicle.registrationNumber}` });
   await c.record(req, { subjectType: 'vehicle', subjectId: vehicle.vehicleId, kind: 'ASSIGNMENT', action: 'DRIVER_ASSIGNED', to: driver.driverId, detail: `Driver ${c.driverName(driver)}` });
