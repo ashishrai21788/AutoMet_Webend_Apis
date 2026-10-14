@@ -6,9 +6,19 @@ const managed = { driverId: 'D1', eligibleCategoryId: 'vc_1', operatingRegionId:
 const eligible = { eligibility: { eligible: true, reasons: [] } };
 const waiting = (code, message) => ({ eligibility: { eligible: false, reasons: [{ code, message }] } });
 
-test('a driver the business has not touched keeps their own flags', () => {
-  assert.equal(isManagedByBusiness({ driverId: 'D2' }), false);
-  assert.equal(deriveOnboarding({ driver: { driverId: 'D2' }, availability: eligible }), null);
+test('a driver approved under the old self-onboarding keeps working while eligibility is not enforced', () => {
+  const legacy = { driverId: 'D2', verification_status: 'APPROVED', isVehicleAdded: true, isDocumentsUploaded: true };
+  assert.equal(deriveOnboarding({ driver: legacy, availability: { enforced: false, eligibility: { eligible: false, reasons: [] } } }), null);
+  // ...but once the business enforces eligibility, the records decide
+  const r = deriveOnboarding({ driver: legacy, availability: { enforced: true, eligibility: { eligible: false, reasons: [{ code: 'NO_VEHICLE', message: 'No vehicle is assigned' }] } } });
+  assert.equal(r.flags.verification_status, 'UNDER_REVIEW');
+});
+
+test('a driver who is still onboarding follows the business records, even with nothing set yet', () => {
+  const fresh = { driverId: 'D3', verification_status: 'INCOMPLETE' };
+  const r = deriveOnboarding({ driver: fresh, availability: waiting('NO_REGION', 'The driver has no operating region') });
+  assert.equal(r.flags.verification_status, 'UNDER_REVIEW');
+  assert.equal(r.onboarding.reasons[0].code, 'NO_REGION');
 });
 
 test('an eligible managed driver is approved, with vehicle and documents done', () => {
