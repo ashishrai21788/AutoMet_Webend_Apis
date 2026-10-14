@@ -652,9 +652,10 @@ exports.rideOptions = async (req, res) => {
     for (const category of offered) {
       const priced = priceTrip(config, { pickup, drop, categoryId: category.categoryId });
       if (!priced.ok) continue; // not priced yet (or not offered here): the rider is not shown a ride they cannot book
-      const near = rankCandidates(free, pickup, { categoryId: category.categoryId, categoryName: category.name })
-        .filter((c) => Number.isFinite(c.distanceKm));
-      const nearest = near.length ? near[0].distanceKm : null;
+      // a driver whose app has not reported a position yet still counts: dispatch can offer them the ride
+      const near = rankCandidates(free, pickup, { categoryId: category.categoryId, categoryName: category.name });
+      const located = near.filter((c) => Number.isFinite(c.distanceKm));
+      const nearest = located.length ? located[0].distanceKm : null;
       const est = priced.estimate;
       options.push({
         category_id: category.categoryId,

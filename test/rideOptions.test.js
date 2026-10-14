@@ -108,3 +108,14 @@ test('invalid coordinates are refused', async () => {
   const { code } = await run({ pickup_latitude: 'x' });
   assert.equal(code, 400);
 });
+
+test('a driver whose app has not sent a position yet is offered as available, without an ETA', async () => {
+  await seed();
+  db.Driver.rows.length = 0;
+  await db.Driver.create({ driverId: 'd_old', email: 'old@t.local', isOnline: true, accountStatus: 'ACTIVE', tenantId: 't1', eligibleCategoryId: 'c_auto' });
+  const { body } = await run(trip);
+  const auto = body.data.options.find((o) => o.category_id === 'c_auto');
+  assert.equal(auto.available, true);
+  assert.equal(auto.drivers_nearby, 1);
+  assert.equal(auto.eta_min, null);
+});
