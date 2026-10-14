@@ -22,12 +22,19 @@ test('other numbers get a random six-digit code', () => {
   assert.notEqual(generateOtp('9000000000', env), '246810x');
 });
 
-test('nothing is fixed unless both variables are set and valid', () => {
-  assert.equal(testLoginConfig({}), null);
-  assert.equal(testLoginConfig({ TEST_LOGIN_OTP: '246810' }), null);
-  assert.equal(testLoginConfig({ TEST_LOGIN_NUMBERS: '9876543210' }), null);
-  assert.equal(testLoginConfig({ TEST_LOGIN_OTP: '12345', TEST_LOGIN_NUMBERS: '9876543210' }), null);
-  assert.equal(testLoginConfig({ TEST_LOGIN_OTP: '246810', TEST_LOGIN_NUMBERS: '12345' }), null);
+test('without valid variables only the built-in test accounts get the built-in code', () => {
+  for (const bad of [{}, { TEST_LOGIN_OTP: '246810' }, { TEST_LOGIN_NUMBERS: '9000000000' },
+    { TEST_LOGIN_OTP: '12345', TEST_LOGIN_NUMBERS: '9000000000' }, { TEST_LOGIN_OTP: '246810', TEST_LOGIN_NUMBERS: '12345' }]) {
+    const cfg = testLoginConfig(bad);
+    assert.equal(cfg.code, '123456');
+    assert.ok(cfg.numbers.has('9876500001'));
+    assert.ok(!cfg.numbers.has('9000000000'));
+  }
+});
+
+test('TEST_LOGIN_DISABLED=1 turns the fixed code off', () => {
+  assert.equal(testLoginConfig({ TEST_LOGIN_DISABLED: '1' }), null);
+  assert.equal(testLoginConfig({ TEST_LOGIN_DISABLED: '1', TEST_LOGIN_OTP: '246810', TEST_LOGIN_NUMBERS: '9876543210' }), null);
 });
 
 test('last10 normalises phone formats', () => {
@@ -39,5 +46,7 @@ test('testCodeFor returns the code for allow-listed numbers only', () => {
   const { testCodeFor } = require('../lib/testLogin');
   assert.equal(testCodeFor('+91 98765 43210', env), '246810');
   assert.equal(testCodeFor('9000000000', env), undefined);
-  assert.equal(testCodeFor('9876543210', {}), undefined);
+  assert.equal(testCodeFor('9876543210', {}), '123456');
+  assert.equal(testCodeFor('9000000000', {}), undefined);
+  assert.equal(testCodeFor('9876543210', { TEST_LOGIN_DISABLED: '1' }), undefined);
 });
