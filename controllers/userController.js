@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { generateOtp, testCodeFor } = require('../lib/testLogin');
-const { phoneVariants } = require('../lib/phoneVariants');
+const { phoneVariants, canonicalPhone } = require('../lib/phoneVariants');
 const { effectiveTenantId } = require('../lib/appTenant');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
@@ -78,7 +78,7 @@ exports.registerUser = async (req, res) => {
     const nameParts = name.trim().split(/\s+/);
     const firstName = nameParts[0] || name;
     const lastName = nameParts.slice(1).join(' ') || name;
-    const phoneTrim = phone.trim();
+    const phoneTrim = canonicalPhone(phone); // international form, as the dashboard stores numbers
     const emailLower = email ? email.toLowerCase().trim() : null;
 
     const UserModel = createModel('users');

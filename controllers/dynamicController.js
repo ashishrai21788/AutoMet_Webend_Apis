@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { generateOtp, testCodeFor } = require('../lib/testLogin');
-const { phoneVariants } = require('../lib/phoneVariants');
+const { phoneVariants, canonicalPhone } = require('../lib/phoneVariants');
 const { effectiveTenantId } = require('../lib/appTenant');
 const { createModel } = require('../models/dynamicModel');
 const { sendFCMNotification } = require('../config/firestore');
@@ -321,14 +321,13 @@ const createDriver = async (req, res, DriverModel) => {
     } = req.body;
     
     // Validate required fields for driver signup
-    if (!name || !email || !phoneNumber) {
+    if (!name || !phoneNumber) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: name, email, phoneNumber',
+        message: 'Missing required fields: name, phoneNumber',
         data: {
           missingFields: {
             name: !name,
-            email: !email,
             phoneNumber: !phoneNumber
           }
         }
@@ -339,8 +338,9 @@ const createDriver = async (req, res, DriverModel) => {
     const nameParts = name.trim().split(/\s+/);
     const firstName = nameParts[0] || name;
     const lastName = explicitLastName || nameParts.slice(1).join(' ') || name;
-    const phone = phoneNumber;
-    const emailLower = email.toLowerCase().trim();
+    // stored the way the dashboard stores it (international form), so both sides find the same driver
+    const phone = canonicalPhone(phoneNumber);
+    const typedEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
 
     // Validate BOTH phoneNumber and email for uniqueness
     // Check for existing phone number first (priority)
@@ -358,15 +358,15 @@ const createDriver = async (req, res, DriverModel) => {
     }
     
     // Check for existing email (if email is provided)
-    if (email && email.trim()) {
-      const existingEmail = await DriverModel.findOne({ email: emailLower });
+    if (typedEmail) {
+      const existingEmail = await DriverModel.findOne({ email: typedEmail });
       if (existingEmail) {
         return res.status(400).json({
           success: false,
           message: 'Email already registered',
           data: {
             field: 'email',
-            value: email,
+            value: typedEmail,
             existingDriverId: existingEmail.driverId
           }
         });
@@ -375,6 +375,8 @@ const createDriver = async (req, res, DriverModel) => {
     
     // Generate unique driver ID
     const driverId = await generateUniqueDriverId(DriverModel);
+    // no email given: the same unique placeholder the dashboard uses (the driver record needs one)
+    const emailLower = typedEmail || require('../lib/fleetValidation').placeholderEmail(driverId);
     
     // Use explicit password if provided by driver app, otherwise generate random
     const saltRounds = 10;
@@ -388,7 +390,7 @@ const createDriver = async (req, res, DriverModel) => {
       tenantId: req.appTenant ? req.appTenant.tenantId : null,
       firstName,
       lastName,
-      email: email.toLowerCase(),
+      email: emailLower,
       phone,
       passwordHash,
       profilePhoto: 'https://cdn.example.com/drivers/default.jpg',

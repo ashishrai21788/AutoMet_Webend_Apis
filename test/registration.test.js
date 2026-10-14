@@ -81,7 +81,7 @@ test('a driver signs up from the app into the app\'s own business, unverified an
   assert.equal(d.tenantId, 'app_uride');
   assert.equal(d.isOnline, false);
   assert.equal(d.isPhoneVerified, false);
-  assert.equal(d.phone, '9811122233');
+  assert.equal(d.phone, '+919811122233'); // the dashboard's international form
   assert.equal(savedOtps.some((o) => o.driverId === d.driverId), true, 'a sign-in code was created');
   assert.equal(JSON.stringify(r.body).includes('passwordHash'), false);
 });
@@ -135,4 +135,17 @@ test('a rider cannot register with a number that exists in another stored form',
   });
   assert.equal(r.code >= 400 && r.code < 500, true);
   assert.equal(db.User.rows.length, 1);
+});
+
+test('a driver can sign up without an email: a placeholder is used, and the phone is international', async () => {
+  db.Driver.rows.length = 0;
+  const r = await run(dynamicController.createRecord, {
+    params: { collectionName: 'drivers' },
+    body: { name: 'No Mail', phoneNumber: '98 1112 2244' },
+    appTenant: { tenantId: 'app_uride' }
+  });
+  assert.equal(r.code, 201, JSON.stringify(r.body).slice(0, 200));
+  const d = db.Driver.rows[0];
+  assert.match(d.email, /^driver-.+@noreply.invalid$/);
+  assert.equal(d.phone, '+919811122244');
 });
