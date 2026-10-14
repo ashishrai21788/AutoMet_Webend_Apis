@@ -77,11 +77,12 @@ test('acceptance is the share of answered requests the driver took, over 30 days
   await db.TripDetails.create(trip('A3', 'NO_RESPONSE'));
   await db.TripDetails.create(trip('A4', 'REJECTED'));
   await db.TripDetails.create(trip('A5', 'REQUESTED')); // still open: not counted
-  await db.TripDetails.create(trip('A6', 'CANCELLED', { cancel_stage: 'before_accept', cancelled_by: 'USER' })); // the rider changed their mind
+  await db.TripDetails.create(trip('A6', 'CANCELLED_BY_USER', { cancel_stage: 'before_accept', cancelled_by: 'USER' })); // the rider changed their mind
+  await db.TripDetails.create(trip('A7', 'CANCELLED_BY_USER_AFTER_ACCEPTANCE', { cancel_stage: 'after_accept', cancelled_by: 'USER' })); // taken, then the rider cancelled
   const d = (await call()).body.data;
-  assert.equal(d.acceptance.offered, 4);
-  assert.equal(d.acceptance.accepted, 2);
-  assert.equal(d.acceptance.ratePercent, 50);
+  assert.equal(d.acceptance.offered, 5);
+  assert.equal(d.acceptance.accepted, 3);
+  assert.equal(d.acceptance.ratePercent, 60);
 });
 
 test('documents that are rejected, expired or about to expire are listed for the driver', async () => {

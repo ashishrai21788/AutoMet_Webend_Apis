@@ -13,7 +13,8 @@ const c = require('./fleet/common');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXPIRY_WARNING_DAYS = 30;
-const ACCEPTED_STATUSES = ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING', 'COMPLETED'];
+// the driver took the request: it moved past ACCEPTED, or the rider (or the driver) cancelled after that
+const ACCEPTED_STATUSES = ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING', 'COMPLETED', 'CANCELLED_BY_USER_AFTER_ACCEPTANCE', 'CANCELLED_BY_DRIVER'];
 
 /** Midnight (as a UTC instant) of the current day in an IANA time zone. */
 function startOfDay(now, timeZone) {
@@ -54,8 +55,10 @@ async function summary(req, res) {
   const average = stars.length ? Math.round((stars.reduce((a, b) => a + b, 0) / stars.length) * 10) / 10 : null;
 
   // acceptance over the last 30 days: of the requests this driver was offered, how many they took
-  const answered = recent.filter((t) => t.status !== 'REQUESTED' && !(t.status === 'CANCELLED' && t.cancel_stage === 'before_accept' && t.cancelled_by === 'USER'));
-  const accepted = answered.filter((t) => ACCEPTED_STATUSES.includes(t.status) || (t.status === 'CANCELLED' && t.cancel_stage === 'after_accept'));
+  // a request the rider withdrew before any answer says nothing about the driver, so it is not counted either way
+  const withdrawn = (t) => t.status === 'CANCELLED_BY_USER' || (t.cancel_stage === 'before_accept' && t.cancelled_by === 'USER');
+  const answered = recent.filter((t) => t.status !== 'REQUESTED' && !withdrawn(t));
+  const accepted = answered.filter((t) => ACCEPTED_STATUSES.includes(t.status));
 
   const vehicle = assignment ? await req.data.findOne(Vehicle, { vehicleId: assignment.vehicleId }) : null;
   const category = vehicle ? await req.data.findOne(VehicleCategory, { categoryId: vehicle.categoryId }) : null;
