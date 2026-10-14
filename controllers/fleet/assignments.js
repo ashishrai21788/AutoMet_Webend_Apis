@@ -65,9 +65,14 @@ async function assign(req, { driverId, vehicleId, reassign }) {
   }
   try {
     const category = await req.data.findOne(VehicleCategory, { categoryId: vehicle.categoryId });
-    if (category && category.name && driver.vehicleType !== category.name) {
-      await req.legacyData.update(dh.Driver(), { driverId: driver.driverId }, { vehicleType: category.name, updatedAt: now });
-    }
+    // what the rider sees on the driver card: the category, the plate and the model of the assigned vehicle
+    const patch = { updatedAt: now };
+    if (category && category.name && driver.vehicleType !== category.name) patch.vehicleType = category.name;
+    if (vehicle.registrationNumber && driver.vehicleNumber !== vehicle.registrationNumber) patch.vehicleNumber = vehicle.registrationNumber;
+    const model = [vehicle.make, vehicle.model].filter(Boolean).join(' ').trim();
+    if (model && driver.vehicleModel !== model) patch.vehicleModel = model;
+    if (vehicle.color && driver.vehicleColor !== vehicle.color) patch.vehicleColor = vehicle.color;
+    if (Object.keys(patch).length > 1) await req.legacyData.update(dh.Driver(), { driverId: driver.driverId }, patch);
   } catch (e) {
     console.warn('[fleet] could not sync the driver vehicle type:', e.message); // the assignment itself already succeeded
   }
