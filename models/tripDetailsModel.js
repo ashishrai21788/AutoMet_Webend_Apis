@@ -73,6 +73,8 @@ const tripDetailsSchema = new mongoose.Schema({
 
   // Wrong start-code attempts for this trip (see lib/tripStartOtp.js). The code itself is derived, never stored.
   start_otp_attempts: { type: Number, default: 0, min: 0 },
+  // when the rider's start code was accepted. A trip with started_at but no value here began without the code check.
+  start_otp_verified_at: { type: Date, default: null },
 
   // The rider's rating of the driver for this trip. Written once, after the trip is COMPLETED (POST /api/v1/rides/rating).
   rider_rating: {

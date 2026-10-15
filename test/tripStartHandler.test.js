@@ -45,9 +45,11 @@ test('a wrong code is refused and counted; the right code starts the trip', asyn
   assert.equal(bad.body.error, 'OTP_INVALID');
   assert.equal(row(t.trip_id).status, 'ARRIVED');
   assert.equal(row(t.trip_id).start_otp_attempts, 1);
+  assert.equal(row(t.trip_id).start_otp_verified_at || null, null, 'a refused code leaves no stamp');
   const ok = await start(t, { otp: good });
   assert.equal(ok.statusCode, 200);
   assert.equal(row(t.trip_id).status, 'ON_GOING');
+  assert.ok(row(t.trip_id).start_otp_verified_at, 'an accepted code is stamped on the trip');
 });
 
 test('after five wrong codes even the right one is refused', async () => {

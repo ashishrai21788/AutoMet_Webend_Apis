@@ -910,6 +910,8 @@ exports.updateTripStatus = async (req, res) => {
             data: { code: verdict.code, trip_id: tripId }
           });
         }
+        // proof, kept on the trip, that this start went through the code check
+        if (tripStartOtp.enabled()) updatePayload.start_otp_verified_at = now;
       }
       const moved = await TripDetails.findOneAndUpdate(
         { trip_id: tripId, status: tripDetails.status },
