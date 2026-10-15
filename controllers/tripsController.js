@@ -199,7 +199,10 @@ exports.nearbyDrivers = async (req, res) => {
     }
     const cfg = dispatchConfig();
     const free = sameShop.filter((d) => !busyIds.has(d.driverId));
-    const near = rankCandidates(free, centre, { radiusKm: Math.max(cfg.radiusKm, 5) })
+    // the rider's map shows what is close by: 1 km unless the app asks for another radius (0.2 to 5 km)
+    const asked = Number(body.radius_km);
+    const radiusKm = Number.isFinite(asked) && asked > 0 ? Math.min(Math.max(asked, 0.2), 5) : Math.max(cfg.radiusKm, 5);
+    const near = rankCandidates(free, centre, { radiusKm })
       .filter((c) => Number.isFinite(c.distanceKm))
       .slice(0, 30);
     const vehicles = near.map(({ driver, distanceKm }) => {

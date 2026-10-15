@@ -74,3 +74,13 @@ test('invalid coordinates are refused', async () => {
   assert.equal((await run({ latitude: 'x', longitude: 1 })).code, 400);
   assert.equal((await run({})).code, 400);
 });
+
+test('radius_km narrows what is drawn and is clamped', async () => {
+  await seed();
+  await db.Driver.create(driver('a', 0.4));
+  await db.Driver.create(driver('b', 3));
+  let r = await run({ latitude: CENTRE.lat, longitude: CENTRE.lng, radius_km: 1 });
+  assert.equal(r.body.data.count, 1);
+  r = await run({ latitude: CENTRE.lat, longitude: CENTRE.lng, radius_km: 99 });
+  assert.equal(r.body.data.count, 2);
+});
