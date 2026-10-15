@@ -11,6 +11,8 @@ const { findDriverConflict } = require('../lib/driverBusy');
 const tripStartOtp = require('../lib/tripStartOtp');
 const { distanceKm: haversineKm, etaMinutes } = require('../lib/dispatch');
 const { positionOf, presenceOf } = require('../lib/driverLocation');
+const { loadPricingConfig } = require('../lib/tripPricing');
+const { tenantForAccount } = require('../lib/appTenant');
 
 const DRIVER_RESPONSE_TIMEOUT_SECONDS = Number(process.env.RIDE_REQUEST_TIMEOUT_SECONDS) || 60;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -1082,6 +1084,13 @@ exports.getRideDetails = async (req, res) => {
           updated_at: driverDoc.locationUpdatedAt || null,
           state: p.state
         };
+        // the business-uploaded top-view icon for this ride's category, so the map draws the right vehicle
+        try {
+          const riderDoc = await UserModel.findOne({ userId: trip.user_id });
+          const cfg = await loadPricingConfig(riderDoc ? await tenantForAccount(riderDoc) : req.appTenant || null);
+          const cat = (cfg.categories || []).find((c) => c.categoryId === trip.category_id);
+          if (cat && cat.mapIconUrl) data.driver_location.map_icon_url = cat.mapIconUrl;
+        } catch (_) { /* the app falls back to its built-in icon */ }
         const target = trip.status === 'ON_GOING' ? trip.drop : trip.pickup;
         if (target && Number.isFinite(target.lat) && Number.isFinite(target.lng) && trip.status !== 'ARRIVED') {
           const km = haversineKm(pos, { lat: target.lat, lng: target.lng });

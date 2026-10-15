@@ -7,10 +7,16 @@ const otp = require('../lib/tripStartOtp');
 const trip = (extra = {}) => ({ trip_id: 'amt_1', status: 'DRIVER_ON_THE_WAY', responded_at: '2026-10-13T10:00:00.000Z', ...extra });
 const withFlag = (value, fn) => { const prev = process.env.TRIP_START_OTP; if (value === undefined) delete process.env.TRIP_START_OTP; else process.env.TRIP_START_OTP = value; try { return fn(); } finally { if (prev === undefined) delete process.env.TRIP_START_OTP; else process.env.TRIP_START_OTP = prev; } };
 
-test('off by default: nothing is shown and nothing is required', () => withFlag(undefined, () => {
+test('switched off with TRIP_START_OTP=off: nothing is shown and nothing is required', () => withFlag('off', () => {
   assert.equal(otp.enabled(), false);
   assert.equal(otp.codeForRider(trip()), null);
   assert.deepEqual(otp.check(trip(), undefined), { ok: true });
+}));
+
+test('on by default: the rider gets a code and the driver must give it', () => withFlag(undefined, () => {
+  assert.equal(otp.enabled(), true);
+  assert.match(otp.codeForRider(trip()), /^[0-9]{4}$/);
+  assert.equal(otp.check(trip(), undefined).code, 'OTP_REQUIRED');
 }));
 
 test('the code is four digits, stable for a trip and different between trips', () => withFlag('on', () => {
