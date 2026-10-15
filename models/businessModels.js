@@ -32,6 +32,7 @@ const vehicleCategorySchema = new mongoose.Schema({
   description: { type: String, default: '', trim: true },
   icon: { type: String, default: 'car' }, // preset icon key
   imageUrl: { type: String, default: '' }, // optional https image
+  mapIconUrl: { type: String, default: '' }, // optional https top-view icon drawn on the rider's map
   passengerCapacity: { type: Number, required: true },
   luggageCapacity: { type: Number, default: null },
   rideType: { type: String, required: true },

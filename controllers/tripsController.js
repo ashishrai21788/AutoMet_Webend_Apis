@@ -199,6 +199,12 @@ exports.nearbyDrivers = async (req, res) => {
     }
     const cfg = dispatchConfig();
     const free = sameShop.filter((d) => !busyIds.has(d.driverId));
+    // each category's map icon (a business-uploaded top view), so the app can draw the right vehicle
+    const iconByCategory = {};
+    try {
+      const tenant = user ? await tenantForAccount(user) : req.appTenant || null;
+      (await loadPricingConfig(tenant)).categories.forEach((c) => { if (c.mapIconUrl) iconByCategory[c.categoryId] = c.mapIconUrl; });
+    } catch (_) { /* icons are optional */ }
     // the rider's map shows what is close by: 1 km unless the app asks for another radius (0.2 to 5 km)
     const asked = Number(body.radius_km);
     const radiusKm = Number.isFinite(asked) && asked > 0 ? Math.min(Math.max(asked, 0.2), 5) : Math.max(cfg.radiusKm, 5);
@@ -213,6 +219,7 @@ exports.nearbyDrivers = async (req, res) => {
         heading: Number.isFinite(Number(driver.locationHeading)) ? Number(driver.locationHeading) : null,
         category_id: driver.eligibleCategoryId || null,
         vehicle_type: driver.vehicleType || null,
+        map_icon_url: iconByCategory[driver.eligibleCategoryId] || null,
         distance_km: Math.round(distanceKm * 10) / 10
       };
     });
@@ -717,6 +724,7 @@ exports.rideOptions = async (req, res) => {
         ride_type: category.rideType,
         icon: category.icon || 'car',
         image_url: category.imageUrl || '',
+        map_icon_url: category.mapIconUrl || '',
         passenger_capacity: category.passengerCapacity,
         luggage_capacity: category.luggageCapacity == null ? null : category.luggageCapacity,
         fare: est.fare,

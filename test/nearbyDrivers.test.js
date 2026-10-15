@@ -51,7 +51,7 @@ test('only available drivers of the rider\'s business near the point are returne
   assert.ok(v.distance_km <= 1.5);
   const text = JSON.stringify(r.body);
   for (const secret of ['near', 'driverId', 'email', 'phone', 'busy', 'other']) assert.ok(!text.includes(`"${secret}"`) || secret === 'near', secret);
-  assert.equal(Object.keys(v).sort().join(','), 'category_id,distance_km,heading,lat,lng,vehicle_type');
+  assert.equal(Object.keys(v).sort().join(','), 'category_id,distance_km,heading,lat,lng,map_icon_url,vehicle_type');
 });
 
 test('a driver whose app has not reported a position is not drawn', async () => {

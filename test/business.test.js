@@ -102,6 +102,8 @@ test('category validation', () => {
   assert.ok(v.validateCategory({ ...ok, rideType: 'spaceship' }).errors.rideType);
   assert.ok(v.validateCategory({ ...ok, regionIds: [] }).errors.regionIds);
   assert.ok(v.validateCategory({ ...ok, imageUrl: 'http://insecure.test/x.png' }).errors.imageUrl);
+  assert.ok(v.validateCategory({ ...ok, mapIconUrl: 'http://insecure.test/x.png' }).errors.mapIconUrl);
+  assert.equal(v.validateCategory({ ...ok, mapIconUrl: 'https://cdn.test/top.png' }).value.mapIconUrl, 'https://cdn.test/top.png');
   assert.ok(v.validateCategory({ ...ok, icon: 'rocket' }).errors.icon);
   assert.equal(v.validateCategory({ ...ok, luggageCapacity: '' }).value.luggageCapacity, null);
 });
