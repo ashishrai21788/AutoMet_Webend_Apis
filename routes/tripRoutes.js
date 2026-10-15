@@ -19,6 +19,11 @@ router.post(
   tripsController.rideOptions
 );
 router.post(
+  '/nearby-drivers',
+  requireAuth({ roles: ['user'] }),
+  tripsController.nearbyDrivers
+);
+router.post(
   '/cancel-request',
   requireAuth({ roles: ['user', 'driver'] }),
   tripsController.cancelRequest

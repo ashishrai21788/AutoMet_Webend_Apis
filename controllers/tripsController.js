@@ -170,6 +170,56 @@ async function findAutoDriver(user, pickup, { exclude = [], vehicleType, categor
   return null;
 }
 
+/**
+ * POST /api/v1/trips/nearby-drivers  { latitude, longitude }
+ * The positions of this business's available drivers around a point, for the rider's map. It carries no driver
+ * identity: only where a vehicle is, which kind it is and which way it faces. Drivers who are busy, offline or
+ * whose position is stale are left out, so every marker is a vehicle that could actually be offered the ride.
+ */
+exports.nearbyDrivers = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const centre = { lat: Number(body.latitude), lng: Number(body.longitude) };
+    if (!isValidLat(centre.lat) || !isValidLng(centre.lng)) {
+      return res.status(400).json({ success: false, message: 'Valid latitude and longitude are required.' });
+    }
+    const user = req.user;
+    const online = await createModel('drivers').find({ isOnline: true }).limit(500).lean();
+    const sameShop = [];
+    for (const d of online) {
+      if (!user || (await sameBusiness(user, d))) sameShop.push(d);
+    }
+    const busyIds = new Set();
+    if (sameShop.length) {
+      const busy = await TripDetails.find({
+        driver_id: { $in: sameShop.map((d) => d.driverId) },
+        status: { $in: ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'] }
+      }).select('driver_id').lean();
+      busy.forEach((t) => busyIds.add(t.driver_id));
+    }
+    const cfg = dispatchConfig();
+    const free = sameShop.filter((d) => !busyIds.has(d.driverId));
+    const near = rankCandidates(free, centre, { radiusKm: Math.max(cfg.radiusKm, 5) })
+      .filter((c) => Number.isFinite(c.distanceKm))
+      .slice(0, 30);
+    const vehicles = near.map(({ driver, distanceKm }) => {
+      const c = driver.lastLocation.coordinates;
+      return {
+        lat: Math.round(c[1] * 1e5) / 1e5,
+        lng: Math.round(c[0] * 1e5) / 1e5,
+        heading: Number.isFinite(Number(driver.locationHeading)) ? Number(driver.locationHeading) : null,
+        category_id: driver.eligibleCategoryId || null,
+        vehicle_type: driver.vehicleType || null,
+        distance_km: Math.round(distanceKm * 10) / 10
+      };
+    });
+    return res.status(200).json({ success: true, message: 'Nearby drivers', data: { count: vehicles.length, vehicles } });
+  } catch (error) {
+    console.error('[trips nearby-drivers]', error);
+    return res.status(500).json({ success: false, message: 'Failed to load nearby drivers' });
+  }
+};
+
 /** The push payload the driver app shows as "New Ride Request", built from a stored trip. */
 function ridePushPayload(trip, riderName) {
   return {
