@@ -49,6 +49,8 @@ const tripDetailsSchema = new mongoose.Schema({
   fare_breakdown: { type: mongoose.Schema.Types.Mixed, default: null },
   region_id: { type: String, default: null },
   category_id: { type: String, default: null },
+  // Random token of the public ride-tracking link the rider shared (null until shared). See lib/tripShare.js.
+  share_token: { type: String, default: null, index: true },
 
   status: {
     type: String,

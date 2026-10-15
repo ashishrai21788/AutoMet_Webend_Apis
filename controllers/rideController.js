@@ -9,6 +9,8 @@ const { emitToDriver, emitToUser } = require('../config/socket');
 const { estimateTrip } = require('../lib/fare');
 const { findDriverConflict } = require('../lib/driverBusy');
 const tripStartOtp = require('../lib/tripStartOtp');
+const { distanceKm: haversineKm, etaMinutes } = require('../lib/dispatch');
+const { positionOf, presenceOf } = require('../lib/driverLocation');
 
 const DRIVER_RESPONSE_TIMEOUT_SECONDS = Number(process.env.RIDE_REQUEST_TIMEOUT_SECONDS) || 60;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -59,7 +61,12 @@ function toDriverProfileForDisplay(doc) {
     vehicle_type: d.vehicleType || null,
     vehicle_number: d.vehicleNumber || null,
     vehicle_model: d.vehicleModel || null,
-    vehicle_color: d.vehicleColor || null
+    vehicle_color: d.vehicleColor || null,
+    seats: d.seatingCapacity != null ? Number(d.seatingCapacity) : null,
+    fuel_type: d.fuleType || null,
+    // approved by the business, and the documents are on record
+    verified: d.driverVerificationStatus === 'APPROVED',
+    id_verified: d.driverVerificationStatus === 'APPROVED' && d.isDocumentsUploaded !== false
   };
 }
 
@@ -1063,6 +1070,24 @@ exports.getRideDetails = async (req, res) => {
     if (isUser) {
       const driverDoc = await DriverModel.findOne({ driverId: trip.driver_id });
       data.driver = toDriverProfileForDisplay(driverDoc);
+      // where the driver is now and how far from the next stop (pickup until the ride starts, then the drop)
+      const pos = driverDoc ? positionOf(driverDoc) : null;
+      const live = ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'].includes(trip.status);
+      if (pos && live) {
+        const p = presenceOf(driverDoc);
+        data.driver_location = {
+          lat: pos.lat,
+          lng: pos.lng,
+          heading: Number.isFinite(Number(driverDoc.locationHeading)) ? Number(driverDoc.locationHeading) : null,
+          updated_at: driverDoc.locationUpdatedAt || null,
+          state: p.state
+        };
+        const target = trip.status === 'ON_GOING' ? trip.drop : trip.pickup;
+        if (target && Number.isFinite(target.lat) && Number.isFinite(target.lng) && trip.status !== 'ARRIVED') {
+          const km = haversineKm(pos, { lat: target.lat, lng: target.lng });
+          data.eta = { minutes: etaMinutes(km), km: Math.round(km * 10) / 10, to: trip.status === 'ON_GOING' ? 'DROP' : 'PICKUP' };
+        }
+      }
       // The rider's start code (null unless TRIP_START_OTP=on and the driver is coming / has arrived). Never sent to the driver.
       const startCode = tripStartOtp.codeForRider(trip);
       if (startCode) data.start_otp = startCode; // absent unless the feature is on and a code is due

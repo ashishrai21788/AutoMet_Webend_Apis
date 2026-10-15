@@ -150,6 +150,20 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// The public ride-tracking page (a small PWA) behind a shared link. It is HTML, so it is answered before the JSON defaults.
+const trackPage = require('./lib/trackPage');
+app.get('/t/manifest.webmanifest', (req, res) => res.type('application/manifest+json').send(trackPage.MANIFEST));
+app.get('/t/sw.js', (req, res) => res.set('Service-Worker-Allowed', '/t/').type('application/javascript').send(trackPage.SW));
+app.get('/t/icon.svg', (req, res) => res.type('image/svg+xml').send(trackPage.ICON));
+app.get('/t/:token', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store',
+    'Referrer-Policy': 'strict-origin-when-cross-origin', // the map tiles ask for a referrer
+    'X-Robots-Tag': 'noindex, nofollow'
+  });
+  res.type('html').send(trackPage.PAGE);
+});
+
 // CORS: web pages only from the allowed dashboards; mobile apps and Postman send no Origin and are unaffected
 app.use(corsMiddleware());
 app.use((req, res, next) => {

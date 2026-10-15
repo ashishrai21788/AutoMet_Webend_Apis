@@ -4,6 +4,7 @@ const rideController = require('../controllers/rideController');
 const tripsController = require('../controllers/tripsController');
 const { requireAuth, requireRideScopeQuery, requireSchedulerSecret } = require('../lib/authMiddleware');
 const { deprecateLegacyRideApi } = require('../lib/deprecationHeaders');
+const shareController = require('../controllers/shareController');
 
 // Create ride request (user → driver) — legacy; prefer /trips/create-request
 router.post(
@@ -26,6 +27,9 @@ router.post(
   requireAuth({ roles: ['user'], enforceBodyUserId: true }),
   rideController.rateDriver
 );
+
+// the rider's link that lets anyone follow this ride (public page /t/:token)
+router.post('/share', requireAuth({ roles: ['user'] }), shareController.createShare);
 
 router.get('/active', requireRideScopeQuery, rideController.getActiveRide);
 

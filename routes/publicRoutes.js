@@ -3,10 +3,15 @@ const router = express.Router();
 const { createLimiter } = require('../lib/rateLimit');
 const { clientIp } = require('../lib/rateLimit');
 const publicController = require('../controllers/publicController');
+const shareController = require('../controllers/shareController');
 
 // No sign-in, so it is limited per address (generous: every app start calls it once)
 const limit = createLimiter({ name: 'public-config-ip', windowMs: 10 * 60 * 1000, max: 120, key: (r) => `public:config:${clientIp(r)}` });
 
 router.get('/business/config', limit, publicController.businessConfig);
+
+// A shared ride, by its random link token (the page /t/:token polls this); read-only and sanitised
+const trackLimit = createLimiter({ name: 'public-track-ip', windowMs: 60 * 1000, max: 60, key: (r) => `public:track:${clientIp(r)}` });
+router.get('/track/:token', trackLimit, shareController.publicTrack);
 
 module.exports = router;
