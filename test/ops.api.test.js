@@ -23,6 +23,10 @@ const DAY = 86400000;
 const now = Date.now();
 const ago = (ms) => new Date(now - ms);
 const ahead = (days) => new Date(now + days * DAY);
+// A moment earlier in the business's own calendar day (a fraction of the time elapsed since its midnight). Fixed offsets
+// such as "30 minutes ago" fall on yesterday when the suite runs just after midnight.
+const dayStartMs = startOfDay(new Date(now), 'Asia/Kolkata').getTime();
+const today = (fraction) => new Date(dayStartMs + (now - dayStartMs) * fraction);
 
 // ---------- pure: alerts and time zones ----------
 
@@ -141,16 +145,16 @@ test.before(async () => {
   const trip = (id, tenantId, userId, driverId, status, extra = {}) => db.TripDetails.create({
     trip_id: id, request_id: `req_${id}`, user_id: userId, driver_id: driverId, tenant_id: tenantId, status,
     pickup: { address: 'FC Road', lat: 18.52, lng: 73.84 }, drop: { address: 'Airport', lat: 18.58, lng: 73.91 }, fare: 250, currency: 'INR',
-    fare_basis: 'ESTIMATE', payment_mode: 'CASH', region_id: 'rg_a', category_id: 'vc_a', requested_at: ago(60 * 60000), timeout_at: ago(0), ...extra
+    fare_basis: 'ESTIMATE', payment_mode: 'CASH', region_id: 'rg_a', category_id: 'vc_a', requested_at: today(0.1), timeout_at: ago(0), ...extra
   });
-  await trip('T1', 'app_a', 'usr_a1', 'drv_a1', 'COMPLETED', { completed_at: ago(30 * 60000), started_at: ago(50 * 60000), arrived_at: ago(55 * 60000), responded_at: ago(58 * 60000), fare: 300 });
-  await trip('T2', 'app_a', 'usr_a1', 'drv_a1', 'ON_GOING', { started_at: ago(5 * 60000) });
+  await trip('T1', 'app_a', 'usr_a1', 'drv_a1', 'COMPLETED', { completed_at: today(0.6), started_at: today(0.5), arrived_at: today(0.4), responded_at: today(0.3), fare: 300 });
+  await trip('T2', 'app_a', 'usr_a1', 'drv_a1', 'ON_GOING', { started_at: today(0.7) });
   await trip('T3', 'app_a', 'usr_a2', 'drv_a1', 'REQUESTED');
-  await trip('T4', 'app_a', 'usr_a2', 'drv_a1', 'CANCELLED_BY_USER', { cancelled_by: 'USER', cancel_stage: 'before_accept', cancellation_reason: 'Changed my mind', cancelled_at: ago(10 * 60000) });
+  await trip('T4', 'app_a', 'usr_a2', 'drv_a1', 'CANCELLED_BY_USER', { cancelled_by: 'USER', cancel_stage: 'before_accept', cancellation_reason: 'Changed my mind', cancelled_at: today(0.5) });
   await trip('T5', 'app_a', 'usr_a1', 'drv_a1', 'COMPLETED', { requested_at: ago(5 * DAY), completed_at: ago(5 * DAY), fare: 100 });
-  await trip('TB', 'app_b', 'usr_b1', 'drv_b1', 'COMPLETED', { completed_at: ago(10 * 60000), fare: 999 });
-  await trip('TD', null, 'usr_old', 'drv_old', 'COMPLETED', { completed_at: ago(10 * 60000), fare: 50 });
-  await db.TripEvent.create({ trip_id: 'T1', event: 'ride_request_accepted', created_at: ago(58 * 60000) });
+  await trip('TB', 'app_b', 'usr_b1', 'drv_b1', 'COMPLETED', { completed_at: today(0.5), fare: 999 });
+  await trip('TD', null, 'usr_old', 'drv_old', 'COMPLETED', { completed_at: today(0.5), fare: 50 });
+  await db.TripEvent.create({ trip_id: 'T1', event: 'ride_request_accepted', created_at: today(0.3) });
 
   await db.DriverDocument.create({ tenantId: 'app_a', docId: 'dd1', driverId: 'drv_a1', type: 'DRIVING_LICENSE', status: 'APPROVED', expiryDate: ahead(-2), file: { key: 'k', mime: 'image/jpeg', size: 1 } });
 
