@@ -72,6 +72,12 @@ test('offers only the categories of the pickup region, each priced, with nearby 
   assert.equal(byId.c_auto.drivers_nearby, 1);
   assert.equal(byId.c_cab.drivers_nearby, 2);
   assert.ok(byId.c_cab.fare > byId.c_auto.fare, 'the cab rule is dearer per km');
+  // the range a rider sees: the estimate at the bottom, a slower trip at the top
+  for (const o of Object.values(byId)) {
+    assert.equal(o.fare_min, o.fare);
+    assert.ok(o.fare_max >= o.fare_min);
+    assert.ok(o.duration_min_high >= o.duration_min_low);
+  }
   assert.ok(byId.c_auto.eta_min >= 1);
   assert.equal(byId.c_auto.available, true);
   assert.equal(body.data.currency, 'INR');

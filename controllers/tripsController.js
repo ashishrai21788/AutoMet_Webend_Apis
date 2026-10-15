@@ -717,9 +717,13 @@ exports.rideOptions = async (req, res) => {
         passenger_capacity: category.passengerCapacity,
         luggage_capacity: category.luggageCapacity == null ? null : category.luggageCapacity,
         fare: est.fare,
+        fare_min: est.fare_min != null ? est.fare_min : est.fare,
+        fare_max: est.fare_max != null ? est.fare_max : est.fare,
         currency: est.currency,
         distance_km: est.distance_km,
         estimated_duration_min: est.duration_min,
+        duration_min_low: est.duration_min_low != null ? est.duration_min_low : est.duration_min,
+        duration_min_high: est.duration_min_high != null ? est.duration_min_high : est.duration_min,
         drivers_nearby: near.length,
         eta_min: nearest == null ? null : etaMinutes(nearest),
         available: near.length > 0
