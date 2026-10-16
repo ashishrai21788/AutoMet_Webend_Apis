@@ -769,3 +769,19 @@ test('audit: sensitive actions are on record with the actor, never with secrets'
   assert.equal(blob.includes('passwordHash'), false);
   assert.ok(db.AdminAudit.rows.filter((r) => r.tenantId === 'app_a' && r.action.startsWith('driver')).every((r) => r.actorEmail));
 });
+
+test('a change saved in the dashboard reaches the apps at once, not a minute later (the business cache is cleared on every admin write)', async () => {
+  const { tenantById } = require('../lib/appTenant');
+  // warm the cache with the current business record
+  const before = await tenantById('app_a');
+  assert.notEqual(before.rideSettings && before.rideSettings.requireEligibleDrivers, true);
+  const saved = await call('PUT', '/business/ride-settings', { ...ctx.a, body: { requireEligibleDrivers: true } });
+  assert.equal(saved.status, 200);
+  const after = await tenantById('app_a');
+  assert.equal(after.rideSettings.requireEligibleDrivers, true, 'the booking path sees the new setting immediately');
+  // a refused write changes nothing and the cache is left alone
+  const bad = await call('PUT', '/business/ride-settings', { ...ctx.a, body: { requireEligibleDrivers: 'yes' } });
+  assert.equal(bad.status, 400);
+  await call('PUT', '/business/ride-settings', { ...ctx.a, body: { requireEligibleDrivers: false } });
+  assert.equal((await tenantById('app_a')).rideSettings.requireEligibleDrivers, false);
+});

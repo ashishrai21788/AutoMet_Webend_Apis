@@ -27,6 +27,15 @@ const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.fi
 
 const router = express.Router();
 
+// The apps read each business through a short cache (lib/appTenant). Any successful change made in the dashboard clears it, so a
+// setting, a name or a suspension reaches riders and drivers at once rather than up to a minute later (on this instance).
+router.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    res.on('finish', () => { if (res.statusCode < 400) require('../lib/appTenant').clearAppTenantCache(); });
+  }
+  next();
+});
+
 router.post('/auth/login', ...adminLoginLimiters(), ctrl.login);
 router.post('/auth/forgot-password', ...adminForgotLimiters(), ctrl.forgotPassword);
 router.post('/auth/reset-password', ...adminResetLimiters(), ctrl.resetPassword);
