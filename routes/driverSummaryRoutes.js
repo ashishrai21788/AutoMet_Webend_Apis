@@ -7,4 +7,7 @@ const { requireAuth } = require('../lib/authMiddleware');
 // Mounted at /api/v1/driver/summary. The signed-in driver's own numbers for the app's Home and Profile.
 router.get('/', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.summary);
 
+router.get('/detail', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.detail);
+router.get('/trips', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.trips);
+
 module.exports = router;

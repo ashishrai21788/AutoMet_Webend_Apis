@@ -697,6 +697,7 @@ exports.logoutDriver = async (req, res) => {
       },
       { new: true }
     );
+    try { await require('../lib/dutyLog').markOffline(driverId, new Date()); } catch (e) { console.error('[duty log]', e && e.message); }
 
     if (!updatedDriver) {
       return res.status(404).json({
@@ -808,6 +809,7 @@ exports.updateOnlineStatus = async (req, res) => {
 
     // Find and update driver
     const DriverModel = createModel('drivers');
+    const before = isOnline !== undefined ? await DriverModel.findOne({ driverId }).lean() : null;
     const updatedDriver = await DriverModel.findOneAndUpdate(
       { driverId },
       updateData,
@@ -822,6 +824,15 @@ exports.updateOnlineStatus = async (req, res) => {
           driverId: driverId
         }
       });
+    }
+
+    // online hours for the driver app: best effort, never fails the toggle
+    if (isOnline !== undefined) {
+      try {
+        const duty = require('../lib/dutyLog');
+        if (isOnline) await duty.markOnline(updatedDriver, before, new Date());
+        else await duty.markOffline(driverId, new Date());
+      } catch (e) { console.error('[duty log]', e && e.message); }
     }
 
     // Remove password hash from response

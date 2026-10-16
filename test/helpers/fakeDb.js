@@ -203,6 +203,7 @@ function createFakeDb() {
     // platform billing
     PlatformInvoice: fakeModel({ uniques: ['invoiceId', 'number'], defaults: () => ({ issuedAt: new Date(), refundedAmount: 0, refunds: [], remindersSent: [], lapsedAt: null }) }),
     PlatformCounter: fakeModel({ uniques: ['key'] }),
+    DriverDutySession: fakeModel({ }),
     RiderInvoice: fakeModel({ uniques: ['invoiceId', 'tripId', ['tenantId', 'invoiceNumber']] }),
     PlatformPlan: fakeModel({ uniques: ['planId', 'name'], defaults: () => ({ active: true, setupFee: 0, trialDays: null }) }),
     PlatformSettings: fakeModel({ uniques: ['key'] }),
@@ -227,6 +228,7 @@ function createFakeDb() {
     });
     stub('models/tripDetailsModel.js', { TripDetails: db.TripDetails });
     stub('models/supportModels.js', { DriverIssue: db.DriverIssue });
+    stub('models/driverDutySessionModel.js', { DriverDutySession: db.DriverDutySession });
     stub('models/riderInvoiceModel.js', { RiderInvoice: db.RiderInvoice });
     stub('models/platformBilling.js', { PlatformInvoice: db.PlatformInvoice, PlatformCounter: db.PlatformCounter, PlatformPlan: db.PlatformPlan, PlatformSettings: db.PlatformSettings });
     require.cache[require.resolve(path.join(root, 'models/tripEventModel.js'))] = { id: 'tripEvent', filename: require.resolve(path.join(root, 'models/tripEventModel.js')), loaded: true, exports: db.TripEvent };

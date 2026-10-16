@@ -127,3 +127,104 @@ test('the rating is the average of what riders gave on the driver\'s trips', asy
   assert.equal(d.rating.ratedTrips, 2);
   assert.equal(d.rating.totalRides, 3);
 });
+
+// ---- online hours, the detailed summary and the ride history ----
+const duty = require('../lib/dutyLog');
+const callWith = async (fn, query = {}, driverId = 'D1') => {
+  const req = { authActorId: driverId, body: {}, params: {}, query, headers: {}, ip: '127.0.0.1' };
+  let out;
+  const res = { code: 200, status(c) { this.code = c; return this; }, json(b) { out = { code: this.code, body: b }; return this; } };
+  let ok = false;
+  await onboarding.driverContext(req, res, () => { ok = true; });
+  if (!ok) return out;
+  await fn(req, res);
+  return out;
+};
+const { detail, trips: tripList } = require('../controllers/driverSummaryController');
+
+test('online hours: a closed session counts as it was, an open one runs to now while the driver is online', async () => {
+  await seed();
+  db.DriverDutySession.rows.length = 0;
+  await db.DriverDutySession.create({ driverId: 'D1', startedAt: hoursAgo(5), endedAt: hoursAgo(4) }); // 1 h
+  await db.DriverDutySession.create({ driverId: 'D1', startedAt: hoursAgo(0.5), endedAt: null }); // open
+  await db.Driver.updateMany({ driverId: 'D1' }, { $set: { isOnline: true } });
+  const week = (await call()).body.data.week.onlineSeconds;
+  assert.ok(week >= 3600 + 1700 && week <= 3600 + 1900, `week online seconds ${week}`);
+});
+
+test('online hours: a session nobody closed ends when the driver was last seen, and never runs past 16 hours', async () => {
+  await seed();
+  db.DriverDutySession.rows.length = 0;
+  await db.DriverDutySession.create({ driverId: 'D1', startedAt: hoursAgo(10), endedAt: null });
+  await db.Driver.updateMany({ driverId: 'D1' }, { $set: { isOnline: false, lastActive: hoursAgo(8) } });
+  const secs = (await call()).body.data.week.onlineSeconds;
+  assert.ok(secs >= 2 * 3600 - 60 && secs <= 2 * 3600 + 60, `stray session ${secs}`);
+  const long = duty.onlineSeconds([{ startedAt: hoursAgo(30), endedAt: hoursAgo(1) }], null, new Date(0), new Date(NOW + 1000), new Date(NOW));
+  assert.equal(long, 16 * 3600);
+});
+
+test('going online twice keeps one session; going offline closes it; coming back later opens a new one', async () => {
+  db.DriverDutySession.rows.length = 0;
+  const d = { driverId: 'D1', tenantId: 't1' };
+  await duty.markOnline(d, { isOnline: false }, hoursAgo(3));
+  await duty.markOnline(d, { isOnline: true }, hoursAgo(2));
+  assert.equal(db.DriverDutySession.rows.length, 1);
+  await duty.markOffline('D1', hoursAgo(1));
+  assert.ok(db.DriverDutySession.rows[0].endedAt);
+  await duty.markOnline(d, { isOnline: false }, hoursAgo(0.5));
+  assert.equal(db.DriverDutySession.rows.length, 2);
+});
+
+test('detailed summary: one row per day, newest first, with totals and the average fare', async () => {
+  await seed();
+  db.DriverDutySession.rows.length = 0;
+  await db.TripDetails.create(trip('D1a', 'COMPLETED', { fare: 100, completed_at: hoursAgo(0.1) }));
+  await db.TripDetails.create(trip('D1b', 'COMPLETED', { fare: 300, completed_at: hoursAgo(0.2) }));
+  await db.TripDetails.create(trip('D1c', 'COMPLETED', { fare: 50, completed_at: hoursAgo(24 * 3) }));
+  await db.TripDetails.create(trip('D1d', 'COMPLETED', { fare: 70, driver_id: 'OTHER', completed_at: hoursAgo(1) }));
+  const r = await callWith(detail, { days: '7' });
+  assert.equal(r.code, 200);
+  const d = r.body.data;
+  assert.equal(d.daily.length, 7);
+  assert.ok(d.daily[0].date > d.daily[1].date, 'newest first');
+  assert.equal(d.week.rides, 3);
+  assert.equal(d.week.earnings, 450);
+  assert.equal(d.week.averageFare, 150);
+  assert.equal((await callWith(detail, { days: '500' })).body.data.days, 90, 'the period is capped');
+});
+
+test('ride history: this driver only, finished and cancelled-after-accept, newest first, paged', async () => {
+  await seed();
+  await db.TripDetails.create(trip('H1', 'COMPLETED', { fare: 10, requested_at: hoursAgo(5), completed_at: hoursAgo(4.5) }));
+  await db.TripDetails.create(trip('H2', 'CANCELLED_BY_DRIVER', { fare: 0, requested_at: hoursAgo(4) }));
+  await db.TripDetails.create(trip('H3', 'COMPLETED', { fare: 30, requested_at: hoursAgo(3), completed_at: hoursAgo(2.5) }));
+  await db.TripDetails.create(trip('H4', 'REJECTED', { requested_at: hoursAgo(2) }));
+  await db.TripDetails.create(trip('H5', 'COMPLETED', { driver_id: 'OTHER', requested_at: hoursAgo(1) }));
+  const first = (await callWith(tripList, { limit: '2' })).body.data;
+  assert.deepEqual(first.trips.map((t) => t.tripId), ['H3', 'H2']);
+  assert.equal(first.hasMore, true);
+  const next = (await callWith(tripList, { limit: '2', skip: String(first.nextSkip) })).body.data;
+  assert.deepEqual(next.trips.map((t) => t.tripId), ['H1']);
+  assert.equal(next.hasMore, false);
+});
+
+test('the go-online and go-offline call opens and closes the duty session the online hours come from', async () => {
+  await seed();
+  db.DriverDutySession.rows.length = 0;
+  const dynamic = require('../controllers/dynamicController');
+  const toggle = async (isOnline) => {
+    const req = { body: { driverId: 'D1', isOnline, onlineAs: 0 }, params: {}, query: {}, headers: {}, ip: '127.0.0.1' };
+    let out;
+    const res = { code: 200, setHeader() {}, status(c) { this.code = c; return this; }, json(b) { out = { code: this.code, body: b }; return this; } };
+    await dynamic.updateOnlineStatus(req, res);
+    return out;
+  };
+  const on = await toggle(true);
+  assert.equal(on.code, 200, JSON.stringify(on.body).slice(0, 200));
+  assert.equal(db.DriverDutySession.rows.length, 1);
+  assert.equal(db.DriverDutySession.rows[0].endedAt, null);
+  await toggle(true); // a repeated call keeps the same session
+  assert.equal(db.DriverDutySession.rows.length, 1);
+  await toggle(false);
+  assert.ok(db.DriverDutySession.rows[0].endedAt, 'going offline closes the session');
+});
