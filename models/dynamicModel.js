@@ -489,6 +489,8 @@ const userSchema = new mongoose.Schema({
   accountStatus: { type: String, enum: ['ACTIVE', 'SUSPENDED'], default: 'ACTIVE' },
   suspendedAt: { type: Date, default: null },
   suspendedReason: { type: String, default: null },
+  // Set when the rider deletes their account: their details are erased, the record stays for trip history.
+  deletedAt: { type: Date, default: null },
   userId: {
     type: String,
     unique: true,

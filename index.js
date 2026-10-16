@@ -164,6 +164,12 @@ app.get('/t/:token', (req, res) => {
   res.type('html').send(trackPage.PAGE);
 });
 
+// How to delete a rider account without opening the app (Google Play asks for this address). Static HTML.
+app.get('/account-deletion', (req, res) => {
+  res.set({ 'Cache-Control': 'public, max-age=3600', 'Referrer-Policy': 'no-referrer' });
+  res.type('html').send(require('./lib/accountDeletionPage').PAGE);
+});
+
 // CORS: web pages only from the allowed dashboards; mobile apps and Postman send no Origin and are unaffected
 app.use(corsMiddleware());
 app.use((req, res, next) => {

@@ -41,6 +41,21 @@ const ensureAllUserFields = (user) => {
   return complete;
 };
 
+// What another screen may see of a rider: everything except the sign-in token and the device identifiers.
+const publicUser = (user) => {
+  const u = ensureAllUserFields(user);
+  if (!u) return u;
+  delete u.accessToken;
+  delete u.fcmToken;
+  delete u.deviceId;
+  return u;
+};
+
+// A rider may only read or change their own account.
+const mayActOnUser = (req, userId) => !(req.authRole === 'user' && req.authActorId && String(req.authActorId) !== String(userId));
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 // Generate unique userId (same pattern as driverId)
 const generateUniqueUserId = async (UserModel) => {
   let userId;
@@ -398,7 +413,7 @@ exports.updateUserToken = async (req, res) => {
 // Update User Profile - firstName, lastName, profilePhoto
 exports.updateUserProfile = async (req, res) => {
   try {
-    const { userId, firstName, lastName, profilePhoto } = req.body;
+    const { userId, firstName, lastName, profilePhoto, email } = req.body;
 
     if (!userId) {
       return res.status(400).json({
@@ -406,6 +421,9 @@ exports.updateUserProfile = async (req, res) => {
         message: 'Missing required field: userId',
         data: { missingFields: { userId: true } }
       });
+    }
+    if (!mayActOnUser(req, userId)) {
+      return res.status(403).json({ success: false, message: 'You can only change your own profile', data: null });
     }
 
     const UserModel = createModel('users');
@@ -419,6 +437,14 @@ exports.updateUserProfile = async (req, res) => {
     }
 
     const updateData = { updatedAt: new Date() };
+    if (email !== undefined) {
+      // optional: used for receipts and recovery; an empty value removes it
+      const e = email === null ? '' : String(email).trim().toLowerCase();
+      if (e && (e.length > 254 || !EMAIL_RE.test(e))) {
+        return res.status(400).json({ success: false, message: 'Enter a valid email address', data: { field: 'email' } });
+      }
+      updateData.email = e || null;
+    }
     if (firstName !== undefined) {
       if (!firstName || String(firstName).trim().length === 0) {
         return res.status(400).json({
@@ -427,17 +453,11 @@ exports.updateUserProfile = async (req, res) => {
           data: { field: 'firstName' }
         });
       }
-      updateData.firstName = String(firstName).trim();
+      updateData.firstName = String(firstName).trim().slice(0, 60);
     }
     if (lastName !== undefined) {
-      if (!lastName || String(lastName).trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'lastName cannot be empty',
-          data: { field: 'lastName' }
-        });
-      }
-      updateData.lastName = String(lastName).trim();
+      // a single name is a valid name: the last name may be empty
+      updateData.lastName = lastName === null ? '' : String(lastName).trim().slice(0, 60);
     }
     if (profilePhoto !== undefined) {
       if (profilePhoto !== null && (!profilePhoto || String(profilePhoto).trim().length === 0)) {
@@ -453,19 +473,27 @@ exports.updateUserProfile = async (req, res) => {
     if (Object.keys(updateData).length === 1) {
       return res.status(400).json({
         success: false,
-        message: 'No fields to update. Provide at least one of: firstName, lastName, profilePhoto',
-        data: { allowedFields: ['firstName', 'lastName', 'profilePhoto'] }
+        message: 'No fields to update. Provide at least one of: firstName, lastName, email, profilePhoto',
+        data: { allowedFields: ['firstName', 'lastName', 'email', 'profilePhoto'] }
       });
     }
 
-    const updated = await UserModel.findOneAndUpdate({ userId }, updateData, { new: true });
+    let updated;
+    try {
+      updated = await UserModel.findOneAndUpdate({ userId }, updateData, { new: true });
+    } catch (e) {
+      if (e && e.code === 11000) {
+        return res.status(409).json({ success: false, message: 'That email is already used by another account', data: { field: 'email' } });
+      }
+      throw e;
+    }
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      data: { user: ensureAllUserFields(updated) }
+      data: { user: publicUser(updated) }
     });
   } catch (error) {
     console.error('updateUserProfile error:', error);
@@ -474,6 +502,70 @@ exports.updateUserProfile = async (req, res) => {
       message: 'Server error while updating profile',
       data: { details: error.message }
     });
+  }
+};
+
+/**
+ * POST /api/users/account/delete  { userId }
+ * Deletes the rider's account: the person's details (name, phone, email, photo, sign-in and device tokens, notifications,
+ * pending codes) are erased and the number can be used to sign up again. Finished trips stay as business records (fares,
+ * routes, support history) with nothing left that names the person, as the privacy policy says. Refused while a ride is live.
+ */
+exports.deleteUserAccount = async (req, res) => {
+  try {
+    const userId = req.body && req.body.userId ? String(req.body.userId).trim() : '';
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Missing required field: userId', data: { missingFields: { userId: true } } });
+    }
+    if (!mayActOnUser(req, userId)) {
+      return res.status(403).json({ success: false, message: 'You can only delete your own account', data: null });
+    }
+    const UserModel = createModel('users');
+    const user = await UserModel.findOne({ userId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Account not found', data: { userId } });
+    }
+
+    const { TripDetails } = require('../models/tripDetailsModel');
+    const live = await TripDetails.findOne({
+      user_id: userId,
+      status: { $in: ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'] }
+    }).lean();
+    if (live) {
+      return res.status(409).json({
+        success: false,
+        message: 'Finish or cancel your current ride before deleting your account.',
+        data: { trip_id: live.trip_id, status: live.status }
+      });
+    }
+
+    await UserModel.findOneAndUpdate({ userId }, {
+      firstName: 'Deleted',
+      lastName: 'rider',
+      phone: `deleted_${userId}`,
+      email: null,
+      profilePhoto: null,
+      passwordHash: null,
+      accessToken: null,
+      fcmToken: null,
+      deviceId: null,
+      isLoggedin: false,
+      isPhoneVerified: false,
+      deletedAt: new Date(),
+      updatedAt: new Date()
+    }, { new: true });
+
+    try { await UserOTP.deleteMany({ userId }); } catch (_) { /* nothing pending */ }
+    try {
+      const mongoose = require('../lib/db/mongoose');
+      await mongoose.connection.db.collection('users_notification').deleteMany({ userId });
+    } catch (_) { /* no notifications kept */ }
+
+    console.log('[account] rider account deleted', { userId });
+    res.status(200).json({ success: true, message: 'Your account and personal data have been deleted.', data: { userId } });
+  } catch (error) {
+    console.error('deleteUserAccount error:', error);
+    res.status(500).json({ success: false, message: 'Could not delete the account. Please try again.', data: { details: error.message } });
   }
 };
 
@@ -547,6 +639,10 @@ exports.getUserByUserId = async (req, res) => {
       });
     }
 
+    if (!mayActOnUser(req, userId)) {
+      return res.status(403).json({ success: false, message: 'You can only view your own profile', data: null });
+    }
+
     const UserModel = createModel('users');
     const user = await UserModel.findOne({ userId });
 
@@ -558,12 +654,24 @@ exports.getUserByUserId = async (req, res) => {
       });
     }
 
+    // what the profile screen shows under the name: finished rides, distance, and since when
+    let stats = { total_rides: 0, total_km: 0, member_since: null };
+    try {
+      const { TripDetails } = require('../models/tripDetailsModel');
+      const done = await TripDetails.find({ user_id: userId, status: 'COMPLETED' }).lean();
+      stats = {
+        total_rides: done.length,
+        total_km: Math.round(done.reduce((sum, t) => sum + (Number(t.distance_km) || 0), 0) * 10) / 10,
+        member_since: user.createdAt || null
+      };
+    } catch (_) { /* the profile works without the numbers */ }
+
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
     res.status(200).json({
       success: true,
       message: 'User detail retrieved successfully',
-      data: { user: ensureAllUserFields(user) }
+      data: { user: { ...publicUser(user), stats } }
     });
   } catch (error) {
     console.error('getUserByUserId error:', error);
@@ -724,7 +832,8 @@ exports.sendUserNotification = async (req, res) => {
 exports.getUserNotifications = async (req, res) => {
   try {
     const { userId, user_id } = req.query;
-    const userIdValue = userId || user_id;
+    // a rider reads only their own notifications, whatever the query says
+    const userIdValue = req.authRole === 'user' && req.authActorId ? req.authActorId : (userId || user_id);
 
     const mongoose = require('../lib/db/mongoose');
     const db = mongoose.connection.db;

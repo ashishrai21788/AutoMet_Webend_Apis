@@ -26,8 +26,16 @@ router.post(
 );
 
 // User Profile Edit
-router.put('/profile', requireAuth({ roles: ['user'] }), userController.updateUserProfile);
-router.post('/profile', requireAuth({ roles: ['user'] }), userController.updateUserProfile);
+router.put('/profile', requireAuth({ roles: ['user'], enforceBodyUserIdCamelCase: true }), userController.updateUserProfile);
+router.post('/profile', requireAuth({ roles: ['user'], enforceBodyUserIdCamelCase: true }), userController.updateUserProfile);
+
+// Delete the rider's own account (their details are erased; see the controller)
+router.post(
+  '/account/delete',
+  requireAuth({ roles: ['user'], enforceBodyUserIdCamelCase: true }),
+  createLimiter({ name: 'rider-account-delete', windowMs: 60 * 60 * 1000, max: 5, key: (q) => { const u = q.authActorId || (q.body && q.body.userId); return u ? 'acctdel:' + u : null; }, message: 'Please wait a while before trying again.' }),
+  userController.deleteUserAccount
+);
 
 // Report a problem to support (optionally about one of the rider's trips), and read the answers
 router.post(
@@ -42,7 +50,7 @@ router.get('/issues', requireAuth({ roles: ['user'] }), supportController.myRide
 router.post('/resend-otp', ...sendLimit, userController.resendUserOtp);
 
 // Get user detail by userId - users
-router.get('/detail/:userId', userController.getUserByUserId);
+router.get('/detail/:userId', requireAuth({ roles: ['user'] }), userController.getUserByUserId);
 
 // User Logout - users
 router.post('/logout', requireAuth({ roles: ['user'] }), userController.logoutUser);
