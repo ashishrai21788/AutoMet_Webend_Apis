@@ -28,6 +28,13 @@ router.post(
   rideController.rateDriver
 );
 
+// the rider's app showed the finished-trip receipt: it is not offered again on the next start
+router.post(
+  '/receipt-ack',
+  requireAuth({ roles: ['user'], enforceBodyUserId: true }),
+  rideController.ackReceipt
+);
+
 // the rider's link that lets anyone follow this ride (public page /t/:token)
 router.post('/share', requireAuth({ roles: ['user'] }), shareController.createShare);
 

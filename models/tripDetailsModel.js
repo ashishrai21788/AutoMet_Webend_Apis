@@ -76,6 +76,10 @@ const tripDetailsSchema = new mongoose.Schema({
   // when the rider's start code was accepted. A trip with started_at but no value here began without the code check.
   start_otp_verified_at: { type: Date, default: null },
 
+  // When the rider's app showed the finished-trip receipt and the rider dismissed it (POST /api/v1/rides/receipt-ack),
+  // or rated the trip. Until then a finished trip is still offered to the rider on the next app start. Separate from the rating.
+  rider_receipt_ack_at: { type: Date, default: null },
+
   // The rider's rating of the driver for this trip. Written once, after the trip is COMPLETED (POST /api/v1/rides/rating).
   rider_rating: {
     stars: { type: Number, default: null, min: 1, max: 5 },

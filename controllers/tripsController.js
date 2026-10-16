@@ -503,6 +503,24 @@ exports.createRequest = async (req, res) => {
       push_sent: false
     });
 
+    if (autoDispatch) {
+      // The one-search-per-rider check above and this insert are not atomic: two taps at the same instant can both pass it.
+      // Keep the earliest request and withdraw this one before the driver is told about it.
+      const live = await TripDetails.find({ user_id: userId, status: { $in: ACTIVE_STATUSES } }).lean();
+      const earlier = (live || []).filter((t) => t.trip_id !== trip.trip_id)
+        .sort((a, b) => new Date(a.requested_at) - new Date(b.requested_at) || String(a.trip_id).localeCompare(String(b.trip_id)))[0];
+      const mineFirst = !earlier || new Date(earlier.requested_at) > new Date(trip.requested_at)
+        || (new Date(earlier.requested_at).getTime() === new Date(trip.requested_at).getTime() && String(earlier.trip_id) > String(trip.trip_id));
+      if (!mineFirst) {
+        await TripDetails.updateOne({ trip_id: trip.trip_id, status: 'REQUESTED' }, { $set: { status: 'CANCELLED_BY_USER', cancelled_at: new Date(), cancellation_reason: 'Duplicate request', updated_at: new Date() } });
+        return res.status(409).json({
+          success: false,
+          message: 'You already have a ride in progress.',
+          data: { trip_id: earlier.trip_id, request_id: earlier.request_id, status: earlier.status }
+        });
+      }
+    }
+
     const riderName = user
       ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.fullName || null
       : null;

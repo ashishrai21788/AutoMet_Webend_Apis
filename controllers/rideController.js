@@ -746,7 +746,7 @@ exports.rateDriver = async (req, res) => {
     // conditional write: two taps at once cannot both rate the ride
     const rated = await TripDetails.findOneAndUpdate(
       { trip_id: tripId, status: 'COMPLETED', 'rider_rating.stars': null },
-      { $set: { 'rider_rating.stars': stars, 'rider_rating.comment': comment || null, 'rider_rating.tags': tags, 'rider_rating.rated_at': now, updated_at: now } },
+      { $set: { 'rider_rating.stars': stars, 'rider_rating.comment': comment || null, 'rider_rating.tags': tags, 'rider_rating.rated_at': now, rider_receipt_ack_at: now, updated_at: now } },
       { new: true }
     );
     if (!rated) {
@@ -758,6 +758,38 @@ exports.rateDriver = async (req, res) => {
   } catch (error) {
     console.error('[rateDriver]', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to save the rating' });
+  }
+};
+
+/**
+ * POST /api/v1/rides/receipt-ack
+ * The rider's app has shown the finished-trip receipt and it was dismissed. Body: { ride_id | trip_id, user_id }.
+ * Only the rider of a COMPLETED trip; repeating it is fine (the first time is kept).
+ */
+exports.ackReceipt = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const tripId = String(body.ride_id ?? body.trip_id ?? '').trim();
+    const userId = String(body.user_id ?? '').trim();
+    if (!tripId || !userId) {
+      return res.status(400).json({ success: false, message: 'Missing required fields: ride_id, user_id' });
+    }
+    const trip = await TripDetails.findOne({ trip_id: tripId }).lean();
+    if (!trip) return res.status(404).json({ success: false, message: 'Ride not found', data: { ride_id: tripId } });
+    if (trip.user_id !== userId) {
+      return res.status(403).json({ success: false, message: 'You can only update your own ride', data: { ride_id: tripId } });
+    }
+    if (trip.status !== 'COMPLETED') {
+      return res.status(409).json({ success: false, message: 'Only a finished ride has a receipt', data: { ride_id: tripId, status: trip.status } });
+    }
+    if (!trip.rider_receipt_ack_at) {
+      const now = new Date();
+      await TripDetails.findOneAndUpdate({ trip_id: tripId, rider_receipt_ack_at: null }, { $set: { rider_receipt_ack_at: now, updated_at: now } }, { new: true });
+    }
+    res.status(200).json({ success: true, message: 'Receipt acknowledged', data: { ride_id: tripId } });
+  } catch (error) {
+    console.error('[ackReceipt]', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to acknowledge the receipt' });
   }
 };
 
@@ -984,6 +1016,9 @@ exports.updateTripStatus = async (req, res) => {
  * For driver or user landing on page: returns current incomplete ride (if any).
  * Reads from trip_details collection. Query: user_id OR driver_id (one required).
  */
+/** A finished trip is offered again on the next app start for this long if its receipt was never dismissed. */
+const RECEIPT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 exports.getActiveRide = async (req, res) => {
   try {
     const userId = (req.query.user_id != null && req.query.user_id !== '') ? String(req.query.user_id).trim() : null;
@@ -1001,7 +1036,17 @@ exports.getActiveRide = async (req, res) => {
     if (userId) query.user_id = userId;
     if (driverId) query.driver_id = driverId;
 
-    const trip = await TripDetails.findOne(query).sort({ requested_at: -1 }).lean();
+    let trip = await TripDetails.findOne(query).sort({ requested_at: -1 }).lean();
+    let needsReceipt = false;
+    if (!trip && userId && !driverId) {
+      // nothing is live: offer a recently finished trip the rider has not seen the receipt of yet (the app was closed
+      // when it ended). Once the receipt is dismissed or the trip is rated it is never offered again.
+      const since = new Date(Date.now() - RECEIPT_WINDOW_MS);
+      const done = await TripDetails.find({ user_id: userId, status: 'COMPLETED' }).sort({ completed_at: -1 }).limit(5).lean();
+      const pending = (done || []).find((t) => !t.rider_receipt_ack_at && !(t.rider_rating && t.rider_rating.stars)
+        && t.completed_at && new Date(t.completed_at) >= since);
+      if (pending) { trip = pending; needsReceipt = true; }
+    }
     if (!trip) {
       return res.status(200).json({
         success: true,
@@ -1011,9 +1056,10 @@ exports.getActiveRide = async (req, res) => {
     }
 
     const { _id, __v, start_otp_attempts, ...rideRecord } = trip; // internal counter, never part of a payload
+    if (needsReceipt) rideRecord.needs_receipt = true;
     res.status(200).json({
       success: true,
-      message: 'Active ride found',
+      message: needsReceipt ? 'Finished ride waiting for its receipt to be seen' : 'Active ride found',
       data: { active_ride: rideRecord }
     });
   } catch (error) {
