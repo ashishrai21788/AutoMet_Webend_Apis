@@ -2,6 +2,7 @@ const { createModel } = require('../models/dynamicModel');
 const { Trip, TRIP_STATUSES } = require('../models/tripModel');
 const { TripDetails } = require('../models/tripDetailsModel');
 const { getNextTripId } = require('../models/tripCounterModel');
+const { issueForTrip, toPublic: invoiceToPublic } = require('../lib/riderInvoice');
 const TripEvent = require('../models/tripEventModel');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { clearForDriver: clearTripRateLimitForDriver } = require('../lib/tripRateLimit');
@@ -998,6 +999,10 @@ exports.updateTripStatus = async (req, res) => {
       }
       // On completion make sure the trip has a fare (trips created before fares existed get one computed now).
       const fareInfo = status === 'COMPLETED' ? await ensureTripFare(tripDetails) : null;
+      // the rider's invoice is issued as the trip completes; a failure here never fails the completion (it is issued on first read instead)
+      if (status === 'COMPLETED') {
+        try { await issueForTrip(await TripDetails.findOne({ trip_id: tripId }).lean()); } catch (e) { console.warn('[invoice] not issued at completion for', tripId, e.message); }
+      }
       await notifyRiderRideStatusUpdated(tripDetails.user_id, tripId, status, fareInfo);
       return res.status(200).json({
         success: true,
@@ -1249,6 +1254,48 @@ async function addRideTypeNames(list) {
     list.forEach((t) => { t.vehicle_type = names[`${t.tenant_id}|${t.category_id}`] || null; });
   } catch (_) { /* the list works without it */ }
 }
+
+/**
+ * GET /api/v1/rides/:tripId/invoice[.pdf]: the rider's invoice for a completed trip (or for the charge after a cancellation).
+ * Only the rider of the trip may read it; it is issued on first request if it was not already, and never changes afterwards.
+ */
+async function loadInvoice(req, res) {
+  const tripId = String(req.params.tripId || '').trim();
+  const trip = await TripDetails.findOne({ trip_id: tripId }).lean();
+  if (!trip) { res.status(404).json({ success: false, message: 'Trip not found', data: null }); return null; }
+  if (!req.authActorId || trip.user_id !== req.authActorId || req.authRole !== 'user') {
+    res.status(403).json({ success: false, message: 'You can only view your own invoices', data: null });
+    return null;
+  }
+  const invoice = await issueForTrip(trip);
+  if (!invoice) { res.status(404).json({ success: false, message: 'There is no invoice for this trip. Invoices are issued for completed trips and for cancellation charges.', data: null }); return null; }
+  return invoice;
+}
+
+exports.getTripInvoice = async (req, res) => {
+  try {
+    const invoice = await loadInvoice(req, res);
+    if (!invoice) return;
+    res.status(200).json({ success: true, data: invoiceToPublic(invoice) });
+  } catch (error) {
+    console.error('[getTripInvoice]', error);
+    res.status(500).json({ success: false, message: 'Could not load the invoice', data: null });
+  }
+};
+
+exports.getTripInvoicePdf = async (req, res) => {
+  try {
+    const invoice = await loadInvoice(req, res);
+    if (!invoice) return;
+    const pub = invoiceToPublic(invoice);
+    const pdf = await require('../lib/riderInvoicePdf').renderRiderInvoice(pub);
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="' + pub.invoiceNumber + '.pdf"', 'Cache-Control': 'private, no-store' });
+    res.status(200).send(pdf);
+  } catch (error) {
+    console.error('[getTripInvoicePdf]', error);
+    res.status(500).json({ success: false, message: 'Could not create the invoice PDF', data: null });
+  }
+};
 
 /**
  * What a rider's trip list may show: rides a driver actually took (accepted, in progress, completed, or cancelled after

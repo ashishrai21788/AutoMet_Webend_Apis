@@ -47,6 +47,8 @@ router.get('/details', requireRideScopeQuery, rideController.getRideDetails);
 router.get('/', requireRideScopeQuery, rideController.listTrips);
 // GET /api/v1/rides itself is answered by the generic /api/:collection/:id route (collection "v1"), so apps read the list here.
 router.get('/history', requireRideScopeQuery, rideController.listTrips);
+router.get('/:tripId/invoice', requireAuth({ roles: ['user'] }), rideController.getTripInvoice);
+router.get('/:tripId/invoice.pdf', requireAuth({ roles: ['user'] }), rideController.getTripInvoicePdf);
 router.get('/:tripId/timeline', requireAuth({ roles: ['user', 'driver'] }), rideController.getTripTimeline);
 router.get('/:tripId', requireAuth({ roles: ['user', 'driver'] }), rideController.getTrip);
 
