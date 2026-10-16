@@ -13,6 +13,19 @@ const { distanceKm: haversineKm, etaMinutes } = require('../lib/dispatch');
 const { positionOf, presenceOf } = require('../lib/driverLocation');
 const { loadPricingConfig } = require('../lib/tripPricing');
 const { tenantForAccount } = require('../lib/appTenant');
+const { policyFor, riderCancelFee } = require('../lib/cancellationFee');
+
+/** The business's cancellation policy for a trip's category, or null (a trip of the default business has none). */
+async function cancellationPolicyOf(trip) {
+  try {
+    if (!trip || !trip.tenant_id) return null;
+    const { forTenant } = require('../lib/tenantData');
+    const { CancellationPolicy } = require('../models/businessModels');
+    return policyFor(await forTenant(trip.tenant_id).find(CancellationPolicy).lean(), trip);
+  } catch (_) {
+    return null; // no policy readable: no fee, never a guessed one
+  }
+}
 
 const DRIVER_RESPONSE_TIMEOUT_SECONDS = Number(process.env.RIDE_REQUEST_TIMEOUT_SECONDS) || 60;
 const ACTIVE_STATUSES = ['REQUESTED', 'ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'];
@@ -226,6 +239,15 @@ exports.createRideRequest = async (req, res) => {
       }
     }
 
+    // one live ride per rider, whichever driver it is with
+    const riderBusy = await TripDetails.findOne({ user_id: userId, status: { $in: ACTIVE_STATUSES_TRIP_DETAILS } }).lean();
+    if (riderBusy) {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have a ride in progress.',
+        data: { trip_id: riderBusy.trip_id, status: riderBusy.status }
+      });
+    }
     const duplicateDetails = await TripDetails.findOne({
       user_id: userId,
       driver_id: driverId,
@@ -606,6 +628,10 @@ exports.cancelRideByUser = async (req, res) => {
 
     const newStatus = cancelStage === 'before_accept' ? 'CANCELLED_BY_USER' : 'CANCELLED_BY_USER_AFTER_ACCEPTANCE';
     const now = new Date();
+    // after the driver accepted, the business's own policy decides whether this cancellation costs the rider anything
+    const feeInfo = cancelStage === 'after_accept' && source === 'trip_details'
+      ? riderCancelFee(await cancellationPolicyOf(trip), trip, now)
+      : { fee: 0, reason: null };
     const driverId = trip.driver_id;
     if (cancelStage === 'before_accept' && driverId) {
       clearTripRateLimitForDriver(driverId);
@@ -621,6 +647,8 @@ exports.cancelRideByUser = async (req, res) => {
             cancelled_at: now,
             cancel_stage: cancelStage,
             cancelled_by: 'USER',
+            cancellation_fee: feeInfo.fee,
+            cancellation_fee_reason: feeInfo.reason,
             updated_at: now
           }
         },
@@ -694,6 +722,7 @@ exports.cancelRideByUser = async (req, res) => {
       trip_id: resolvedRideId,
       request_id: resolvedRequestId,
       status: newStatus,
+      cancellation_fee: feeInfo.fee,
       message: cancelStage === 'before_accept' ? 'Ride cancelled before driver acceptance' : 'Ride cancelled after driver acceptance'
     });
   } catch (error) {
@@ -1149,6 +1178,13 @@ exports.getRideDetails = async (req, res) => {
           data.eta = { minutes: etaMinutes(km), km: Math.round(km * 10) / 10, to: trip.status === 'ON_GOING' ? 'DROP' : 'PICKUP' };
         }
       }
+      await addRideTypeNames([data]); // the ride type's name (VIP, Auto ...) for the screen
+      // what cancelling right now would cost, so the rider is told before confirming (never a figure the app invents)
+      if (['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED'].includes(trip.status)) {
+        const preview = riderCancelFee(await cancellationPolicyOf(trip), trip, new Date());
+        data.cancel_fee_now = preview.fee;
+        data.cancel_fee_currency = preview.currency || trip.currency || null;
+      }
       // The rider's start code (null unless TRIP_START_OTP=on and the driver is coming / has arrived). Never sent to the driver.
       const startCode = tripStartOtp.codeForRider(trip);
       if (startCode) data.start_otp = startCode; // absent unless the feature is on and a code is due
@@ -1200,6 +1236,33 @@ exports.getTrip = async (req, res) => {
  * GET /api/v1/rides
  * Query: user_id, driver_id, status (optional filters)
  */
+/** Adds the ride type's name (VIP, Auto ...) to each trip, from its category, so a list can draw the right vehicle. */
+async function addRideTypeNames(list) {
+  try {
+    const { forTenant } = require('../lib/tenantData');
+    const { VehicleCategory } = require('../models/businessModels');
+    const tenants = [...new Set(list.map((t) => t.tenant_id).filter(Boolean))];
+    const names = {};
+    for (const id of tenants) {
+      (await forTenant(id).find(VehicleCategory).lean()).forEach((c) => { names[`${id}|${c.categoryId}`] = c.name; });
+    }
+    list.forEach((t) => { t.vehicle_type = names[`${t.tenant_id}|${t.category_id}`] || null; });
+  } catch (_) { /* the list works without it */ }
+}
+
+/**
+ * What a rider's trip list may show: rides a driver actually took (accepted, in progress, completed, or cancelled after
+ * accepting). Requests that were never accepted (still searching, no driver found, declined, cancelled while searching)
+ * are for the business's analytics, not the rider.
+ */
+const RIDER_LIST_STATUSES = ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING', 'COMPLETED', 'CANCELLED_BY_USER', 'CANCELLED_BY_USER_AFTER_ACCEPTANCE', 'CANCELLED_BY_DRIVER'];
+const CANCELLED_NEEDS_ACCEPT = ['CANCELLED_BY_USER', 'CANCELLED_BY_DRIVER'];
+function riderMayListTrip(t) {
+  if (!RIDER_LIST_STATUSES.includes(t.status)) return false;
+  if (CANCELLED_NEEDS_ACCEPT.includes(t.status)) return !!t.responded_at;
+  return true;
+}
+
 exports.listTrips = async (req, res) => {
   try {
     const query = {};
@@ -1218,8 +1281,12 @@ exports.listTrips = async (req, res) => {
     const limit = Math.min(Math.max(0, parseInt(req.query.limit, 10) || 20), 100);
     const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
     // trips are kept in trip_details (the booking record the apps and dispatch use)
-    const trips = await TripDetails.find(query).sort({ requested_at: -1 }).skip(skip).limit(limit).lean();
+    const riderOnly = !!query.user_id && !query.driver_id;
+    if (riderOnly && !query.status) query.status = { $in: RIDER_LIST_STATUSES };
+    let trips = await TripDetails.find(query).sort({ requested_at: -1 }).skip(skip).limit(limit).lean();
+    if (riderOnly) trips = trips.filter(riderMayListTrip);
     const list = trips.map(({ _id, __v, start_otp_attempts, ...t }) => t);
+    await addRideTypeNames(list);
     res.status(200).json({
       success: true,
       data: list,

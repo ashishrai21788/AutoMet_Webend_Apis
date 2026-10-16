@@ -65,6 +65,9 @@ const tripDetailsSchema = new mongoose.Schema({
   cancelled_at: { type: Date, default: null },
   cancel_stage: { type: String, default: null, enum: ['before_accept', 'after_accept', null], trim: true },
   cancelled_by: { type: String, default: null, enum: ['USER', 'DRIVER', 'ADMIN', null], trim: true },
+  // what the rider owes for cancelling after the driver accepted, from the business's cancellation policy (0 when nothing)
+  cancellation_fee: { type: Number, default: 0, min: 0 },
+  cancellation_fee_reason: { type: String, default: null, trim: true },
 
   // Automatic dispatch (lib/dispatch.js): the request is offered to one driver at a time, nearest first.
   dispatch_mode: { type: String, default: 'MANUAL', enum: ['MANUAL', 'AUTO'], trim: true },

@@ -418,6 +418,15 @@ exports.createRequest = async (req, res) => {
     }
     const estimate = pricing.estimate;
 
+    // one live ride per rider, whichever driver it is with (the auto-dispatch path above has the same rule)
+    const riderBusy = await TripDetails.findOne({ user_id: userId, status: { $in: ACTIVE_STATUSES } });
+    if (riderBusy) {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have a ride in progress.',
+        data: { trip_id: riderBusy.trip_id, request_id: riderBusy.request_id, status: riderBusy.status }
+      });
+    }
     const duplicate = await TripDetails.findOne({
       user_id: userId,
       driver_id: driverId,
