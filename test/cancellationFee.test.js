@@ -97,3 +97,32 @@ test('a rider\'s list shows accepted, running, completed and cancelled-after-acc
   await listTrips({ query: { driver_id: 'drv-9' } }, dres);
   assert.equal(dres.body.data.length, seed.length);
 });
+
+test('the trip list pages: a stable order, has_more, and a next_skip that never repeats or skips a trip', async () => {
+  const { listTrips } = require('../controllers/rideController');
+  const base = { user_id: 'rider-pg', driver_id: 'drv-pg', tenant_id: 'app_x', category_id: 'vc1', pickup: { address: 'A', lat: 1, lng: 1 }, drop: { address: 'B', lat: 2, lng: 2 }, timeout_at: new Date(), status: 'COMPLETED', responded_at: new Date() };
+  for (let i = 0; i < 25; i++) {
+    await db.TripDetails.create({ ...base, trip_id: 'pg_' + String(i).padStart(2, '0'), request_id: 'R_pg_' + i, requested_at: new Date(Date.UTC(2026, 9, 1, 0, i)) });
+  }
+  const get = async (skip) => {
+    const res = { statusCode: 200, body: null, status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; return this; }, setHeader() {} };
+    await listTrips({ query: { user_id: 'rider-pg', limit: '10', skip: String(skip) } }, res);
+    return res.body;
+  };
+  const seen = [];
+  let skip = 0;
+  let pages = 0;
+  for (;;) {
+    const page = await get(skip);
+    seen.push(...page.data.map((t) => t.trip_id));
+    pages++;
+    if (!page.has_more) break;
+    skip = page.next_skip;
+    assert.ok(pages < 10, 'paging must end');
+  }
+  assert.equal(pages, 3);
+  assert.equal(seen.length, 25);
+  assert.equal(new Set(seen).size, 25, 'no trip repeated across pages');
+  assert.equal(seen[0], 'pg_24', 'newest first');
+  assert.equal(seen[24], 'pg_00');
+});

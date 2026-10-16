@@ -114,6 +114,9 @@ const tripDetailsSchema = new mongoose.Schema({
 
 tripDetailsSchema.index({ user_id: 1, driver_id: 1, status: 1 });
 tripDetailsSchema.index({ timeout_at: 1, status: 1 });
+// a rider's or a driver's trip list, newest first (the history screens page through these)
+tripDetailsSchema.index({ user_id: 1, requested_at: -1 });
+tripDetailsSchema.index({ driver_id: 1, requested_at: -1 });
 
 const TripDetails = mongoose.model('TripDetails', tripDetailsSchema);
 

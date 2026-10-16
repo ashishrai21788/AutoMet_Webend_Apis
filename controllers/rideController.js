@@ -1283,14 +1283,18 @@ exports.listTrips = async (req, res) => {
     // trips are kept in trip_details (the booking record the apps and dispatch use)
     const riderOnly = !!query.user_id && !query.driver_id;
     if (riderOnly && !query.status) query.status = { $in: RIDER_LIST_STATUSES };
-    let trips = await TripDetails.find(query).sort({ requested_at: -1 }).skip(skip).limit(limit).lean();
+    let trips = await TripDetails.find(query).sort({ requested_at: -1, trip_id: -1 }).skip(skip).limit(limit).lean();
+    // paging is counted on what was read, before the rider-visibility filter below drops any rows
+    const read = trips.length;
     if (riderOnly) trips = trips.filter(riderMayListTrip);
     const list = trips.map(({ _id, __v, start_otp_attempts, ...t }) => t);
     await addRideTypeNames(list);
     res.status(200).json({
       success: true,
       data: list,
-      count: list.length
+      count: list.length,
+      has_more: read === limit,
+      next_skip: skip + read
     });
   } catch (error) {
     console.error('[listTrips]', error);
