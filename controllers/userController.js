@@ -843,10 +843,18 @@ exports.getUserNotifications = async (req, res) => {
     const db = mongoose.connection.db;
     const coll = db.collection('users_notification');
 
-    const query = {};
-    if (userIdValue) query.userId = userIdValue;
+    // never list everyone's: a request with no account to scope to is refused
+    if (!userIdValue) {
+      return res.status(400).json({ success: false, message: 'Missing required parameter: userId', data: { missingFields: { userId: true } } });
+    }
+    const query = { userId: userIdValue };
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit, 10) || 100), 200);
+    const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
 
-    const list = await coll.find(query).sort({ date: -1 }).toArray();
+    // one extra row tells whether another page exists
+    const rows = await coll.find(query).sort({ date: -1, _id: -1 }).skip(skip).limit(limit + 1).toArray();
+    const hasMore = rows.length > limit;
+    const list = hasMore ? rows.slice(0, limit) : rows;
     const formatted = list.map(n => ({
       id: n._id.toString(),
       notification_id: n.notification_id || n._id.toString(),
@@ -868,7 +876,10 @@ exports.getUserNotifications = async (req, res) => {
       data: {
         notifications: formatted,
         totalCount: formatted.length,
-        unreadCount: formatted.filter(x => x.isUnread === true).length
+        // unread across all pages, not just this one
+        unreadCount: await coll.countDocuments({ ...query, isUnread: { $ne: false } }),
+        has_more: hasMore,
+        next_skip: skip + list.length
       }
     });
   } catch (error) {

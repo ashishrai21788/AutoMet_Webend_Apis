@@ -103,7 +103,17 @@ test('a rider cannot push a notification to, or alter the notifications of, anot
   assert.equal(r.statusCode, 403);
   // read: a rider always gets their own list, whatever userId the query carries
   const seen = [];
-  Object.defineProperty(require('../lib/db/mongoose'), 'connection', { configurable: true, value: { db: { collection: () => ({ find: (q) => { seen.push(q); return { sort: () => ({ toArray: async () => [] }) }; } }) } } });
+  const rows = Array.from({ length: 5 }, (_, i) => ({ _id: { toString: () => 'n' + i }, title: 't' + i, userId: 'U2', isUnread: i % 2 === 0 }));
+  Object.defineProperty(require('../lib/db/mongoose'), 'connection', { configurable: true, value: { db: { collection: () => ({
+    find: (q) => { seen.push(q); let sk = 0; let lm = 99; const c = { sort: () => c, skip: (n) => { sk = n; return c; }, limit: (n) => { lm = n; return c; }, toArray: async () => rows.slice(sk, sk + lm) }; return c; },
+    countDocuments: async () => 3
+  }) } } });
   await run(users.getUserNotifications, { ...other, query: { userId: 'U1' } });
   assert.deepEqual(seen.map((q) => q.userId), ['U2']);
+  // paging: 2 per page over 5 rows -> 3 pages, has_more until the last, unread counted across all pages
+  const pg = async (skip) => (await run(users.getUserNotifications, { ...other, query: { limit: '2', skip: String(skip) } })).body.data;
+  const p1 = await pg(0); assert.equal(p1.notifications.length, 2); assert.equal(p1.has_more, true); assert.equal(p1.unreadCount, 3);
+  const p3 = await pg(4); assert.equal(p3.notifications.length, 1); assert.equal(p3.has_more, false);
+  // a request with no account to scope to is refused rather than listing everyone's
+  assert.equal((await run(users.getUserNotifications, { query: {} })).statusCode, 400);
 });
