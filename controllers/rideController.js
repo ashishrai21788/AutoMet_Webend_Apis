@@ -746,7 +746,7 @@ exports.rateDriver = async (req, res) => {
     // conditional write: two taps at once cannot both rate the ride
     const rated = await TripDetails.findOneAndUpdate(
       { trip_id: tripId, status: 'COMPLETED', 'rider_rating.stars': null },
-      { $set: { 'rider_rating.stars': stars, 'rider_rating.comment': comment || null, 'rider_rating.tags': tags, 'rider_rating.rated_at': now, rider_receipt_ack_at: now, updated_at: now } },
+      { $set: { 'rider_rating.stars': stars, 'rider_rating.comment': comment || null, 'rider_rating.tags': tags, 'rider_rating.rated_at': now, rider_receipt_ack_at: trip.rider_receipt_ack_at || now, updated_at: now } },
       { new: true }
     );
     if (!rated) {

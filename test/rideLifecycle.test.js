@@ -117,3 +117,14 @@ test('a second rating of the same trip is refused and the first one stays', asyn
   const again = await call(rateDriver, { body: { ride_id: t.trip_id, user_id: 'rider-1', stars: 1 } });
   assert.equal(again.statusCode, 409);
 });
+
+test('rating after the receipt was seen keeps the time it was first seen', async () => {
+  await reset();
+  const t = makeTrip();
+  await db.TripDetails.create(t);
+  await call(ackReceipt, { body: { ride_id: t.trip_id, user_id: 'rider-1' } });
+  const first = new Date(row(t.trip_id).rider_receipt_ack_at).getTime();
+  await new Promise((r) => setTimeout(r, 15));
+  assert.equal((await call(rateDriver, { body: { ride_id: t.trip_id, user_id: 'rider-1', stars: 5 } })).statusCode, 200);
+  assert.equal(new Date(row(t.trip_id).rider_receipt_ack_at).getTime(), first);
+});
