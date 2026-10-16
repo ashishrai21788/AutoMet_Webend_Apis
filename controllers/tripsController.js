@@ -512,8 +512,9 @@ exports.createRequest = async (req, res) => {
       push_sent: false
     });
 
-    if (autoDispatch) {
+    {
       // The one-search-per-rider check above and this insert are not atomic: two taps at the same instant can both pass it.
+      // (every booking path, whether the rider picked a driver or the server does)
       // Keep the earliest request and withdraw this one before the driver is told about it.
       const live = await TripDetails.find({ user_id: userId, status: { $in: ACTIVE_STATUSES } }).lean();
       const earlier = (live || []).filter((t) => t.trip_id !== trip.trip_id)
