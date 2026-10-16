@@ -80,6 +80,8 @@ const tripDetailsSchema = new mongoose.Schema({
   rider_rating: {
     stars: { type: Number, default: null, min: 1, max: 5 },
     comment: { type: String, default: null, trim: true, maxlength: 300 },
+    // what the rider picked from the quick feedback chips (see RATING_TAGS in rideController)
+    tags: { type: [String], default: [] },
     rated_at: { type: Date, default: null }
   },
 

@@ -28,7 +28,7 @@ const call = async (body) => {
 const stored = (id) => {
   const row = db.TripDetails.rows.find((r) => r.trip_id === id);
   // the in-memory stand-in keeps a dotted $set as a flat key; the real models (TEST_DB=postgres) nest it
-  if (row && !row.rider_rating) row.rider_rating = { stars: row['rider_rating.stars'], comment: row['rider_rating.comment'], rated_at: row['rider_rating.rated_at'] };
+  if (row && !row.rider_rating) row.rider_rating = { stars: row['rider_rating.stars'], comment: row['rider_rating.comment'], tags: row['rider_rating.tags'], rated_at: row['rider_rating.rated_at'] };
   return row;
 };
 
@@ -93,4 +93,15 @@ test('an unknown trip is 404, a string "4" is accepted as 4, and the comment is 
   assert.equal(r.statusCode, 200);
   assert.equal(r.body.data.stars, 4);
   assert.equal(r.body.data.comment, null);
+});
+
+test('quick feedback chips are saved once each; unknown ones are ignored', async () => {
+  const t = makeTrip();
+  await db.TripDetails.create(t);
+  const r = await call({ ride_id: t.trip_id, user_id: 'rider-1', stars: 5, tags: ['Polite', 'Polite', 'Great driver', 'not a real chip', 42] });
+  assert.equal(r.statusCode, 200);
+  assert.deepEqual(r.body.data.tags, ['Polite', 'Great driver']);
+  assert.deepEqual(stored(t.trip_id).rider_rating.tags, ['Polite', 'Great driver']);
+  const none = makeTrip(); await db.TripDetails.create(none);
+  assert.deepEqual((await call({ ride_id: none.trip_id, user_id: 'rider-1', stars: 3 })).body.data.tags, [], 'no chips is fine');
 });
