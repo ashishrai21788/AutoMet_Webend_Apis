@@ -182,3 +182,16 @@ test('analytics stay open for the apps but bounded: too many events or too large
   const big = run({ events: [{ eventName: 'x', blob: 'a'.repeat(300 * 1024) }] });
   assert.equal(big.out.code, 413);
 });
+
+test('the invoice carries the same driver and vehicle details as the ride details screen', () => {
+  const { buildInvoiceDocument } = require('../lib/riderInvoice');
+  const d = buildInvoiceDocument({
+    trip: { trip_id: 'T1', user_id: 'u1', fare: 50, currency: 'INR' }, tenant: { name: 'Biz' }, rider: { firstName: 'A' },
+    driver: { firstName: 'Ravi', rating: 4.84, seatingCapacity: 3, fuleType: 'CNG', vehicleColor: 'Green', vehicleNumber: 'DL1' }
+  });
+  assert.equal(d.driver.rating, 4.8);
+  assert.equal(d.driver.seats, 3);
+  assert.equal(d.driver.fuelType, 'CNG');
+  assert.equal(d.driver.vehicleColour, 'Green');
+  assert.equal(d.trip.status, 'COMPLETED');
+});
