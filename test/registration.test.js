@@ -149,3 +149,11 @@ test('a driver can sign up without an email: a placeholder is used, and the phon
   assert.match(d.email, /^driver-.+@noreply.invalid$/);
   assert.equal(d.phone, '+919811122244');
 });
+
+test('reports and notifications cannot be reached through the generic routes; FAQs are read-only there', () => {
+  for (const c of ['driver_issues', 'drivers_notification']) {
+    for (const m of ['GET', 'POST', 'PUT', 'DELETE']) assert.equal(gate(m, c).blocked, 403, `${m} /${c}`);
+  }
+  assert.equal(gate('GET', 'driver_faqs').passed, true);
+  for (const m of ['POST', 'PUT', 'DELETE']) assert.equal(gate(m, 'driver_faqs').blocked, 403, `${m} /driver_faqs`);
+});

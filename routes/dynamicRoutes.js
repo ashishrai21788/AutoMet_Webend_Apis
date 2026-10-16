@@ -7,6 +7,18 @@ const { otpSendLimiters, createLimiter, clientIp } = require('../lib/rateLimit')
 const driverLocationController = require('../controllers/driverLocationController');
 const { businessOnboardingResponse } = require('../lib/driverOnboarding');
 
+// A driver's own record only: a signed-in driver, and the id in the address must be theirs. (These three routes used to
+// answer anyone, with the driver's phone, email, vehicle and licence details.)
+const ownDriver = [
+  requireAuth({ roles: ['driver'] }),
+  (req, res, next) => {
+    if (req.authActorId && req.authActorId !== String(req.params.driverId)) {
+      return res.status(403).json({ success: false, message: 'You can only read your own details', data: null });
+    }
+    next();
+  }
+];
+
 // Driver Login Route - MUST come before dynamic routes
 router.post('/drivers/login', ...otpSendLimiters('driver-login'), businessOnboardingResponse(), dynamicController.loginDriver);
 // Driver self-registration (the same handler as POST /api/drivers, which older app builds still call)
@@ -39,7 +51,7 @@ router.post(
 );
 
 // Driver Current Status Route - MUST come before dynamic routes
-router.get('/drivers/status/:driverId', businessOnboardingResponse(), dynamicController.getDriverStatus);
+router.get('/drivers/status/:driverId', ...ownDriver, businessOnboardingResponse(), dynamicController.getDriverStatus);
 
 // Protected Driver Routes (require JWT token) - MUST come before dynamic routes
 router.get('/drivers/profile', dynamicController.verifyToken, businessOnboardingResponse(), dynamicController.getDriverProfile);
@@ -71,10 +83,10 @@ router.put(
 );
 
 // Get Vehicle Details by DriverId Route - MUST come before dynamic routes
-router.get('/drivers/:driverId/vehicle-details', dynamicController.getVehicleDetails);
+router.get('/drivers/:driverId/vehicle-details', ...ownDriver, dynamicController.getVehicleDetails);
 
 // Driver analytics (aggregate from user_app_analytics + currentlyViewing + todayTotalViewed)
-router.get('/drivers/:driverId/analytics', driverAnalyticsController.getDriverAnalytics);
+router.get('/drivers/:driverId/analytics', ...ownDriver, driverAnalyticsController.getDriverAnalytics);
 
 // Get Driver FAQs Route - MUST come before dynamic routes
 router.get('/drivers/faqs', dynamicController.getDriverFAQs);

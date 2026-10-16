@@ -744,6 +744,10 @@ exports.sendUserNotification = async (req, res) => {
   try {
     const { user_id, userId, title, body, data, channelId } = req.body;
     const userIdValue = (user_id || userId || '').toString().trim();
+    // a rider can only notify themselves; messaging other people is the business's job from the dashboard
+    if (userIdValue && !mayActOnUser(req, userIdValue)) {
+      return res.status(403).json({ success: false, message: 'You can only send notifications to yourself', data: null });
+    }
     if (!userIdValue) {
       return res.status(400).json({
         success: false,
@@ -881,7 +885,8 @@ exports.getUserNotifications = async (req, res) => {
 exports.updateUserNotificationReadStatus = async (req, res) => {
   try {
     const { user_id, userId, notificationIds } = req.body;
-    const userIdValue = user_id || userId;
+    // a rider changes only their own notifications, whatever id the request carries
+    const userIdValue = req.authRole === 'user' && req.authActorId ? req.authActorId : (user_id || userId);
 
     if (!userIdValue) {
       return res.status(400).json({
@@ -973,7 +978,8 @@ exports.updateUserNotificationReadStatus = async (req, res) => {
 exports.deleteUserNotification = async (req, res) => {
   try {
     const { userId, user_id, notificationId, notification_id } = req.query;
-    const userIdValue = userId || user_id;
+    // a rider deletes only their own notifications, whatever id the request carries
+    const userIdValue = req.authRole === 'user' && req.authActorId ? req.authActorId : (userId || user_id);
     const notificationIdValue = notificationId || notification_id;
 
     if (!userIdValue || !notificationIdValue) {

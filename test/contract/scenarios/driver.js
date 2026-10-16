@@ -32,9 +32,11 @@ module.exports = async function driver(t) {
   await call('update fields: nothing to update', { method: 'PUT', path: '/api/drivers/update', body: { driverId }, token, expectStatus: 400 });
   await call('update fields', { method: 'POST', path: '/api/drivers/update', body: { driverId, gender: 'female', emergencyContactName: 'Asha' }, token });
   await call('profile: after the updates', { path: '/api/drivers/profile', token, expectStatus: 200 });
-  await call('status of a driver', { path: `/api/drivers/status/${driverId}`, expectStatus: 200 });
+  await call('status of a driver', { path: `/api/drivers/status/${driverId}`, token, expectStatus: 200 });
+  await call('status of a driver: no sign-in is refused', { path: `/api/drivers/status/${driverId}`, expectStatus: 401 });
 
-  await call('vehicle details: read', { path: `/api/drivers/${driverId}/vehicle-details` });
+  await call('vehicle details: read', { path: `/api/drivers/${driverId}/vehicle-details`, token });
+  await call('vehicle details: no sign-in is refused', { path: `/api/drivers/${driverId}/vehicle-details`, expectStatus: 401 });
   await call('vehicle details: missing driverId', { method: 'PUT', path: '/api/drivers/vehicle-details', body: {}, token, expectStatus: 400 });
   await call('vehicle details: update', { method: 'PUT', path: '/api/drivers/vehicle-details', body: { driverId, vehicleType: 'Sedan', vehicleNumber: 'MH12AB1234', vehicleModel: 'Dzire', vehicleColor: 'White', vehicleManufacturingYear: '2021', fuleType: 'Petrol', seatingCapacity: 4, isVehicleAdded: true }, token });
   await call('vehicle details: read after the update', { path: `/api/drivers/${driverId}/vehicle-details` });
@@ -74,7 +76,8 @@ module.exports = async function driver(t) {
     ] }
   });
   await call('analytics: empty body', { method: 'POST', path: '/api/user-app-analytics', body: {}, expectStatus: 400 });
-  await call('analytics: driver summary', { path: `/api/drivers/${driverId}/analytics` });
+  await call('analytics: driver summary', { path: `/api/drivers/${driverId}/analytics`, token });
+  await call('analytics: driver summary needs a sign-in', { path: `/api/drivers/${driverId}/analytics`, expectStatus: 401 });
   await call('analytics: driver app saves its own events', { method: 'POST', path: '/api/driver-app-analytics', body: { deviceId: 'driver-device-1', events: [{ eventName: 'app_opened', timestamp: now, params: {} }] } });
 
   await call('collections not open to the app: admin users', { path: '/api/admin_users', expectStatus: 403 });

@@ -96,3 +96,14 @@ test('the public deletion page explains how, and loads no scripts', () => {
   assert.match(PAGE, /What is kept/);
   assert.doesNotMatch(PAGE, /<script/i);
 });
+
+test('a rider cannot push a notification to, or alter the notifications of, another rider', async () => {
+  const other = { authRole: 'user', authActorId: 'U2' };
+  let r = await run(users.sendUserNotification, { ...other, body: { userId: 'U1', title: 'Your account is locked, call 555-0100' } });
+  assert.equal(r.statusCode, 403);
+  // read: a rider always gets their own list, whatever userId the query carries
+  const seen = [];
+  Object.defineProperty(require('../lib/db/mongoose'), 'connection', { configurable: true, value: { db: { collection: () => ({ find: (q) => { seen.push(q); return { sort: () => ({ toArray: async () => [] }) }; } }) } } });
+  await run(users.getUserNotifications, { ...other, query: { userId: 'U1' } });
+  assert.deepEqual(seen.map((q) => q.userId), ['U2']);
+});

@@ -2763,6 +2763,10 @@ exports.sendDriverNotification = async (req, res) => {
   try {
     const { driver_id, driverId, title, body, data } = req.body;
     const driverIdValue = (driver_id || driverId || '').toString().trim();
+    // a driver can only notify themselves; messaging other people is the business's job from the dashboard
+    if (driverIdValue && req.authRole === 'driver' && req.authActorId && String(req.authActorId) !== driverIdValue) {
+      return res.status(403).json({ success: false, message: 'You can only send notifications to yourself', data: null });
+    }
     if (!driverIdValue) {
       return res.status(400).json({
         success: false,
