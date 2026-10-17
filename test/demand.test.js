@@ -84,3 +84,30 @@ test('a rider reports their position; one row per rider; only riders may report;
   assert.equal(db.RiderPresence.rows[0].area, 'Sector 63');
   assert.equal(db.RiderPresence.rows[0].tenantId, 't1');
 });
+
+// ---- what a driver sees on a ride request: how far the pickup is, and how experienced the rider is ----
+const { pickupLeg, offerExtras } = require('../lib/rideOffer');
+
+test('the pickup leg is the driver-to-pickup distance with a road allowance, and a drive time', () => {
+  const driver = { lastLocation: { type: 'Point', coordinates: [DRIVER.lng, DRIVER.lat] } };
+  const leg = pickupLeg(driver, north(1));
+  assert.ok(leg.km >= 1.2 && leg.km <= 1.4, `1 km straight line is about 1.3 km by road, got ${leg.km}`);
+  assert.ok(leg.minutes >= 3 && leg.minutes <= 4, `drive time ${leg.minutes}`);
+  assert.equal(pickupLeg({}, north(1)), null, 'no position, no leg');
+  assert.equal(pickupLeg(driver, { lat: 'x', lng: 1 }), null);
+});
+
+test('offer extras carry the pickup leg and the rider\'s finished-ride count, empty when unknown', async () => {
+  db.TripDetails.rows.length = 0;
+  await db.TripDetails.create({ trip_id: 'T1', user_id: 'U9', status: 'COMPLETED' });
+  await db.TripDetails.create({ trip_id: 'T2', user_id: 'U9', status: 'COMPLETED' });
+  await db.TripDetails.create({ trip_id: 'T3', user_id: 'U9', status: 'CANCELLED_BY_USER' });
+  await db.TripDetails.create({ trip_id: 'T4', user_id: 'OTHER', status: 'COMPLETED' });
+  const driver = { lastLocation: { type: 'Point', coordinates: [DRIVER.lng, DRIVER.lat] } };
+  const x = await offerExtras({ user_id: 'U9', pickup: north(2) }, driver);
+  assert.equal(x.rider_trips, '2');
+  assert.ok(Number(x.pickup_distance) > 2 && Number(x.pickup_eta_min) >= 5);
+  const none = await offerExtras({ user_id: 'U9', pickup: north(2) }, {});
+  assert.equal(none.pickup_distance, '');
+  assert.equal(none.pickup_eta_min, '');
+});

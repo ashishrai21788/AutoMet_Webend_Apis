@@ -5,6 +5,7 @@ const { isFcmReady } = require('../config/firestore');
 const { emitToDriver, emitToUser } = require('../config/socket');
 const { buildImmediateCreateResponse } = require('../lib/createRequestMode');
 const { isDriverReachable, getDriverFcmInfo, sendRideRequestPushWithRetry } = require('../lib/fcmTripPush');
+const { offerExtras } = require('../lib/rideOffer');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { priceTrip, loadPricingConfig } = require('../lib/tripPricing');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
@@ -231,8 +232,9 @@ exports.nearbyDrivers = async (req, res) => {
 };
 
 /** The push payload the driver app shows as "New Ride Request", built from a stored trip. */
-function ridePushPayload(trip, riderName) {
+function ridePushPayload(trip, riderName, extras = {}) {
   return {
+    ...extras,
     request_id: trip.request_id,
     pickup_address: trip.pickup.address,
     drop_address: trip.drop.address,
@@ -291,7 +293,8 @@ async function reofferTrip(trip, now = new Date()) {
 
     const { fcmToken } = getDriverFcmInfo(next.driver);
     const riderName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.fullName || null;
-    const push = await sendRideRequestPushWithRetry(fcmToken, claimed.trip_id, ridePushPayload(claimed, riderName), {
+    const extras = await offerExtras(claimed, next.driver);
+    const push = await sendRideRequestPushWithRetry(fcmToken, claimed.trip_id, ridePushPayload(claimed, riderName, extras), {
       DriverModel: createModel('drivers'), driverId: nextId
     });
     if (push.success) {
@@ -549,7 +552,8 @@ exports.createRequest = async (req, res) => {
       estimated_duration: String(estimate.duration_min),
       fare: String(estimate.fare),
       currency: estimate.currency,
-      payment_mode: 'CASH'
+      payment_mode: 'CASH',
+      ...(await offerExtras(trip, driver))
     };
     const pushResult = await sendRideRequestPushWithRetry(
       driverFcmToken,

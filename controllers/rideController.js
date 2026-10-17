@@ -1091,6 +1091,20 @@ exports.getActiveRide = async (req, res) => {
 
     const { _id, __v, start_otp_attempts, ...rideRecord } = trip; // internal counter, never part of a payload
     if (needsReceipt) rideRecord.needs_receipt = true;
+    // a driver looking at an offer sees what the push carried: who is asking, how far the pickup is, how many rides they have done
+    if (driverId && trip.status === 'REQUESTED') {
+      try {
+        const [rider, drv] = await Promise.all([
+          createModel('users').findOne({ userId: trip.user_id }).lean(),
+          createModel('drivers').findOne({ driverId }).lean()
+        ]);
+        const extras = await require('../lib/rideOffer').offerExtras(trip, drv);
+        rideRecord.rider_name = rider ? ([rider.firstName, rider.lastName].filter(Boolean).join(' ').trim() || rider.fullName || null) : null;
+        rideRecord.pickup_distance_km = extras.pickup_distance === '' ? null : Number(extras.pickup_distance);
+        rideRecord.pickup_eta_min = extras.pickup_eta_min === '' ? null : Number(extras.pickup_eta_min);
+        rideRecord.rider_trips = extras.rider_trips === '' ? null : Number(extras.rider_trips);
+      } catch (e) { console.error('[getActiveRide offer]', e && e.message); }
+    }
     res.status(200).json({
       success: true,
       message: needsReceipt ? 'Finished ride waiting for its receipt to be seen' : 'Active ride found',
