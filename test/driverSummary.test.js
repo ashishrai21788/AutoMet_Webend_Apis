@@ -228,3 +228,23 @@ test('the go-online and go-offline call opens and closes the duty session the on
   await toggle(false);
   assert.ok(db.DriverDutySession.rows[0].endedAt, 'going offline closes the session');
 });
+
+test('demand: riders with their app open near the driver are counted, for this business only', async () => {
+  await seed();
+  db.RiderPresence.rows.length = 0;
+  const lat = 28.5746; const lng = 77.4858;
+  await db.Driver.updateMany({ driverId: 'D1' }, { $set: { lastLocation: { type: 'Point', coordinates: [lng, lat] }, locationUpdatedAt: new Date() } });
+  const seen = (km, extra = {}) => ({ userId: 'R' + Math.random(), tenantId: 't1', lat: lat + km / 111.2, lng, area: 'Sector 62', lastSeen: new Date(), ...extra });
+  await db.RiderPresence.create(seen(0.5));
+  await db.RiderPresence.create(seen(1));
+  await db.RiderPresence.create(seen(1.5));
+  await db.RiderPresence.create(seen(1, { tenantId: 'other-business' }));
+  await db.RiderPresence.create(seen(1, { lastSeen: new Date(Date.now() - 20 * 60 * 1000) }));
+  const d = (await call()).body.data.demand;
+  assert.equal(d.ridersNearby, 3);
+  assert.equal(d.level, 'GOOD');
+  db.RiderPresence.rows.length = 0;
+  assert.equal((await call()).body.data.demand.level, 'NONE');
+  await db.Driver.updateMany({ driverId: 'D1' }, { $set: { lastLocation: null } });
+  assert.equal((await call()).body.data.demand, null, 'a driver with no position has no demand reading');
+});

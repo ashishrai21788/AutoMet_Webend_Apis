@@ -278,6 +278,7 @@ app.use('/api/images', require('./routes/imageRoutes')); // Image upload/delete 
 app.use('/api/v1/rides', require('./routes/rideRoutes')); // Ride request, accept, reject, status, timeline, check-timeouts
 app.use('/api/v1/ride-actions', require('./routes/rideActionRoutes')); // Ride actions: request, accept, reject, cancel (atomic, idempotent)
 app.use('/api/v1/driver/onboarding', require('./routes/driverOnboardingRoutes')); // Driver self-service onboarding: area, vehicle, documents (the dashboard's own records)
+app.use('/api/v1/rider/presence', require('./routes/riderPresenceRoutes')); // Where a rider is while the map is open: the source of the demand drivers see
 app.use('/api/v1/driver/summary', require('./routes/driverSummaryRoutes')); // The driver's own numbers: today's trips and earnings, rating, vehicle, area, alerts
 app.use('/api/v1/public', require('./routes/publicRoutes')); // Public business config for the rider/driver apps (X-App-Id), no sign-in
 app.use('/api/v1/trips', require('./routes/tripRoutes')); // Trip create-request (30s wait), driver-response, check-timeouts

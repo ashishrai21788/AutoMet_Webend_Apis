@@ -12,6 +12,9 @@ const { createModel } = require('../models/dynamicModel');
 const c = require('./fleet/common');
 const { DriverDutySession } = require('../models/driverDutySessionModel');
 const { onlineSeconds } = require('../lib/dutyLog');
+const { demandAround } = require('../lib/demand');
+const { positionOf } = require('../lib/driverLocation');
+const { effectiveTenantId } = require('../lib/appTenant');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXPIRY_WARNING_DAYS = 30;
@@ -85,6 +88,13 @@ async function summary(req, res) {
   scan(await req.data.find(DriverDocument, { driverId: driver.driverId }), requirements.driver, 'driver');
   if (vehicle) scan(await req.data.find(VehicleDocument, { vehicleId: vehicle.vehicleId }), requirements.vehicle, 'vehicle');
 
+  // demand: riders with their app open near where this driver last was (null when the driver has no position yet)
+  let demand = null;
+  try {
+    const position = positionOf(fresh);
+    if (position) demand = await demandAround({ tenantId: await effectiveTenantId(fresh), position, now });
+  } catch (e) { console.error('[driver demand]', e && e.message); }
+
   const availability = await checkDriverAvailable(fresh);
   const eligibility = availability.eligibility || { eligible: false, reasons: [] };
   const last = done[0] || null;
@@ -93,6 +103,7 @@ async function summary(req, res) {
     generatedAt: now.toISOString(),
     currency,
     driver: { driverId: driver.driverId, name: [fresh.firstName, fresh.lastName].filter(Boolean).join(' ').trim(), profilePhoto: /^https?:/.test(fresh.profilePhoto || '') && !/cdn.example.com/.test(fresh.profilePhoto) ? fresh.profilePhoto : null, online: !!fresh.isOnline },
+    demand,
     support: { phone: req.business.supportPhone || '', email: req.business.supportEmail || '', name: req.business.name || '' },
     today: { trips: today.length, earnings: sum(today), onlineSeconds: onlineSeconds(sessions, fresh, dayStart, now, now) },
     week: { trips: week.length, earnings: sum(week), onlineSeconds: onlineSeconds(sessions, fresh, weekStart, now, now) },
