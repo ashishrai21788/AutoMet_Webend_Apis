@@ -111,3 +111,42 @@ test('offer extras carry the pickup leg and the rider\'s finished-ride count, em
   assert.equal(none.pickup_distance, '');
   assert.equal(none.pickup_eta_min, '');
 });
+
+// ---- the driver rates the rider ----
+const rideController = require('../controllers/rideController');
+const rateRider = async (body) => {
+  const req = { body, params: {}, query: {}, headers: {} };
+  let out;
+  const res = { code: 200, status(c) { this.code = c; return this; }, json(b) { out = { code: this.code, body: b }; return this; } };
+  await rideController.rateRider(req, res);
+  return out;
+};
+
+test('a driver rates the rider of a finished ride once; others cannot; bad input is refused', async () => {
+  db.TripDetails.rows.length = 0;
+  await db.TripDetails.create({ trip_id: 'R1', user_id: 'U1', driver_id: 'D1', status: 'COMPLETED' });
+  await db.TripDetails.create({ trip_id: 'R2', user_id: 'U1', driver_id: 'D1', status: 'ON_GOING' });
+  assert.equal((await rateRider({ trip_id: 'R1', driver_id: 'D1', stars: 0 })).code, 400);
+  assert.equal((await rateRider({ trip_id: 'R1', driver_id: 'D1', stars: 4.5 })).code, 400);
+  assert.equal((await rateRider({ trip_id: 'NOPE', driver_id: 'D1', stars: 5 })).code, 404);
+  assert.equal((await rateRider({ trip_id: 'R1', driver_id: 'OTHER', stars: 5 })).code, 403, 'only the trip\'s own driver');
+  assert.equal((await rateRider({ trip_id: 'R2', driver_id: 'D1', stars: 5 })).code, 409, 'not finished yet');
+  const ok = await rateRider({ trip_id: 'R1', driver_id: 'D1', stars: 5, comment: 'Polite' });
+  assert.equal(ok.code, 200, JSON.stringify(ok.body));
+  const saved = db.TripDetails.rows.find((t) => t.trip_id === 'R1');
+  assert.equal(saved['driver_rating.stars'] ?? (saved.driver_rating && saved.driver_rating.stars), 5);
+  assert.equal((await rateRider({ trip_id: 'R1', driver_id: 'D1', stars: 1 })).code, 409, 'once only');
+});
+
+test('a rider\'s rating appears only after enough drivers have rated them', async () => {
+  db.TripDetails.rows.length = 0;
+  const driver = { lastLocation: { type: 'Point', coordinates: [DRIVER.lng, DRIVER.lat] } };
+  const done = (id, stars) => db.TripDetails.create({ trip_id: id, user_id: 'U5', status: 'COMPLETED', driver_rating: stars ? { stars } : undefined });
+  await done('A1', 5); await done('A2', 4);
+  assert.equal((await offerExtras({ user_id: 'U5', pickup: north(1) }, driver)).rider_rating, '', 'two ratings are not enough');
+  await done('A3', 5);
+  await done('A4', null);
+  const x = await offerExtras({ user_id: 'U5', pickup: north(1) }, driver);
+  assert.equal(x.rider_rating, '4.7', 'the average of 5, 4 and 5');
+  assert.equal(x.rider_trips, '4');
+});

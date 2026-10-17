@@ -28,6 +28,13 @@ router.post(
   rideController.rateDriver
 );
 
+// the driver rates the rider after a finished ride
+router.post(
+  '/rate-rider',
+  requireAuth({ roles: ['driver'], enforceBodyDriverId: true }),
+  rideController.rateRider
+);
+
 // the rider's app showed the finished-trip receipt: it is not offered again on the next start
 router.post(
   '/receipt-ack',

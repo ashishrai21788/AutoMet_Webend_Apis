@@ -92,6 +92,13 @@ const tripDetailsSchema = new mongoose.Schema({
     rated_at: { type: Date, default: null }
   },
 
+  // The driver's rating of the rider for this trip. Written once, after the trip is COMPLETED (POST /api/v1/rides/rate-rider).
+  driver_rating: {
+    stars: { type: Number, default: null, min: 1, max: 5 },
+    comment: { type: String, default: null, trim: true, maxlength: 300 },
+    rated_at: { type: Date, default: null }
+  },
+
   requested_at: { type: Date, required: true, default: Date.now },
   responded_at: { type: Date, default: null },
   driver_on_the_way_at: { type: Date, default: null },
