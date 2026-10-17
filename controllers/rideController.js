@@ -792,6 +792,65 @@ exports.rateDriver = async (req, res) => {
 };
 
 /**
+ * POST /api/v1/rides/driver-cancel
+ * The driver cancels a ride they accepted, before the trip starts. Body: { trip_id, driver_id, reason? }.
+ * The rider is told at once (socket and push) and is never charged for it. 404 unknown trip · 403 not this driver's trip ·
+ * 409 already ended / answered by someone else in the meantime · 400 once the trip has started or bad input.
+ */
+const DRIVER_CANCEL_REASONS = ['Rider not reachable', 'Rider asked to cancel', 'Vehicle problem', 'Pickup is too far', 'Other'];
+exports.DRIVER_CANCEL_REASONS = DRIVER_CANCEL_REASONS;
+
+exports.cancelRideByDriver = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const tripId = String(body.ride_id ?? body.trip_id ?? '').trim();
+    const driverId = String(body.driver_id ?? '').trim();
+    const reason = body.reason == null ? null : String(body.reason).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120) || null;
+    if (!tripId || !driverId) {
+      return res.status(400).json({ success: false, message: 'Missing required fields: trip_id, driver_id', data: { missingFields: { trip_id: !tripId, driver_id: !driverId } } });
+    }
+    const trip = await TripDetails.findOne({ trip_id: tripId }).lean();
+    if (!trip) return res.status(404).json({ success: false, message: 'Ride not found', data: { ride_id: tripId } });
+    if (trip.driver_id !== driverId) {
+      return res.status(403).json({ success: false, message: 'Only the driver of this ride can cancel it', data: { ride_id: tripId } });
+    }
+    if (String(trip.status).startsWith('CANCELLED')) {
+      return res.status(409).json({ success: false, message: 'This ride has already been cancelled', data: { ride_id: tripId, status: trip.status } });
+    }
+    if (!['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED'].includes(trip.status)) {
+      return res.status(400).json({ success: false, message: 'A ride can only be cancelled before the trip has started', data: { ride_id: tripId, status: trip.status } });
+    }
+    const now = new Date();
+    // conditional write on the status we just read: a start or a rider cancel that lands first wins
+    const cancelled = await TripDetails.findOneAndUpdate(
+      { trip_id: tripId, driver_id: driverId, status: trip.status },
+      { $set: { status: 'CANCELLED_BY_DRIVER', cancelled_by: 'DRIVER', cancel_stage: 'after_accept', cancellation_reason: reason, cancelled_at: now, cancellation_fee: 0, cancellation_fee_reason: null, updated_at: now } },
+      { new: true }
+    );
+    if (!cancelled) {
+      const latest = await TripDetails.findOne({ trip_id: tripId }).lean();
+      return res.status(409).json({ success: false, message: `The ride has just changed (now ${latest ? latest.status : 'unknown'}). Please check its status.`, data: { ride_id: tripId, current_status: latest ? latest.status : null } });
+    }
+    await logTripEvent(tripId, 'CANCELLED_BY_DRIVER', { cancelled_by: 'DRIVER', cancel_stage: 'after_accept', cancellation_reason: reason || undefined, cancelled_at: now.toISOString() });
+    clearTripRateLimitForDriver(driverId);
+    try {
+      emitToUser(trip.user_id, 'ride_status_updated', { trip_id: tripId, status: 'CANCELLED_BY_DRIVER', cancelled_by: 'DRIVER', cancellation_reason: reason || undefined });
+    } catch (e) { /* the push below still tells the rider */ }
+    sendPushToUser(trip.user_id, {
+      title: 'Your driver cancelled',
+      body: 'The driver cancelled this ride. You have not been charged. You can book another ride.',
+      channelId: 'user_notifications',
+      data: { type: 'ride_status_updated', trip_id: tripId, status: 'CANCELLED_BY_DRIVER', cancelled_by: 'DRIVER' },
+      dataOnly: true
+    }).catch(() => {});
+    res.status(200).json({ success: true, message: 'Ride cancelled', data: { ride_id: tripId, status: 'CANCELLED_BY_DRIVER', cancellation_reason: reason } });
+  } catch (error) {
+    console.error('[cancelRideByDriver]', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to cancel the ride' });
+  }
+};
+
+/**
  * POST /api/v1/rides/rate-rider
  * The driver of a COMPLETED trip rates the rider once. Body: { trip_id, driver_id, stars (1-5), comment? (max 300 characters) }.
  * 404 unknown trip · 403 not this driver's trip · 409 not completed yet / already rated · 400 bad input.
@@ -1153,7 +1212,7 @@ exports.getActiveRide = async (req, res) => {
         rideRecord.pickup_distance_km = extras.pickup_distance === '' ? null : Number(extras.pickup_distance);
         rideRecord.pickup_eta_min = extras.pickup_eta_min === '' ? null : Number(extras.pickup_eta_min);
         rideRecord.rider_trips = extras.rider_trips === '' ? null : Number(extras.rider_trips);
-        rideRecord.rider_rating = extras.rider_rating === '' ? null : Number(extras.rider_rating);
+        rideRecord.rider_avg_rating = extras.rider_rating === '' ? null : Number(extras.rider_rating);
       } catch (e) { console.error('[getActiveRide offer]', e && e.message); }
     }
     res.status(200).json({
@@ -1219,6 +1278,11 @@ exports.getRideDetails = async (req, res) => {
     if (isDriver) {
       const userDoc = await UserModel.findOne({ userId: trip.user_id });
       data.user = toUserProfileForDisplay(userDoc);
+      try {
+        const extras = await require('../lib/rideOffer').offerExtras(trip, null);
+        data.rider_trips = extras.rider_trips === '' ? null : Number(extras.rider_trips);
+        data.rider_avg_rating = extras.rider_rating === '' ? null : Number(extras.rider_rating);
+      } catch (_) { /* the screen shows the ride without them */ }
     }
     if (isUser) {
       const driverDoc = await DriverModel.findOne({ driverId: trip.driver_id });

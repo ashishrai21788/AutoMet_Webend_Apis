@@ -150,3 +150,45 @@ test('a rider\'s rating appears only after enough drivers have rated them', asyn
   assert.equal(x.rider_rating, '4.7', 'the average of 5, 4 and 5');
   assert.equal(x.rider_trips, '4');
 });
+
+// ---- the driver cancels an accepted ride ----
+const driverCancel = async (body) => {
+  const req = { body, params: {}, query: {}, headers: {} };
+  let out;
+  const res = { code: 200, status(c) { this.code = c; return this; }, json(b) { out = { code: this.code, body: b }; return this; } };
+  await rideController.cancelRideByDriver(req, res);
+  return out;
+};
+
+test('a driver can cancel an accepted ride before the trip starts: once, only their own, never after it started', async () => {
+  db.TripDetails.rows.length = 0;
+  await db.TripDetails.create({ trip_id: 'C1', user_id: 'U1', driver_id: 'D1', status: 'DRIVER_ON_THE_WAY' });
+  await db.TripDetails.create({ trip_id: 'C2', user_id: 'U1', driver_id: 'D1', status: 'ON_GOING' });
+  await db.TripDetails.create({ trip_id: 'C3', user_id: 'U1', driver_id: 'D1', status: 'COMPLETED' });
+  assert.equal((await driverCancel({ driver_id: 'D1' })).code, 400, 'a trip id is needed');
+  assert.equal((await driverCancel({ trip_id: 'NOPE', driver_id: 'D1' })).code, 404);
+  assert.equal((await driverCancel({ trip_id: 'C1', driver_id: 'OTHER' })).code, 403, 'only the ride\'s own driver');
+  assert.equal((await driverCancel({ trip_id: 'C2', driver_id: 'D1' })).code, 400, 'not once the trip has started');
+  assert.equal((await driverCancel({ trip_id: 'C3', driver_id: 'D1' })).code, 400);
+  const ok = await driverCancel({ trip_id: 'C1', driver_id: 'D1', reason: 'Vehicle problem' });
+  assert.equal(ok.code, 200, JSON.stringify(ok.body));
+  const row = db.TripDetails.rows.find((t) => t.trip_id === 'C1');
+  assert.equal(row.status, 'CANCELLED_BY_DRIVER');
+  assert.equal(row.cancelled_by, 'DRIVER');
+  assert.equal(row.cancellation_fee, 0, 'the rider is never charged for a driver cancelling');
+  assert.equal((await driverCancel({ trip_id: 'C1', driver_id: 'D1' })).code, 409, 'only once');
+});
+
+test('the driver\'s ride details carry the rider\'s finished-ride count and average rating', async () => {
+  db.TripDetails.rows.length = 0;
+  await db.User.create({ userId: 'UX', phone: '+919800000000', firstName: 'Asha' });
+  await db.TripDetails.create({ trip_id: 'LIVE', user_id: 'UX', driver_id: 'DX', status: 'ACCEPTED', pickup: { address: 'A', lat: 1, lng: 1 }, drop: { address: 'B', lat: 2, lng: 2 } });
+  for (const [i, s] of [5, 4, 5].entries()) await db.TripDetails.create({ trip_id: 'OLD' + i, user_id: 'UX', driver_id: 'DX', status: 'COMPLETED', driver_rating: { stars: s } });
+  const req = { query: { trip_id: 'LIVE', driver_id: 'DX' }, headers: {}, params: {} };
+  let out;
+  const res = { code: 200, status(c) { this.code = c; return this; }, json(b) { out = { code: this.code, body: b }; return this; } };
+  await rideController.getRideDetails(req, res);
+  assert.equal(out.code, 200, JSON.stringify(out.body).slice(0, 200));
+  assert.equal(out.body.data.rider_trips, 3);
+  assert.equal(out.body.data.rider_avg_rating, 4.7);
+});

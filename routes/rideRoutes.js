@@ -28,6 +28,13 @@ router.post(
   rideController.rateDriver
 );
 
+// the driver cancels an accepted ride before the trip starts
+router.post(
+  '/driver-cancel',
+  requireAuth({ roles: ['driver'], enforceBodyDriverId: true }),
+  rideController.cancelRideByDriver
+);
+
 // the driver rates the rider after a finished ride
 router.post(
   '/rate-rider',
