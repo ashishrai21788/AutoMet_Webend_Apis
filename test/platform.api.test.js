@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const express = require('express');
 const { createFakeDb } = require('./helpers/fakeDb');
 const { jsonBodyParser } = require('../lib/jsonBody');
+const { startOfDay } = require('../lib/timeZone');
 
 const db = createFakeDb();
 db.install();
@@ -15,6 +16,9 @@ const adminRoutes = require('../routes/adminRoutes');
 const { integrationStatus } = require('../lib/integrationStatus');
 
 const ago = (ms) => new Date(Date.now() - ms);
+// A moment that is still "today" in the businesses' time zone however early in the day the test runs: "N minutes ago",
+// but never before the start of the day (a few minutes after local midnight, "5 minutes ago" is already yesterday).
+const todayAgo = (ms) => new Date(Math.max(Date.now() - ms, startOfDay(new Date(), 'Asia/Kolkata').getTime() + 1000));
 let server;
 let base;
 const ctx = {};
@@ -36,11 +40,11 @@ test.before(async () => {
   await driver('d3', null, { isOnline: true }); // before businesses: the default business
   await db.User.create({ userId: 'u1', tenantId: 'app_a', firstName: 'A', lastName: 'R', phone: '+911', createdAt: ago(86400000) });
   await db.User.create({ userId: 'u2', tenantId: null, firstName: 'B', lastName: 'R', phone: '+912', createdAt: ago(30 * 86400000) });
-  const trip = (id, tenant, status, minsAgo) => db.TripDetails.create({ trip_id: id, request_id: id, user_id: 'u1', driver_id: 'd1', tenant_id: tenant, status, pickup: { address: 'a', lat: 1, lng: 1 }, drop: { address: 'b', lat: 1, lng: 1 }, requested_at: ago(minsAgo * 60000), timeout_at: new Date() });
-  await trip('T1', 'app_a', 'ON_GOING', 5);
-  await trip('T2', 'app_a', 'REQUESTED', 2);
+  const trip = (id, tenant, status, minsAgo, when = ago) => db.TripDetails.create({ trip_id: id, request_id: id, user_id: 'u1', driver_id: 'd1', tenant_id: tenant, status, pickup: { address: 'a', lat: 1, lng: 1 }, drop: { address: 'b', lat: 1, lng: 1 }, requested_at: when(minsAgo * 60000), timeout_at: new Date() });
+  await trip('T1', 'app_a', 'ON_GOING', 5, todayAgo);
+  await trip('T2', 'app_a', 'REQUESTED', 2, todayAgo);
   await trip('T3', 'app_a', 'COMPLETED', 3 * 1440);
-  await trip('T4', null, 'COMPLETED', 1);
+  await trip('T4', null, 'COMPLETED', 1, todayAgo);
 
   const app = express();
   app.use(jsonBodyParser());

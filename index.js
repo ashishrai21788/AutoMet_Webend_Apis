@@ -64,20 +64,16 @@ const connectWithRetry = async () => {
   } catch (error) {
     serverHealth.dbConnected = false;
     connectionRetryCount++;
-    console.error(`❌ Database connection failed (attempt ${connectionRetryCount}/${maxRetries}):`, error.message);
-    
-    if (connectionRetryCount < maxRetries) {
-      // Exponential backoff: 5s, 10s, 20s, 40s, 80s
-      const retryDelay = Math.min(5000 * Math.pow(2, connectionRetryCount - 1), 80000);
-      console.log(`🔄 Retrying database connection in ${retryDelay/1000} seconds...`);
-      
-      setTimeout(() => {
-        connectWithRetry();
-      }, retryDelay);
-    } else {
-      console.error('❌ Max database connection retries reached. Server will continue without database.');
+    console.error(`❌ Database connection failed (attempt ${connectionRetryCount}):`, error.message);
+
+    // Keep retrying forever with a capped backoff (5s, 10s, 20s, 40s, 80s, then every 80s): giving up would leave every
+    // /api call answering 503 until someone restarts the service, even after the database comes back.
+    const retryDelay = Math.min(5000 * Math.pow(2, Math.min(connectionRetryCount, maxRetries) - 1), 80000);
+    console.log(`🔄 Retrying database connection in ${retryDelay/1000} seconds...`);
+    if (connectionRetryCount >= maxRetries) {
       console.log('💡 Please check your MongoDB credentials and network connection.');
     }
+    setTimeout(connectWithRetry, retryDelay);
   }
 };
 
