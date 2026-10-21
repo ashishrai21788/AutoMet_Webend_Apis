@@ -1283,6 +1283,13 @@ exports.getRideDetails = async (req, res) => {
         data.rider_trips = extras.rider_trips === '' ? null : Number(extras.rider_trips);
         data.rider_avg_rating = extras.rider_rating === '' ? null : Number(extras.rider_rating);
       } catch (_) { /* the screen shows the ride without them */ }
+      await addRideTypeNames([data]); // the ride type's name (Auto, VIP ...): it decides which vehicle the driver's own map marker shows
+      // the business's top-view map icon for this ride's category, so the driver sees the same vehicle the rider does
+      try {
+        const cfg = await loadPricingConfig(userDoc ? await tenantForAccount(userDoc) : req.appTenant || null);
+        const cat = (cfg.categories || []).find((c) => c.categoryId === trip.category_id);
+        if (cat && cat.mapIconUrl) data.map_icon_url = cat.mapIconUrl;
+      } catch (_) { /* the app falls back to its built-in icon */ }
     }
     if (isUser) {
       const driverDoc = await DriverModel.findOne({ driverId: trip.driver_id });
