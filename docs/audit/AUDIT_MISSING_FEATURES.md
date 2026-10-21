@@ -1,7 +1,7 @@
 # Missing, partial, deferred and blocked work
 
 ## Not implemented (in scope; suggested order)
-1. **Legal documents module** (privacy, rider terms, driver terms, location disclosure, account-deletion policy): versioned, per audience, effective dates, acknowledgement tracking, admin editor, public endpoint; the apps render the published version instead of `strings.xml`. Today the text is compiled into each app and the privacy policy has no hosted URL (Google Play needs one).
+1. ~~Legal documents module~~ **Done in cycle 2** (see AUDIT_MASTER_REPORT.md). Still open: translations (one language per type today), the built-in fallback text still ships in the apps, and the owner must write and have the real text reviewed.
 2. **Configuration publish lifecycle**: draft, validate, publish, history, rollback of pricing and branding as immutable snapshots. Today edits are live immediately and only an audit row records them.
 3. **Minimum app version and forced update**, returned in public config and enforced by the apps.
 4. **Tolls**: a toll amount entered or confirmed per trip, shown to the rider, included in the fare and invoice, and in driver earnings. No code exists.

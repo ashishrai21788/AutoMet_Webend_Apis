@@ -164,6 +164,9 @@ app.get('/t/:token', (req, res) => {
   res.type('html').send(trackPage.PAGE);
 });
 
+// A business's published legal document as a web page (the address for the Play Store listing and the apps' links)
+app.get('/legal/:appId/:type', require('./controllers/legalController').page);
+
 // How to delete a rider account without opening the app (Google Play asks for this address). Static HTML.
 app.get('/account-deletion', (req, res) => {
   res.set({ 'Cache-Control': 'public, max-age=3600', 'Referrer-Policy': 'no-referrer' });
@@ -279,6 +282,7 @@ app.use('/api/v1/rides', require('./routes/rideRoutes')); // Ride request, accep
 app.use('/api/v1/ride-actions', require('./routes/rideActionRoutes')); // Ride actions: request, accept, reject, cancel (atomic, idempotent)
 app.use('/api/v1/driver/onboarding', require('./routes/driverOnboardingRoutes')); // Driver self-service onboarding: area, vehicle, documents (the dashboard's own records)
 app.use('/api/v1/rider/presence', require('./routes/riderPresenceRoutes')); // Where a rider is while the map is open: the source of the demand drivers see
+app.use('/api/v1/legal', require('./routes/legalRoutes')); // What a signed-in rider or driver still has to agree to, and recording consent
 app.use('/api/v1/driver/earnings', require('./routes/driverEarningsRoutes')); // The driver's earnings, analytics, bank account and withdrawals
 app.use('/api/v1/driver/account', require('./routes/driverAccountRoutes')); // The driver's own data rights: a copy of their data, and deleting the account
 app.use('/api/v1/driver/summary', require('./routes/driverSummaryRoutes')); // The driver's own numbers: today's trips and earnings, rating, vehicle, area, alerts

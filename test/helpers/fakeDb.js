@@ -209,6 +209,8 @@ function createFakeDb() {
     Coupon: fakeModel({ uniques: ['couponId', ['tenantId', 'code']], defaults: () => ({ redeemed: 0, active: true, createdAt: new Date(), updatedAt: new Date() }) }),
     CouponUse: fakeModel({ uniques: [['tenantId', 'couponId', 'userId']] }),
     CouponRedemption: fakeModel({ uniques: ['redemptionId', ['tenantId', 'tripId']], defaults: () => ({ state: 'RESERVED', createdAt: new Date(), updatedAt: new Date() }) }),
+    LegalDocument: fakeModel({ uniques: ['docId', ['tenantId', 'type', 'version']], defaults: () => ({ status: 'DRAFT', createdAt: new Date(), updatedAt: new Date() }) }),
+    LegalAcceptance: fakeModel({ uniques: [['tenantId', 'role', 'accountId', 'type', 'version']], defaults: () => ({ at: new Date() }) }),
     DriverPayout: fakeModel({ uniques: ['payoutId', { fields: ['tenantId', 'driverId'], only: { open: true } }], defaults: () => ({ open: true, status: 'REQUESTED', requestedAt: new Date(), createdAt: new Date(), updatedAt: new Date() }) }),
     RiderPresence: fakeModel({ uniques: ['userId'] }),
     RiderInvoice: fakeModel({ uniques: ['invoiceId', 'tripId', ['tenantId', 'invoiceNumber']] }),
@@ -238,6 +240,7 @@ function createFakeDb() {
     stub('models/riderPresenceModel.js', { RiderPresence: db.RiderPresence });
     stub('models/driverDutySessionModel.js', { DriverDutySession: db.DriverDutySession });
     stub('models/driverPayoutModel.js', { DriverPayout: db.DriverPayout });
+    stub('models/legalModel.js', { LegalDocument: db.LegalDocument, LegalAcceptance: db.LegalAcceptance });
     stub('models/couponModel.js', { Coupon: db.Coupon, CouponUse: db.CouponUse, CouponRedemption: db.CouponRedemption });
     stub('models/driverLedgerModel.js', { DriverAdjustment: db.DriverAdjustment, Incentive: db.Incentive });
     stub('models/riderInvoiceModel.js', { RiderInvoice: db.RiderInvoice });

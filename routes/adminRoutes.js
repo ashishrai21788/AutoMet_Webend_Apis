@@ -162,6 +162,14 @@ router.get('/business/payouts/:id', requireAdmin('payments.manage'), withBusines
 router.post('/business/payouts/:id/start', requireAdmin('payments.manage'), withBusiness, payouts.start);
 router.post('/business/payouts/:id/pay', requireAdmin('payments.manage'), withBusiness, payouts.pay);
 router.post('/business/payouts/:id/fail', requireAdmin('payments.manage'), withBusiness, payouts.fail);
+const legalAdmin = require('../controllers/legalAdminController');
+router.get('/business/legal', ...read, legalAdmin.overview);
+router.get('/business/legal/acceptances', ...read, legalAdmin.acceptances);
+router.get('/business/legal/:type/versions', ...read, legalAdmin.versions);
+router.post('/business/legal/:type', ...manage, legalAdmin.createDraft);
+router.put('/business/legal/doc/:id', ...manage, legalAdmin.updateDraft);
+router.post('/business/legal/doc/:id/publish', ...manage, legalAdmin.publish);
+router.delete('/business/legal/doc/:id', ...manage, legalAdmin.deleteDraft);
 const couponsAdmin = require('../controllers/couponsAdminController');
 router.get('/business/coupons', ...read, couponsAdmin.list);
 router.post('/business/coupons', ...pricing, couponsAdmin.create);

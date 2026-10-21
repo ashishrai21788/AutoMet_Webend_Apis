@@ -33,3 +33,20 @@ Chat and online payments: not implemented and not claimed. Booking, invoice and 
 
 ## Release decision
 See `RELEASE_READINESS.md`: blocked by the gaps above.
+
+---
+
+# Cycle 2: legal documents
+
+**Overall status: still NOT PRODUCTION READY.**
+
+| Area | Result | Evidence |
+|---|---|---|
+| Backend tests | PASS | `npm test`: 523 tests, 519 pass, 0 fail, 4 skipped (the same 4 as before); 7 new in `test/legal.test.js` |
+| Admin dashboard | PASS (type check and lint) | `tsc -b` and `oxlint` clean; the Legal Documents page was not opened in a browser |
+| Rider and driver apps | PASS (build only) | `compileDebugKotlin` clean in both; not seen on a device (none was connected) |
+| Legal documents, live | PASS | lab backend over HTTP: 404 before publishing, draft, publish, edit of a published version refused (409), public document and hosted page served, a script tag in the text escaped, consent pending then recorded then none pending, acceptance counted per version |
+
+**What was built:** a versioned legal documents module. Six types (privacy policy, rider terms, driver terms, location disclosure, account deletion, cancellation and refund), each with draft, publish with an effective date (a future date waits), never-edited published versions, history, optional required agreement, and an acceptance record per rider or driver and version. Public API and a public web page per document (the address Google Play asks for). Admin page with editor, live preview and publish dialog. Rider and driver apps show the published text (fallback: the built-in text) and ask for required agreement once per start, again after every new version.
+
+**Limits:** one language per type; text is plain (headings, bullets, paragraphs) by design so it is always safely escaped; a business must write and legally review its own text, this module does not make it sufficient.
