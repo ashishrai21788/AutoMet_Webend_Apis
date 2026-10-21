@@ -738,6 +738,49 @@ exports.cancelRideByUser = async (req, res) => {
  * Body: { ride_id | trip_id, user_id, stars (1-5), comment? (max 300 characters), tags? (quick feedback chips, see RATING_TAGS) }
  * 404 unknown trip · 403 not the rider's trip · 409 not completed yet / already rated · 400 bad input.
  */
+/**
+ * A tip from the rider to the driver for a finished ride, in the currency's major unit. One tip per ride, never more than twice the
+ * fare (and never below the smallest unit), written with a conditional update so two taps cannot add it twice. The driver gets 100%
+ * of it, paid the way the ride was. Returns { ok, status, message, minor } and never throws for a bad request.
+ */
+async function recordTip(trip, userId, amount) {
+  const { digitsOf, toMinor } = require('../lib/riderInvoice');
+  const currency = trip.currency || 'INR';
+  const digits = digitsOf(currency);
+  const minor = toMinor(Number(amount), digits);
+  if (!Number.isFinite(minor) || minor < 1) return { ok: false, status: 400, message: 'Enter a tip amount.' };
+  const cap = Math.max(toMinor(Number(trip.fare) || 0, digits) * 2, 0);
+  if (minor > cap) return { ok: false, status: 400, message: 'A tip can be at most twice the fare.' };
+  if (trip.user_id !== userId) return { ok: false, status: 403, message: 'You can only tip on your own ride.' };
+  if (trip.status !== 'COMPLETED') return { ok: false, status: 409, message: 'You can tip once the ride is completed.' };
+  const now = new Date();
+  const done = await TripDetails.findOneAndUpdate({ trip_id: trip.trip_id, status: 'COMPLETED', tip_minor: { $in: [0, null] } }, { $set: { tip_minor: minor, tip_at: now, updated_at: now } }, { new: true });
+  if (!done) return { ok: false, status: 409, message: 'You have already tipped on this ride.' };
+  await logTripEvent(trip.trip_id, 'RIDER_TIPPED_DRIVER', { amount_minor: minor, tipped_at: now.toISOString() });
+  try {
+    const shown = (minor / 10 ** digits).toFixed(digits);
+    await sendPushToDriver(trip.driver_id, { title: 'You received a tip', body: `${currency === 'INR' ? '₹' : currency + ' '}${shown} from your last rider. Thank you for the great ride.`, channelId: 'driver_notifications', data: { type: 'TIP', trip_id: String(trip.trip_id) } });
+  } catch (_) { /* the tip is saved either way */ }
+  return { ok: true, minor, digits };
+}
+
+exports.tipDriver = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const tripId = String(body.ride_id ?? body.trip_id ?? '').trim();
+    const userId = String(body.user_id ?? '').trim();
+    if (!tripId || !userId) return res.status(400).json({ success: false, message: 'Missing required fields: ride_id, user_id' });
+    const trip = await TripDetails.findOne({ trip_id: tripId }).lean();
+    if (!trip) return res.status(404).json({ success: false, message: 'Ride not found' });
+    const r = await recordTip(trip, userId, body.amount);
+    if (!r.ok) return res.status(r.status).json({ success: false, message: r.message });
+    return res.status(200).json({ success: true, message: 'Thank you. Your tip goes to your driver.', data: { ride_id: tripId, tip: r.minor / 10 ** r.digits } });
+  } catch (error) {
+    console.error('[tipDriver]', error);
+    return res.status(500).json({ success: false, message: 'Could not add the tip' });
+  }
+};
+
 const RATING_TAGS = ['Great driver', 'Clean vehicle', 'Safe ride', 'On time', 'Polite', 'Smooth ride'];
 
 exports.rateDriver = async (req, res) => {
@@ -784,7 +827,13 @@ exports.rateDriver = async (req, res) => {
     }
     await logTripEvent(tripId, 'RIDER_RATED_DRIVER', { stars, comment: comment || undefined, tags: tags.length ? tags : undefined, rated_at: now.toISOString() });
 
-    res.status(200).json({ success: true, message: 'Thanks for rating your ride', data: { ride_id: tripId, stars, comment: comment || null, tags, rated_at: now.toISOString() } });
+    // an optional tip sent with the rating; a failed tip never undoes the rating
+    let tip = null;
+    if (body.tip != null && Number(body.tip) > 0) {
+      const r = await recordTip(trip, userId, body.tip);
+      tip = r.ok ? { amount: r.minor / 10 ** r.digits } : { error: r.message };
+    }
+    res.status(200).json({ success: true, message: 'Thanks for rating your ride', data: { ride_id: tripId, stars, comment: comment || null, tags, rated_at: now.toISOString(), ...(tip ? { tip } : {}) } });
   } catch (error) {
     console.error('[rateDriver]', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to save the rating' });
@@ -1112,6 +1161,18 @@ exports.updateTripStatus = async (req, res) => {
       }
       // On completion make sure the trip has a fare (trips created before fares existed get one computed now).
       const fareInfo = status === 'COMPLETED' ? await ensureTripFare(tripDetails) : null;
+      // the driver's earnings on this trip are fixed now, so a later change of commission never rewrites them
+      if (status === 'COMPLETED') {
+        try {
+          const done = await TripDetails.findOne({ trip_id: tripId }).lean();
+          const drv = await createModel('drivers').findOne({ driverId: done.driver_id });
+          const tenant = drv ? await tenantForAccount(drv) : req.appTenant || null;
+          const snap = require('../lib/driverMoney').snapshotFor(done, tenant);
+          await TripDetails.updateOne({ trip_id: tripId }, { $set: { driver_earning: snap } });
+          // a bonus the driver has just earned by this trip is credited now (safe to repeat: it can only be credited once)
+          await require('../lib/incentives').settle({ tenantId: tenant && tenant.tenantId, driverId: done.driver_id, currency: snap.currency });
+        } catch (e) { console.warn('[earnings] not fixed at completion for', tripId, e.message); }
+      }
       // the rider's invoice is issued as the trip completes; a failure here never fails the completion (it is issued on first read instead)
       if (status === 'COMPLETED') {
         try { await issueForTrip(await TripDetails.findOne({ trip_id: tripId }).lean()); } catch (e) { console.warn('[invoice] not issued at completion for', tripId, e.message); }

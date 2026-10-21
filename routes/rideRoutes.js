@@ -28,6 +28,13 @@ router.post(
   rideController.rateDriver
 );
 
+// the rider tips the driver for a finished ride
+router.post(
+  '/tip',
+  requireAuth({ roles: ['user'], enforceBodyUserId: true }),
+  rideController.tipDriver
+);
+
 // the driver cancels an accepted ride before the trip starts
 router.post(
   '/driver-cancel',

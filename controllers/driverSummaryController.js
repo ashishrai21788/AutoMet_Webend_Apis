@@ -55,7 +55,10 @@ async function summary(req, res) {
 
   const week = done.filter((t) => t.completed_at && new Date(t.completed_at) >= weekStart);
   const today = week.filter((t) => new Date(t.completed_at) >= dayStart);
-  const sum = (rows) => round2(rows.reduce((s, t) => s + (Number(t.fare) || 0), 0));
+  // what the driver earned (fares less the business's share), the same figure the Earnings screens show
+  const adjAll = await require('../models/driverLedgerModel').DriverAdjustment.find({ tenantId: req.business.tenantId, driverId: driver.driverId }).lean();
+  const adjIn = (from) => adjAll.filter((x) => new Date(x.at) >= from);
+  const sum = (rows, from) => { const t = require('../lib/driverMoney').totals(rows, req.business, adjIn(from)); return t.totalMinor / 10 ** require('../lib/riderInvoice').digitsOf(currency); };
   // the rating is what riders gave on this driver's trips (stored on each trip, not kept as a counter that can drift)
   const stars = done.map((t) => Number((t.rider_rating && t.rider_rating.stars) || t['rider_rating.stars'])).filter((n) => n >= 1 && n <= 5);
   const average = stars.length ? Math.round((stars.reduce((a, b) => a + b, 0) / stars.length) * 10) / 10 : null;
@@ -105,8 +108,8 @@ async function summary(req, res) {
     driver: { driverId: driver.driverId, name: [fresh.firstName, fresh.lastName].filter(Boolean).join(' ').trim(), profilePhoto: /^https?:/.test(fresh.profilePhoto || '') && !/cdn.example.com/.test(fresh.profilePhoto) ? fresh.profilePhoto : null, online: !!fresh.isOnline },
     demand,
     support: { phone: req.business.supportPhone || '', email: req.business.supportEmail || '', name: req.business.name || '' },
-    today: { trips: today.length, earnings: sum(today), onlineSeconds: onlineSeconds(sessions, fresh, dayStart, now, now) },
-    week: { trips: week.length, earnings: sum(week), onlineSeconds: onlineSeconds(sessions, fresh, weekStart, now, now) },
+    today: { trips: today.length, earnings: sum(today, dayStart), onlineSeconds: onlineSeconds(sessions, fresh, dayStart, now, now) },
+    week: { trips: week.length, earnings: sum(week, weekStart), onlineSeconds: onlineSeconds(sessions, fresh, weekStart, now, now) },
     rating: { average: average != null ? average : (Number(fresh.rating) > 0 ? Number(fresh.rating) : null), ratedTrips: stars.length, totalRides: done.length },
     acceptance: { offered: answered.length, accepted: accepted.length, ratePercent: answered.length ? Math.round((accepted.length / answered.length) * 100) : null },
     vehicle: vehicle ? {
@@ -150,7 +153,7 @@ async function detail(req, res) {
     const start = new Date(todayStart.getTime() - i * DAY_MS);
     const end = i === 0 ? now : new Date(start.getTime() + DAY_MS);
     const trips = done.filter((t) => t.completed_at && new Date(t.completed_at) >= start && new Date(t.completed_at) < new Date(start.getTime() + DAY_MS));
-    rows.push({ date: dayKey(new Date(start.getTime() + 60 * 60 * 1000), tz), rides: trips.length, earnings: round2(trips.reduce((s, t) => s + (Number(t.fare) || 0), 0)), onlineSeconds: onlineSeconds(sessions, fresh, start, end, now) });
+    rows.push({ date: dayKey(new Date(start.getTime() + 60 * 60 * 1000), tz), rides: trips.length, earnings: round2(require('../lib/driverMoney').totals(trips, req.business).netMinor / 10 ** require('../lib/riderInvoice').digitsOf(currency)), onlineSeconds: onlineSeconds(sessions, fresh, start, end, now) });
   }
   const total = (list) => ({ rides: list.reduce((s, r) => s + r.rides, 0), earnings: round2(list.reduce((s, r) => s + r.earnings, 0)), onlineSeconds: list.reduce((s, r) => s + r.onlineSeconds, 0) });
   const avg = (t) => (t.rides ? round2(t.earnings / t.rides) : 0);

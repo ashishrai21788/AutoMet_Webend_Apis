@@ -204,6 +204,9 @@ function createFakeDb() {
     PlatformInvoice: fakeModel({ uniques: ['invoiceId', 'number'], defaults: () => ({ issuedAt: new Date(), refundedAmount: 0, refunds: [], remindersSent: [], lapsedAt: null }) }),
     PlatformCounter: fakeModel({ uniques: ['key'] }),
     DriverDutySession: fakeModel({ }),
+    DriverAdjustment: fakeModel({ uniques: ['adjustmentId', { fields: ['tenantId', 'driverId', 'refId'], only: { kind: 'INCENTIVE' } }], defaults: () => ({ at: new Date(), createdAt: new Date(), createdBy: 'system' }) }),
+    Incentive: fakeModel({ uniques: ['incentiveId'], defaults: () => ({ active: true, bonusMinor: 0, createdAt: new Date(), updatedAt: new Date() }) }),
+    DriverPayout: fakeModel({ uniques: ['payoutId', { fields: ['tenantId', 'driverId'], only: { open: true } }], defaults: () => ({ open: true, status: 'REQUESTED', requestedAt: new Date(), createdAt: new Date(), updatedAt: new Date() }) }),
     RiderPresence: fakeModel({ uniques: ['userId'] }),
     RiderInvoice: fakeModel({ uniques: ['invoiceId', 'tripId', ['tenantId', 'invoiceNumber']] }),
     PlatformPlan: fakeModel({ uniques: ['planId', 'name'], defaults: () => ({ active: true, setupFee: 0, trialDays: null }) }),
@@ -231,6 +234,8 @@ function createFakeDb() {
     stub('models/supportModels.js', { DriverIssue: db.DriverIssue });
     stub('models/riderPresenceModel.js', { RiderPresence: db.RiderPresence });
     stub('models/driverDutySessionModel.js', { DriverDutySession: db.DriverDutySession });
+    stub('models/driverPayoutModel.js', { DriverPayout: db.DriverPayout });
+    stub('models/driverLedgerModel.js', { DriverAdjustment: db.DriverAdjustment, Incentive: db.Incentive });
     stub('models/riderInvoiceModel.js', { RiderInvoice: db.RiderInvoice });
     stub('models/platformBilling.js', { PlatformInvoice: db.PlatformInvoice, PlatformCounter: db.PlatformCounter, PlatformPlan: db.PlatformPlan, PlatformSettings: db.PlatformSettings });
     require.cache[require.resolve(path.join(root, 'models/tripEventModel.js'))] = { id: 'tripEvent', filename: require.resolve(path.join(root, 'models/tripEventModel.js')), loaded: true, exports: db.TripEvent };

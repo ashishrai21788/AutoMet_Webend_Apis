@@ -416,6 +416,7 @@ const driverSchema = new mongoose.Schema({
     }
   },
   bankAccount: {
+    bankName: { type: String, default: null },
     accountHolderName: {
       type: String,
       default: null,

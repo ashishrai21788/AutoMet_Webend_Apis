@@ -23,6 +23,11 @@ const tenantSchema = new mongoose.Schema({
   brandColor: { type: String, default: '#f5a300', trim: true },
   supportEmail: { type: String, default: '', trim: true },
   supportPhone: { type: String, default: '', trim: true },
+  /** How this business pays its drivers: its share of each fare, the smallest withdrawal (minor units) and whether cash earnings can be withdrawn. */
+  payoutSettings: {
+    type: new mongoose.Schema({ commissionPercent: { type: Number, default: 0, min: 0, max: 100 }, minWithdrawalMinor: { type: Number, default: 0, min: 0 }, cashWithdrawable: { type: Boolean, default: false }, processingNote: { type: String, default: '', trim: true, maxlength: 140 } }, { _id: false }),
+    default: () => ({})
+  },
   /** https link to the business's logo, shown in its apps. */
   logoUrl: { type: String, default: '', trim: true },
   /** Operating country of the business; null until the owner completes the first onboarding step. */

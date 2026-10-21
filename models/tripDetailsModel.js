@@ -93,6 +93,12 @@ const tripDetailsSchema = new mongoose.Schema({
   },
 
   // The driver's rating of the rider for this trip. Written once, after the trip is COMPLETED (POST /api/v1/rides/rate-rider).
+  /** What the driver earned on this trip, fixed when it completed: { fareMinor, feeMinor, netMinor, percent, currency, at }. */
+  driver_earning: { type: mongoose.Schema.Types.Mixed, default: null },
+  /** A tip the rider added after the ride, in minor units. 100% goes to the driver, in the same way the ride was paid. */
+  tip_minor: { type: Number, default: 0, min: 0 },
+  tip_at: { type: Date, default: null },
+
   driver_rating: {
     stars: { type: Number, default: null, min: 1, max: 5 },
     comment: { type: String, default: null, trim: true, maxlength: 300 },

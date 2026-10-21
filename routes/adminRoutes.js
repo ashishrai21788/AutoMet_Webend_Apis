@@ -155,6 +155,22 @@ router.get('/business/audit.csv', requireAdmin('audit.view'), withBusiness, ops.
 router.get('/business/support/issues', requireAdmin('support.manage'), withBusiness, support.list);
 router.get('/business/support/issues/:id', requireAdmin('support.manage'), withBusiness, support.get);
 router.post('/business/support/issues/:id', requireAdmin('support.manage'), withBusiness, support.update);
+// ---- driver payouts (withdrawal requests the business pays and records) ----
+const payouts = require('../controllers/payoutsController');
+router.get('/business/payouts', requireAdmin('payments.view'), withBusiness, payouts.list);
+router.get('/business/payouts/:id', requireAdmin('payments.manage'), withBusiness, payouts.get);
+router.post('/business/payouts/:id/start', requireAdmin('payments.manage'), withBusiness, payouts.start);
+router.post('/business/payouts/:id/pay', requireAdmin('payments.manage'), withBusiness, payouts.pay);
+router.post('/business/payouts/:id/fail', requireAdmin('payments.manage'), withBusiness, payouts.fail);
+const incentivesAdmin = require('../controllers/incentivesAdminController');
+router.get('/business/incentives', requireAdmin('payments.view'), withBusiness, incentivesAdmin.list);
+router.post('/business/incentives', requireAdmin('payments.manage'), withBusiness, incentivesAdmin.create);
+router.put('/business/incentives/:id', requireAdmin('payments.manage'), withBusiness, incentivesAdmin.update);
+router.get('/business/adjustments', requireAdmin('payments.view'), withBusiness, incentivesAdmin.adjustments);
+router.post('/business/adjustments', requireAdmin('payments.manage'), withBusiness, incentivesAdmin.addAdjustment);
+router.get('/business/payout-settings', requireAdmin('payments.view'), withBusiness, payouts.getSettings);
+router.put('/business/payout-settings', requireAdmin('payments.manage'), withBusiness, payouts.updateSettings);
+
 router.get('/business/alerts', ...read, ops.alerts);
 router.get('/business/reports/summary', requireAdmin('trips.view'), withBusiness, reports.summary);
 router.get('/business/export/trips.csv', requireAdmin('trips.view'), withBusiness, reports.tripsCsv);
