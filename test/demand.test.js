@@ -192,3 +192,29 @@ test('the driver\'s ride details carry the rider\'s finished-ride count and aver
   assert.equal(out.body.data.rider_trips, 3);
   assert.equal(out.body.data.rider_avg_rating, 4.7);
 });
+
+// ---- what a finished trip pays the driver ----
+const { earningsFor } = require('../lib/driverEarnings');
+
+test('earnings: the fare lines add up, and the business share comes off only when it keeps one', () => {
+  const trip = { fare: 80, currency: 'INR', fare_breakdown: { lines: [{ label: 'Base fare (6.8 km)', amount: 68 }, { label: 'Time charge (20 min)', amount: 12 }] } };
+  const none = earningsFor(trip, { market: { currency: 'INR' } });
+  assert.equal(none.passenger_fare, 80);
+  assert.equal(none.platform_fee, 0);
+  assert.equal(none.earnings, 80, 'with no share kept the driver gets the whole fare');
+  assert.deepEqual(none.lines.map((l) => l.amount), [68, 12]);
+  const kept = earningsFor(trip, { market: { currency: 'INR', driverCommissionPercent: 10 } });
+  assert.equal(kept.platform_fee_percent, 10);
+  assert.equal(kept.platform_fee, 8);
+  assert.equal(kept.earnings, 72);
+  assert.equal(earningsFor(trip, { market: { driverCommissionPercent: 250 } }).earnings, 80, 'a share above 100 is ignored');
+  assert.equal(earningsFor({ fare: 50, currency: 'INR' }, null).lines.length, 1, 'an old trip without a breakdown is one honest line');
+});
+
+test('the driver rates the rider with quick notes; unknown notes are dropped', async () => {
+  db.TripDetails.rows.length = 0;
+  await db.TripDetails.create({ trip_id: 'N1', user_id: 'U1', driver_id: 'D1', status: 'COMPLETED' });
+  const ok = await rateRider({ trip_id: 'N1', driver_id: 'D1', stars: 4, tags: ['Polite', 'On time', 'Polite', 'Hacker'] });
+  assert.equal(ok.code, 200);
+  assert.deepEqual(ok.body.data.tags, ['Polite', 'On time']);
+});

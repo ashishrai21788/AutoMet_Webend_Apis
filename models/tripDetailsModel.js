@@ -96,6 +96,8 @@ const tripDetailsSchema = new mongoose.Schema({
   driver_rating: {
     stars: { type: Number, default: null, min: 1, max: 5 },
     comment: { type: String, default: null, trim: true, maxlength: 300 },
+    // the quick notes the driver picked (Polite, On time, Late ...)
+    tags: { type: [String], default: [] },
     rated_at: { type: Date, default: null }
   },
 

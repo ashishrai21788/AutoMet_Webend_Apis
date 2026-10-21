@@ -4,7 +4,9 @@ const { ROLES } = require('../lib/adminPermissions');
 const marketSchema = new mongoose.Schema({
   country: { type: String, trim: true }, // ISO 3166-1 alpha-2
   currency: { type: String, trim: true }, // ISO 4217
-  timezone: { type: String, trim: true } // IANA
+  timezone: { type: String, trim: true }, // IANA
+  /** The share of each fare the business keeps from its drivers, 0 to 100 (0: drivers receive the whole fare). */
+  driverCommissionPercent: { type: Number, default: 0, min: 0, max: 100 }
 }, { _id: false });
 
 /** A client of the platform: one white-label app with its own data, admins and settings. */

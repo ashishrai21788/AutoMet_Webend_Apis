@@ -855,6 +855,8 @@ exports.cancelRideByDriver = async (req, res) => {
  * The driver of a COMPLETED trip rates the rider once. Body: { trip_id, driver_id, stars (1-5), comment? (max 300 characters) }.
  * 404 unknown trip · 403 not this driver's trip · 409 not completed yet / already rated · 400 bad input.
  */
+const RIDER_NOTE_TAGS = ['Polite', 'On time', 'Easy to find', 'Helped with luggage', 'Rude', 'Late', 'Location issue', 'Other'];
+
 exports.rateRider = async (req, res) => {
   try {
     const body = req.body || {};
@@ -862,6 +864,8 @@ exports.rateRider = async (req, res) => {
     const driverId = String(body.driver_id ?? '').trim();
     const stars = Number(body.stars);
     const comment = body.comment == null ? null : String(body.comment).trim();
+    // only the known quick notes are kept, once each
+    const tags = Array.isArray(body.tags) ? [...new Set(body.tags.map((t) => String(t).trim()).filter((t) => RIDER_NOTE_TAGS.includes(t)))] : [];
     if (!tripId || !driverId) {
       return res.status(400).json({ success: false, message: 'Missing required fields: trip_id, driver_id', data: { missingFields: { trip_id: !tripId, driver_id: !driverId } } });
     }
@@ -886,14 +890,14 @@ exports.rateRider = async (req, res) => {
     // conditional write: two taps at once cannot both rate the rider
     const rated = await TripDetails.findOneAndUpdate(
       { trip_id: tripId, status: 'COMPLETED', 'driver_rating.stars': null },
-      { $set: { 'driver_rating.stars': stars, 'driver_rating.comment': comment || null, 'driver_rating.rated_at': now, updated_at: now } },
+      { $set: { 'driver_rating.stars': stars, 'driver_rating.comment': comment || null, 'driver_rating.tags': tags, 'driver_rating.rated_at': now, updated_at: now } },
       { new: true }
     );
     if (!rated) {
       return res.status(409).json({ success: false, message: 'This rider has already been rated for this ride', data: { ride_id: tripId } });
     }
-    await logTripEvent(tripId, 'DRIVER_RATED_RIDER', { stars, comment: comment || undefined, rated_at: now.toISOString() });
-    res.status(200).json({ success: true, message: 'Thanks for rating the rider', data: { ride_id: tripId, stars, comment: comment || null, rated_at: now.toISOString() } });
+    await logTripEvent(tripId, 'DRIVER_RATED_RIDER', { stars, comment: comment || undefined, tags: tags.length ? tags : undefined, rated_at: now.toISOString() });
+    res.status(200).json({ success: true, message: 'Thanks for rating the rider', data: { ride_id: tripId, stars, comment: comment || null, tags, rated_at: now.toISOString() } });
   } catch (error) {
     console.error('[rateRider]', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to save the rating' });
@@ -1286,6 +1290,11 @@ exports.getRideDetails = async (req, res) => {
       await addRideTypeNames([data]); // the ride type's name (Auto, VIP ...): it decides which vehicle the driver's own map marker shows
       // whether the rider's 4-digit PIN is needed to start this trip (the code itself is never sent to the driver)
       data.start_code_required = tripStartOtp.enabled();
+      // what this trip pays the driver, line by line, for the finished-ride screen
+      try {
+        const driverDoc = await DriverModel.findOne({ driverId });
+        data.driver_earnings = require('../lib/driverEarnings').earningsFor(trip, driverDoc ? await tenantForAccount(driverDoc) : req.appTenant || null);
+      } catch (_) { /* the screen shows the plain fare */ }
       // the business's top-view map icon for this ride's category, so the driver sees the same vehicle the rider does
       try {
         const cfg = await loadPricingConfig(userDoc ? await tenantForAccount(userDoc) : req.appTenant || null);
