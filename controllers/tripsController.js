@@ -7,7 +7,8 @@ const { buildImmediateCreateResponse } = require('../lib/createRequestMode');
 const { isDriverReachable, getDriverFcmInfo, sendRideRequestPushWithRetry } = require('../lib/fcmTripPush');
 const { offerExtras } = require('../lib/rideOffer');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
-const { priceTrip, loadPricingConfig } = require('../lib/tripPricing');
+const { priceTrip, priceTripWithCoupon, loadPricingConfig } = require('../lib/tripPricing');
+const coupons = require('../lib/coupons');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
 const { findDriverConflict } = require('../lib/driverBusy');
@@ -410,14 +411,19 @@ exports.createRequest = async (req, res) => {
       return res.status(409).json({ success: false, message: 'This driver is not available for rides right now.', error: gate.code, data: { driver_id: driverId, code: gate.code } });
     }
     const tenant = await tenantForAccount(user);
-    const pricing = priceTrip(await loadPricingConfig(tenant), {
+    const couponCode = body.coupon_code != null ? String(body.coupon_code).trim() : '';
+    const pricing = await priceTripWithCoupon(await loadPricingConfig(tenant), {
       pickup: { lat: pickupLat, lng: pickupLng },
       drop: { lat: dropLat, lng: dropLng },
       vehicleType: driver.vehicleType,
       categoryId: requestedCategoryId || undefined
-    });
+    }, { tenant, userId, code: couponCode });
     if (!pricing.ok) {
       return res.status(pricing.status).json({ success: false, message: pricing.message, error: pricing.code, data: { driver_id: driverId } });
+    }
+    // a coupon that does not apply stops the booking: the rider is never charged the full fare behind their back
+    if (couponCode && !(pricing.coupon && pricing.coupon.applied)) {
+      return res.status(422).json({ success: false, message: pricing.coupon ? pricing.coupon.message : 'That coupon is not valid.', error: 'COUPON_INVALID', data: { coupon_code: couponCode, code: pricing.coupon && pricing.coupon.code_error } });
     }
     const estimate = pricing.estimate;
 
@@ -502,6 +508,7 @@ exports.createRequest = async (req, res) => {
       fare_basis: estimate.fare_basis,
       fare_source: estimate.fare_source,
       fare_breakdown: estimate.breakdown || null,
+      coupon: pricing.coupon && pricing.coupon.applied ? { code: pricing.coupon.couponDoc.code, coupon_id: pricing.coupon.couponDoc.couponId, discount_minor: pricing.coupon.discountMinor, funded_by: pricing.coupon.couponDoc.fundedBy || 'BUSINESS' } : null,
       region_id: estimate.region_id || null,
       category_id: estimate.category_id || null,
       tenant_id: tenant ? tenant.tenantId : null,
@@ -531,6 +538,16 @@ exports.createRequest = async (req, res) => {
           message: 'You already have a ride in progress.',
           data: { trip_id: earlier.trip_id, request_id: earlier.request_id, status: earlier.status }
         });
+      }
+    }
+
+    // Take the coupon's use now that the booking exists. The limits are conditional counter updates, so the last use goes to one
+    // booking only; a booking that lost the race is withdrawn before the driver hears about it.
+    if (pricing.coupon && pricing.coupon.applied) {
+      const taken = await coupons.reserve({ tenantId: tenant.tenantId, coupon: pricing.coupon.couponDoc, userId, tripId: trip.trip_id, discountMinor: pricing.coupon.discountMinor, currency: estimate.currency });
+      if (!taken.ok) {
+        await TripDetails.updateOne({ trip_id: trip.trip_id, status: 'REQUESTED' }, { $set: { status: 'CANCELLED_BY_USER', cancelled_at: new Date(), cancellation_reason: 'Coupon no longer available', updated_at: new Date() } });
+        return res.status(422).json({ success: false, message: taken.message, error: 'COUPON_INVALID', data: { coupon_code: couponCode, code: taken.code } });
       }
     }
 
@@ -645,12 +662,12 @@ exports.estimate = async (req, res) => {
     // the business is the signed-in rider's, else the one named by the app (X-App-Id), else the default business
     const tenant = req.user ? await tenantForAccount(req.user) : req.appTenant || null;
     const categoryId = body.category_id != null ? String(body.category_id).trim() : '';
-    const pricing = priceTrip(await loadPricingConfig(tenant), {
+    const pricing = await priceTripWithCoupon(await loadPricingConfig(tenant), {
       pickup: { lat: pickupLat, lng: pickupLng },
       drop: { lat: dropLat, lng: dropLng },
       vehicleType,
       categoryId: categoryId || undefined
-    });
+    }, { tenant, userId: req.user ? (req.user.userId || req.authActorId) : null, code: body.coupon_code != null ? String(body.coupon_code).trim() : '' });
     if (!pricing.ok) {
       return res.status(pricing.status).json({ success: false, message: pricing.message, error: pricing.code });
     }
@@ -669,6 +686,7 @@ exports.estimate = async (req, res) => {
         region_id: estimate.region_id || null,
         category_id: estimate.category_id || null,
         breakdown: estimate.fare_source === 'BUSINESS_RULES' ? estimate.breakdown : undefined,
+        coupon: pricing.coupon ? { code: pricing.coupon.code, applied: !!pricing.coupon.applied, discount: pricing.coupon.discount || 0, message: pricing.coupon.message } : undefined,
         payment_mode: 'CASH'
       }
     });
