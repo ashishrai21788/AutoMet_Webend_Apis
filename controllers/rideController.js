@@ -1284,6 +1284,8 @@ exports.getRideDetails = async (req, res) => {
         data.rider_avg_rating = extras.rider_rating === '' ? null : Number(extras.rider_rating);
       } catch (_) { /* the screen shows the ride without them */ }
       await addRideTypeNames([data]); // the ride type's name (Auto, VIP ...): it decides which vehicle the driver's own map marker shows
+      // whether the rider's 4-digit PIN is needed to start this trip (the code itself is never sent to the driver)
+      data.start_code_required = tripStartOtp.enabled();
       // the business's top-view map icon for this ride's category, so the driver sees the same vehicle the rider does
       try {
         const cfg = await loadPricingConfig(userDoc ? await tenantForAccount(userDoc) : req.appTenant || null);
