@@ -1849,7 +1849,7 @@ exports.updateDriverFields = async (req, res) => {
 // Update driver profile (firstName, lastName, profilePhoto)
 exports.updateDriverProfile = async (req, res) => {
   try {
-    const { driverId, firstName, lastName, profilePhoto } = req.body;
+    const { driverId, firstName, lastName, profilePhoto, email } = req.body;
 
     // Validate required fields
     if (!driverId) {
@@ -1910,6 +1910,16 @@ exports.updateDriverProfile = async (req, res) => {
       updateData.lastName = lastName.trim();
     }
 
+    if (email !== undefined) {
+      const next = String(email || '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(next) || next.length > 120) {
+        return res.status(400).json({ success: false, message: 'Enter a valid email address', data: { field: 'email' } });
+      }
+      const taken = await DriverModel.findOne({ email: next, driverId: { $ne: driverId } }).lean();
+      if (taken) return res.status(409).json({ success: false, message: 'That email is already used by another account', data: { field: 'email' } });
+      updateData.email = next;
+    }
+
     if (profilePhoto !== undefined) {
       if (!profilePhoto || profilePhoto.trim().length === 0) {
         return res.status(400).json({
@@ -1927,9 +1937,9 @@ exports.updateDriverProfile = async (req, res) => {
     if (Object.keys(updateData).length === 1) { // Only updatedAt
       return res.status(400).json({
         success: false,
-        message: 'No fields provided to update. Provide at least one of: firstName, lastName, profilePhoto',
+        message: 'No fields provided to update. Provide at least one of: firstName, lastName, email, profilePhoto',
         data: {
-          allowedFields: ['firstName', 'lastName', 'profilePhoto']
+          allowedFields: ['firstName', 'lastName', 'email', 'profilePhoto']
         }
       });
     }

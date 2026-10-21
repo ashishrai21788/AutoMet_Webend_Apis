@@ -8,6 +8,9 @@ const { requireAuth } = require('../lib/authMiddleware');
 router.get('/', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.summary);
 
 router.get('/detail', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.detail);
+router.get('/profile', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.profile);
 router.get('/trips', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.trips);
+router.get('/trips/:tripId', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.tripDetail);
+router.get('/trips/:tripId/receipt.pdf', requireAuth({ roles: ['driver'] }), onboarding.driverContext, summary.tripReceipt);
 
 module.exports = router;

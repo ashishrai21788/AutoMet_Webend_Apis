@@ -248,3 +248,74 @@ test('demand: riders with their app open near the driver are counted, for this b
   await db.Driver.updateMany({ driverId: 'D1' }, { $set: { lastLocation: null } });
   assert.equal((await call()).body.data.demand, null, 'a driver with no position has no demand reading');
 });
+
+// ---- the redesigned ride history and the ride details ----
+const { tripDetail, tripReceipt } = require('../controllers/driverSummaryController');
+const callWithParams = async (fn, params, query = {}, driverId = 'D1') => {
+  const req = { authActorId: driverId, body: {}, params, query, headers: {}, ip: '127.0.0.1' };
+  let out;
+  const res = { code: 200, headers: {}, set(h) { Object.assign(this.headers, h); return this; }, status(c) { this.code = c; return this; }, json(b) { out = { code: this.code, body: b }; return this; }, send(b) { out = { code: this.code, body: b, headers: this.headers }; return this; } };
+  let ok = false;
+  await onboarding.driverContext(req, res, () => { ok = true; });
+  if (!ok) return out;
+  await fn(req, res);
+  return out;
+};
+
+test('ride history: tabs, counts, totals with the change against last week, search and day totals', async () => {
+  await seed();
+  await db.User.create({ userId: 'U1', firstName: 'Rohit', lastName: 'Sharma', phone: '+919800000001' }).catch(() => {});
+  await db.TripDetails.create(trip('W1', 'COMPLETED', { fare: 100, pickup: { address: 'Gaur City Mall' }, completed_at: hoursAgo(1) }));
+  await db.TripDetails.create(trip('W2', 'COMPLETED', { fare: 60, payment_mode: 'UPI', completed_at: hoursAgo(2) }));
+  await db.TripDetails.create(trip('W3', 'CANCELLED_BY_USER_AFTER_ACCEPTANCE', { fare: 0, cancellation_reason: 'Passenger no-show', cancelled_at: hoursAgo(3) }));
+  await db.TripDetails.create(trip('P1', 'COMPLETED', { fare: 80, completed_at: hoursAgo(24 * 9) }));
+  const r = (await callWith(tripList, { range: 'week' })).body.data;
+  assert.equal(r.counts.all, 3);
+  assert.equal(r.counts.completed, 2);
+  assert.equal(r.counts.cancelled, 1);
+  assert.equal(r.totals.earnings.value, 160);
+  assert.equal(r.totals.earnings.changePercent, 100, '160 against 80 the week before');
+  assert.equal(r.totals.comparedWith, 'last week');
+  const cancelled = (await callWith(tripList, { range: 'week', status: 'cancelled' })).body.data;
+  assert.deepEqual(cancelled.trips.map((t) => t.tripId), ['W3']);
+  assert.equal(cancelled.trips[0].cancelReason, 'Passenger no-show');
+  assert.deepEqual((await callWith(tripList, { range: 'week', payment: 'online' })).body.data.trips.map((t) => t.tripId), ['W2']);
+  assert.deepEqual((await callWith(tripList, { range: 'week', q: 'gaur mall' })).body.data.trips.map((t) => t.tripId), ['W1']);
+  assert.deepEqual((await callWith(tripList, { range: 'week', sort: 'earnings', status: 'completed' })).body.data.trips.map((t) => t.tripId), ['W1', 'W2']);
+  const all = (await callWith(tripList, { range: 'all' })).body.data;
+  assert.equal(all.totals.comparedWith, null);
+  assert.equal(all.totals.earnings.changePercent, null);
+  assert.ok(Object.values(all.dayTotals).every((d) => d.rides >= 1));
+});
+
+test('ride details: the fare lines, the driver\'s earnings, the timeline, and only for this driver\'s own rides', async () => {
+  await seed();
+  const base = hoursAgo(5).getTime();
+  await db.TripDetails.create(trip('X1', 'COMPLETED', {
+    fare: 80, distance_km: 6.8, category_id: 'c1',
+    fare_breakdown: { lines: [{ label: 'Base fare', amount: 68 }, { label: 'Time charge', amount: 12 }], fees: [], taxes: [], total: 80 },
+    responded_at: new Date(base), arrived_at: new Date(base + 3 * 60000), started_at: new Date(base + 7 * 60000), completed_at: new Date(base + 27 * 60000),
+    rider_rating: { stars: 5 }
+  }));
+  const r = await callWithParams(tripDetail, { tripId: 'X1' });
+  assert.equal(r.code, 200, JSON.stringify(r.body).slice(0, 200));
+  const d = r.body.data;
+  assert.equal(d.fare.passengerFare, 80);
+  assert.equal(d.fare.earnings, 80);
+  assert.equal(d.fare.lines.length, 2);
+  assert.equal(d.durationMin, 20);
+  assert.equal(d.rider.ratedYou, 5);
+  assert.deepEqual(d.timeline.map((s) => s.label), ['Ride accepted', 'Arrived at pickup', 'Ride started', 'Ride completed']);
+  assert.deepEqual(d.timeline.map((s) => s.tookMin), [null, 3, 4, 20]);
+  assert.equal(d.rider.phone, '+919800000001', 'a ride from the last two days still lets the driver call');
+  await db.TripDetails.create(trip('X0', 'COMPLETED', { fare: 10, completed_at: hoursAgo(24 * 5) }));
+  assert.equal((await callWithParams(tripDetail, { tripId: 'X0' })).body.data.rider.phone, '', 'an older ride no longer shows the rider\'s number');
+  assert.equal((await callWithParams(tripDetail, { tripId: 'X1' }, {}, 'OTHER')).code, 404, 'not another driver\'s ride');
+  assert.equal((await callWithParams(tripDetail, { tripId: 'nope' })).code, 404);
+  const kept = require('../lib/driverEarnings').earningsFor({ fare: 80, currency: 'INR' }, { market: { currency: 'INR', driverCommissionPercent: 10 } });
+  assert.equal(kept.platform_fee, 8, 'the business keeps its share');
+  assert.equal(kept.earnings, 72);
+  const pdf = await callWithParams(tripReceipt, { tripId: 'X1' });
+  assert.equal(pdf.code, 200);
+  assert.equal(Buffer.from(pdf.body).subarray(0, 4).toString(), '%PDF');
+});

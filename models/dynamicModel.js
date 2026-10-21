@@ -20,6 +20,8 @@ const driverSchema = new mongoose.Schema({
     default: null
   },
   createdByAdmin: { type: String, default: null },
+  // Set when the driver deletes their own account: their personal data is erased, the record stays for trip history.
+  deletedAt: { type: Date, default: null },
   // Basic Information (Mandatory for signup)
   driverId: {
     type: String,

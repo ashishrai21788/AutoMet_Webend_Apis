@@ -158,22 +158,246 @@ async function detail(req, res) {
   return c.ok(res, { generatedAt: now.toISOString(), currency, timezone: tz, days, today: { ...t0, averageFare: avg(t0) }, week: { ...t7, averageFare: avg(t7) }, period: { ...tAll, averageFare: avg(tAll) }, daily: rows });
 }
 
-/** GET /api/v1/driver/summary/trips?skip=0&limit=20 : the driver's finished and cancelled rides, newest first, paged. */
+const DT = require('../lib/driverTrips');
+const { earningsFor } = require('../lib/driverEarnings');
+
+/** The riders behind a set of trips, by user id: { name, photo, phone }. */
+async function ridersFor(rows) {
+  const ids = [...new Set(rows.map((t) => t.user_id).filter(Boolean))];
+  const out = {};
+  if (!ids.length) return out;
+  try {
+    const docs = await createModel('users').find({ userId: { $in: ids } }).lean();
+    for (const u of docs || []) {
+      out[u.userId] = { name: [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.fullName || '', photo: /^https?:/.test(u.profilePhoto || '') ? u.profilePhoto : null, phone: u.phone || '' };
+    }
+  } catch (e) { console.error('[driver trips riders]', e && e.message); }
+  return out;
+}
+
+/**
+ * GET /api/v1/driver/summary/trips : the driver's finished and cancelled rides, newest first, paged.
+ *   range   today | week | month | all (default all): the period (week is the last 7 days, month the last 30)
+ *   status  all | completed | cancelled (default all)
+ *   q       search: a place, the rider, a date as written on screen, or a trip id
+ *   payment all | cash | online
+ *   sort    newest | oldest | earnings
+ *   skip, limit  paging
+ * Besides the rows it returns what the screen's headline cards need: totals for the period with the change against the
+ * period before, the counts for the three tabs, and the totals of each day shown.
+ */
 async function trips(req, res) {
   const driver = req.ownDriver;
+  const now = new Date();
+  const tz = (req.business.market && req.business.market.timezone) || 'Asia/Kolkata';
+  const currency = (req.business.market && req.business.market.currency) || 'INR';
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
   const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
-  const rows = await TripDetails.find({ driver_id: driver.driverId, status: { $in: ['COMPLETED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_USER_AFTER_ACCEPTANCE'] } }).sort({ requested_at: -1, trip_id: -1 }).skip(skip).limit(limit).lean();
-  const currency = (req.business.market && req.business.market.currency) || 'INR';
+  const range = DT.RANGES.includes(String(req.query.range)) ? String(req.query.range) : 'all';
+  const status = ['completed', 'cancelled'].includes(String(req.query.status)) ? String(req.query.status) : 'all';
+  const payment = ['cash', 'online'].includes(String(req.query.payment)) ? String(req.query.payment) : 'all';
+  const sort = ['oldest', 'earnings'].includes(String(req.query.sort)) ? String(req.query.sort) : 'newest';
+  const bounds = DT.rangeBounds(range, now, startOfDay(now, tz));
+
+  const all = (await TripDetails.find({ driver_id: driver.driverId, status: { $in: DT.HISTORY_STATUSES } }).lean())
+    .sort((x, y) => (new Date(DT.happenedAt(y) || 0) - new Date(DT.happenedAt(x) || 0)) || String(y.trip_id).localeCompare(String(x.trip_id)));
+  const inRange = all.filter((t) => DT.inWindow(t, bounds.from, bounds.to));
+  const before = bounds.prevFrom ? all.filter((t) => DT.inWindow(t, bounds.prevFrom, bounds.prevTo)) : [];
+
+  const riders = await ridersFor(inRange);
+  const rows = inRange.map((t) => DT.listRow(t, { tenant: req.business, tz, rider: riders[t.user_id] || null }));
+  let shown = rows.filter((r) => (status === 'all' || (status === 'completed') === (r.status === 'COMPLETED'))
+    && (payment === 'all' || (payment === 'cash') === (r.paymentMode === 'CASH'))
+    && DT.matchesSearch(r, req.query.q, tz));
+  if (sort === 'oldest') shown = shown.slice().reverse();
+  else if (sort === 'earnings') shown = shown.slice().sort((x, y) => y.earnings - x.earnings);
+  const page = shown.slice(skip, skip + limit);
+
+  // headline cards: the whole period (not just the search), with the change against the one before it
+  const now1 = DT.statsFor(inRange, req.business);
+  const prev1 = DT.statsFor(before, req.business);
+  const fresh = (await createModel('drivers').findOne({ driverId: driver.driverId }).lean()) || driver;
+  const from = bounds.from || new Date(now.getTime() - 90 * DT.DAY_MS);
+  const sessions = await DriverDutySession.find({ driverId: driver.driverId, startedAt: { $gte: new Date((bounds.prevFrom || from).getTime() - DT.DAY_MS) } }).lean();
+  const onlineNow = onlineSeconds(sessions, fresh, from, now, now);
+  const onlinePrev = bounds.prevFrom ? onlineSeconds(sessions, fresh, bounds.prevFrom, bounds.prevTo, now) : 0;
+  const pct = bounds.prevFrom ? DT.changePercent : () => null;
+
+  // each day's own totals, for the headers between the rows
+  const days = {};
+  for (const r of shown) {
+    if (!r.day) continue;
+    const d = days[r.day] || (days[r.day] = { rides: 0, earnings: 0 });
+    d.rides += 1;
+    d.earnings = DT.round2(d.earnings + r.earnings);
+  }
+  const dayTotals = {};
+  for (const r of page) if (r.day) dayTotals[r.day] = days[r.day];
+
   return c.ok(res, {
     currency,
-    trips: rows.map((t) => ({
-      tripId: t.trip_id, status: t.status, fare: Number(t.fare) || 0, requestedAt: t.requested_at || null, startedAt: t.started_at || null, completedAt: t.completed_at || t.cancelled_at || null,
-      pickup: (t.pickup && t.pickup.address) || '', drop: (t.drop && t.drop.address) || '', distanceKm: t.distance_km != null ? Number(t.distance_km) : null,
-      paymentMode: String(t.payment_mode || 'CASH').toUpperCase(), rating: (t.rider_rating && t.rider_rating.stars) || null
+    timezone: tz,
+    range,
+    totals: {
+      earnings: { value: now1.earnings, changePercent: pct(now1.earnings, prev1.earnings) },
+      completed: { value: now1.completed, changePercent: pct(now1.completed, prev1.completed) },
+      cancelled: { value: now1.cancelled, changePercent: pct(now1.cancelled, prev1.cancelled) },
+      onlineSeconds: { value: onlineNow, changePercent: pct(onlineNow, onlinePrev) },
+      comparedWith: bounds.prevFrom ? (range === 'today' ? 'yesterday' : range === 'week' ? 'last week' : 'last month') : null
+    },
+    counts: { all: rows.length, completed: now1.completed, cancelled: now1.cancelled },
+    dayTotals,
+    trips: page.map((r) => ({
+      tripId: r.tripId, status: r.rawStatus, state: r.status, fare: r.earnings, earnings: r.earnings, requestedAt: r.at, completedAt: r.at, at: r.at, day: r.day,
+      pickup: r.pickup.address || r.pickup.name, drop: r.drop.address || r.drop.name, pickupPlace: r.pickup, dropPlace: r.drop,
+      distanceKm: r.distanceKm, durationMin: r.durationMin, paymentMode: r.paymentMode, rating: r.riderRating,
+      riderName: r.riderName, cancelReason: r.cancelReason
     })),
-    hasMore: rows.length === limit,
-    nextSkip: skip + rows.length
+    hasMore: skip + page.length < shown.length,
+    nextSkip: skip + page.length
+  });
+}
+
+/** One of this driver's finished or cancelled trips; null when the id is not theirs. */
+async function ownTrip(req) {
+  const id = String(req.params.tripId || '').trim();
+  if (!id) return null;
+  const trip = await TripDetails.findOne({ trip_id: id, driver_id: req.ownDriver.driverId }).lean();
+  return trip && DT.HISTORY_STATUSES.includes(trip.status) ? trip : null;
+}
+
+const CALL_WINDOW_MS = 48 * 60 * 60 * 1000; // the rider's number is shown only while a lost item or a late payment may still need it
+
+/** GET /api/v1/driver/summary/trips/:tripId : everything on the Ride Details screen for one finished or cancelled ride. */
+async function tripDetail(req, res) {
+  const t = await ownTrip(req);
+  if (!t) return c.fail(res, 404, 'We could not find that ride.');
+  const now = new Date();
+  const tz = (req.business.market && req.business.market.timezone) || 'Asia/Kolkata';
+  const currency = t.currency || (req.business.market && req.business.market.currency) || 'INR';
+  const cancelled = DT.isCancelled(t);
+  const riders = await ridersFor([t]);
+  const rider = riders[t.user_id] || {};
+  let riderTrips = null; let riderAvg = null;
+  try {
+    const extras = await require('../lib/rideOffer').offerExtras(t, null);
+    riderTrips = extras.rider_trips === '' ? null : Number(extras.rider_trips);
+    riderAvg = extras.rider_rating === '' ? null : Number(extras.rider_rating);
+  } catch (_) { /* the screen simply leaves them out */ }
+  let category = null;
+  try { category = t.category_id ? await req.data.findOne(VehicleCategory, { categoryId: t.category_id }) : null; } catch (_) { /* optional */ }
+  const earn = earningsFor(t, req.business);
+  const endedAt = t.completed_at || t.cancelled_at || null;
+  const recent = endedAt && now.getTime() - new Date(endedAt).getTime() <= CALL_WINDOW_MS;
+  const pay = DT.payMode(t);
+  return c.ok(res, {
+    currency,
+    timezone: tz,
+    tripId: t.trip_id,
+    status: cancelled ? 'CANCELLED' : 'COMPLETED',
+    rawStatus: t.status,
+    at: DT.happenedAt(t),
+    earnings: cancelled ? 0 : earn.earnings,
+    cancelReason: cancelled ? (t.cancellation_reason || (t.status === 'CANCELLED_BY_DRIVER' ? 'Cancelled by you' : 'Cancelled by passenger')) : null,
+    cancellationFee: cancelled ? Number(t.cancellation_fee) || 0 : 0,
+    pickup: { address: (t.pickup && t.pickup.address) || '', lat: t.pickup && t.pickup.lat, lng: t.pickup && t.pickup.lng, at: t.started_at || t.responded_at || null },
+    drop: { address: (t.drop && t.drop.address) || '', lat: t.drop && t.drop.lat, lng: t.drop && t.drop.lng, at: t.completed_at || null },
+    distanceKm: t.distance_km != null ? Number(t.distance_km) : null,
+    durationMin: cancelled ? null : DT.durationMin(t),
+    rideType: category ? category.name : '',
+    rider: {
+      name: rider.name || '', photo: rider.photo || null, trips: riderTrips, rating: riderAvg,
+      ratedYou: (t.rider_rating && t.rider_rating.stars) || null,
+      phone: recent ? rider.phone || '' : ''
+    },
+    trip: { rideType: category ? category.name : '', paymentMode: pay, status: cancelled ? 'Cancelled' : 'Completed', passengers: t.passengers != null ? Number(t.passengers) : 1 },
+    fare: {
+      lines: earn.lines.map((l) => ({ label: l.label, amount: l.amount, kind: l.kind })),
+      passengerFare: earn.passenger_fare,
+      platformFeePercent: earn.platform_fee_percent,
+      platformFee: earn.platform_fee,
+      earnings: earn.earnings,
+      note: cancelled ? null : (pay === 'CASH' ? 'Collected in cash from the passenger.' : 'Amount will be credited to your wallet within 24 hours.')
+    },
+    timeline: DT.timelineOf(t),
+    support: { phone: req.business.supportPhone || '', email: req.business.supportEmail || '', name: req.business.name || '' }
+  });
+}
+
+/** GET /api/v1/driver/summary/trips/:tripId/receipt.pdf : the driver's earnings receipt for the ride. */
+async function tripReceipt(req, res) {
+  const t = await ownTrip(req);
+  if (!t) return c.fail(res, 404, 'We could not find that ride.');
+  const riders = await ridersFor([t]);
+  const fresh = (await createModel('drivers').findOne({ driverId: req.ownDriver.driverId }).lean()) || req.ownDriver;
+  const pdf = await require('../lib/driverReceiptPdf').renderDriverReceipt({
+    business: { name: req.business.name || '', supportPhone: req.business.supportPhone || '', supportEmail: req.business.supportEmail || '' },
+    trip: t, earnings: earningsFor(t, req.business), cancelled: DT.isCancelled(t),
+    driverName: [fresh.firstName, fresh.lastName].filter(Boolean).join(' ').trim(),
+    riderName: (riders[t.user_id] || {}).name || ''
+  });
+  res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="receipt-' + t.trip_id + '.pdf"', 'Cache-Control': 'private, no-store' });
+  return res.status(200).send(pdf);
+}
+
+/**
+ * GET /api/v1/driver/summary/profile : everything the Profile screen shows that is not the document list (that comes
+ * from the onboarding state): who the driver is, lifetime numbers, the vehicle with its picture, and how they are doing.
+ */
+async function profile(req, res) {
+  const driver = req.ownDriver;
+  const now = new Date();
+  const monthAgo = new Date(now.getTime() - 30 * DAY_MS);
+  const currency = (req.business.market && req.business.market.currency) || 'INR';
+  const fresh = (await createModel('drivers').findOne({ driverId: driver.driverId }).lean()) || driver;
+  const [done, recent, assignment, cancelledByDriver] = await Promise.all([
+    TripDetails.find({ driver_id: driver.driverId, status: 'COMPLETED' }).limit(5000).lean(),
+    TripDetails.find({ driver_id: driver.driverId, requested_at: { $gte: monthAgo } }).lean(),
+    req.data.findOne(DriverVehicleAssignment, { driverId: driver.driverId, active: true }),
+    TripDetails.countDocuments ? TripDetails.countDocuments({ driver_id: driver.driverId, status: 'CANCELLED_BY_DRIVER' }) : 0
+  ]);
+  const stars = done.map((t) => Number((t.rider_rating && t.rider_rating.stars) || t['rider_rating.stars'])).filter((n) => n >= 1 && n <= 5);
+  const average = stars.length ? Math.round((stars.reduce((a, b) => a + b, 0) / stars.length) * 10) / 10 : (Number(fresh.rating) > 0 ? Number(fresh.rating) : null);
+  const totalEarnings = round2(done.reduce((s, t) => s + require('../lib/driverEarnings').earningsFor(t, req.business).earnings, 0));
+  const withdrawn = (t) => t.status === 'CANCELLED_BY_USER' || (t.cancel_stage === 'before_accept' && t.cancelled_by === 'USER');
+  const answered = recent.filter((t) => t.status !== 'REQUESTED' && !withdrawn(t));
+  const accepted = answered.filter((t) => ACCEPTED_STATUSES.includes(t.status));
+  const tookRides = done.length + cancelledByDriver;
+  const vehicle = assignment ? await req.data.findOne(Vehicle, { vehicleId: assignment.vehicleId }) : null;
+  const category = vehicle ? await req.data.findOne(VehicleCategory, { categoryId: vehicle.categoryId }) : null;
+  const created = fresh.createdAt ? new Date(fresh.createdAt) : null;
+  const months = created ? Math.max(0, Math.floor((now.getTime() - created.getTime()) / (30.44 * DAY_MS))) : 0;
+  const email = String(fresh.email || '');
+  return c.ok(res, {
+    currency,
+    driver: {
+      driverId: fresh.driverId,
+      name: [fresh.firstName, fresh.lastName].filter(Boolean).join(' ').trim(),
+      firstName: fresh.firstName || '',
+      lastName: fresh.lastName || '',
+      phone: fresh.phone || '',
+      email: /@noreply\.invalid$/i.test(email) ? '' : email,
+      photo: /^https?:/.test(fresh.profilePhoto || '') && !/cdn.example.com/.test(fresh.profilePhoto) ? fresh.profilePhoto : null,
+      verified: fresh.driverVerificationStatus === 'APPROVED',
+      verificationStatus: fresh.driverVerificationStatus || 'INCOMPLETE',
+      online: !!fresh.isOnline,
+      memberSince: created ? created.toISOString() : null,
+      monthsWithUs: months
+    },
+    stats: { trips: done.length, rating: average, ratedTrips: stars.length, totalEarnings, monthsWithUs: months },
+    performance: {
+      rating: average,
+      ratedTrips: stars.length,
+      acceptance: { offered: answered.length, accepted: accepted.length, ratePercent: answered.length ? Math.round((accepted.length / answered.length) * 100) : null },
+      completion: { completed: done.length, cancelledByYou: cancelledByDriver, ratePercent: tookRides ? Math.round((done.length / tookRides) * 100) : null },
+      periodDays: 30
+    },
+    vehicle: vehicle ? {
+      registrationNumber: vehicle.registrationNumber, make: vehicle.make || '', model: vehicle.model || '', colour: vehicle.colour || '', year: vehicle.year ?? null,
+      fuelType: vehicle.fuelType || fresh.fuleType || '', categoryName: category ? category.name : '', imageUrl: category && /^https?:/.test(category.imageUrl || '') ? category.imageUrl : null,
+      seats: vehicle.passengerCapacity ?? (category ? category.passengerCapacity : null), verificationStatus: vehicle.verificationStatus || 'INCOMPLETE'
+    } : null,
+    support: { phone: req.business.supportPhone || '', email: req.business.supportEmail || '', name: req.business.name || '' }
   });
 }
 
@@ -186,4 +410,4 @@ const safe = (fn) => async (req, res) => {
   }
 };
 
-module.exports = { summary: safe(summary), detail: safe(detail), trips: safe(trips), startOfDay };
+module.exports = { summary: safe(summary), detail: safe(detail), trips: safe(trips), tripDetail: safe(tripDetail), profile: safe(profile), tripReceipt: safe(tripReceipt), startOfDay };
