@@ -140,6 +140,8 @@ router.delete('/business/pricing/draft', ...pricing, pricingAdmin.discard);
 router.delete('/business/pricing/draft/:key', ...pricing, pricingAdmin.discard);
 router.post('/business/pricing/publish', ...pricing, pricingAdmin.publish);
 router.put('/business/pricing/workflow', ...pricing, pricingAdmin.setWorkflow);
+router.get('/business/pricing/schedules', ...read, pricingAdmin.listSchedules);
+router.post('/business/pricing/schedules/:id/cancel', ...pricing, pricingAdmin.cancelSchedule);
 router.get('/business/pricing/versions', ...read, pricingAdmin.listVersions);
 router.get('/business/pricing/versions/:version', ...read, pricingAdmin.getVersion);
 router.post('/business/pricing/versions/:version/rollback', ...pricing, pricingAdmin.rollback);

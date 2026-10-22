@@ -8,7 +8,10 @@
  *   GET    /api/admin/business/pricing/draft                 the workflow, the drafts, what publishing would change, and what is stale
  *   DELETE /api/admin/business/pricing/draft/:key            discard one draft (key = categoryId|regionKey)
  *   DELETE /api/admin/business/pricing/draft                 discard all drafts
- *   POST   /api/admin/business/pricing/publish               make every draft live at once (all checked first), recorded as a version
+ *   POST   /api/admin/business/pricing/publish               make every draft live at once (all checked first), recorded as a version;
+ *                                                            with effectiveAt (a future time) the set is scheduled instead and applied then
+ *   GET    /api/admin/business/pricing/schedules             scheduled and recent publishes
+ *   POST   /api/admin/business/pricing/schedules/:id/cancel  cancel a scheduled publish; its changes come back as drafts
  *   PUT    /api/admin/business/pricing/workflow              { mode: direct | draft }
  *   GET    /api/admin/business/pricing/versions              history, newest first
  *   GET    /api/admin/business/pricing/versions/:n           what it changed and what going back to it would change
@@ -19,7 +22,8 @@
 const crypto = require('crypto');
 const { Tenant, AdminAudit } = require('../models/adminModels');
 const { ServiceRegion, VehicleCategory, FareRule } = require('../models/businessModels');
-const { FareRuleDraft, PricingVersion } = require('../models/pricingModels');
+const { FareRuleDraft, PricingVersion, PricingSchedule } = require('../models/pricingModels');
+const { forTenant } = require('../lib/tenantData');
 const { validateFareRuleInput } = require('../lib/fareRules');
 const { clearAppTenantCache } = require('../lib/appTenant');
 const shapes = require('../lib/adminShapes');
@@ -106,7 +110,7 @@ exports.discard = c.handle(async (req, res) => {
 exports.setWorkflow = c.handle(async (req, res) => {
   const mode = String((req.body && req.body.mode) || '');
   if (!MODES.includes(mode)) return c.invalid(res, { mode: 'Choose direct or draft' });
-  if (mode === 'direct' && (await drafts(req)).length) return c.fail(res, 409, 'Publish or discard the pending pricing changes first', { mode: 'Pending changes exist' });
+  if (mode === 'direct' && ((await drafts(req)).length || (await PricingSchedule.countDocuments({ tenantId: req.business.tenantId, status: 'SCHEDULED' })))) return c.fail(res, 409, 'Publish, cancel or discard the pending pricing changes first', { mode: 'Pending changes exist' });
   const before = modeOf(req.business);
   if (before === mode) return c.ok(res, { mode });
   await req.data.update(Tenant, {}, { pricingWorkflow: mode });
@@ -140,10 +144,34 @@ async function checkDrafts(req, rows) {
   return { problems, plan, market };
 }
 
-/** POST .../pricing/publish { note? } */
+/** Writes a checked plan to live pricing: upserts and removals only, so running it again after an interruption finishes the job. */
+async function applyPlan(req, plan, market, now) {
+  for (const step of plan) {
+    const d = step.draft;
+    if (step.op === 'DELETE') await req.data.remove(FareRule, { categoryId: d.categoryId, regionKey: d.regionKey });
+    else {
+      await req.data.update(FareRule, { categoryId: d.categoryId, regionKey: d.regionKey },
+        { ...step.value, regionId: d.regionId || null, currency: market.currency, active: true, updatedAt: now },
+        { upsert: true, setOnInsert: { ruleId: newId('fr'), createdAt: now } });
+    }
+  }
+}
+
+const MIN_AHEAD_MS = 2 * 60 * 1000;
+const MAX_AHEAD_MS = 366 * 24 * 3600 * 1000;
+
+/** POST .../pricing/publish { note?, effectiveAt? } */
 exports.publish = c.handle(async (req, res) => {
   const rows = await drafts(req);
   if (!rows.length) return c.fail(res, 409, 'There are no pending pricing changes');
+  let effectiveAt = null;
+  if (req.body && req.body.effectiveAt !== undefined && req.body.effectiveAt !== null && req.body.effectiveAt !== '') {
+    effectiveAt = new Date(req.body.effectiveAt);
+    if (Number.isNaN(effectiveAt.getTime())) return c.invalid(res, { effectiveAt: 'Enter a valid date and time' });
+    const ahead = effectiveAt.getTime() - Date.now();
+    if (ahead < MIN_AHEAD_MS) return c.invalid(res, { effectiveAt: 'Choose a time at least 2 minutes from now, or publish now' });
+    if (ahead > MAX_AHEAD_MS) return c.invalid(res, { effectiveAt: 'Choose a time within the next year' });
+  }
   const live = await liveRules(req);
   const changes = pd.draftChanges(live, rows);
   const stale = pd.staleDrafts(live, rows);
@@ -155,21 +183,22 @@ exports.publish = c.handle(async (req, res) => {
     return c.fail(res, 409, 'The drafts match the live pricing, so there is nothing to publish');
   }
 
+  const note = String((req.body && req.body.note) || '').slice(0, 200);
+  if (effectiveAt) {
+    // frozen now, applied then: the drafts become a schedule and are cleared, so later edits make new drafts
+    const items = plan.map((p) => ({ op: p.op, categoryId: p.draft.categoryId, regionId: p.draft.regionId || null, regionKey: p.draft.regionKey, fields: p.op === 'SAVE' ? p.value : null, currency: market.currency }));
+    const schedule = await req.data.create(PricingSchedule, { scheduleId: newId('ps'), effectiveAt, note, status: 'SCHEDULED', items, summary: pd.summaryOf(changes), createdBy: req.admin.email || req.admin.adminId, createdAt: new Date() });
+    for (const d of rows) await req.data.remove(FareRuleDraft, { draftId: d.draftId });
+    await audit(req, 'pricing.scheduled', { scheduleId: schedule.scheduleId, effectiveAt, ...pd.summaryOf(changes), note: note || undefined });
+    return c.ok(res, { scheduled: true, scheduleId: schedule.scheduleId, effectiveAt, ...pd.summaryOf(changes) });
+  }
+
   const before = pd.snapshotRules(live);
   const now = new Date();
-  // everything was checked above; the writes are upserts and removals, so publishing again after an interruption finishes the job
-  for (const step of plan) {
-    const d = step.draft;
-    if (step.op === 'DELETE') await req.data.remove(FareRule, { categoryId: d.categoryId, regionKey: d.regionKey });
-    else {
-      await req.data.update(FareRule, { categoryId: d.categoryId, regionKey: d.regionKey },
-        { ...step.value, regionId: d.regionId || null, currency: market.currency, active: true, updatedAt: now },
-        { upsert: true, setOnInsert: { ruleId: newId('fr'), createdAt: now } });
-    }
-  }
+  await applyPlan(req, plan, market, now);
   for (const d of rows) await req.data.remove(FareRuleDraft, { draftId: d.draftId });
-  const made = await recordVersion(req, { before, source: 'publish', note: req.body && req.body.note });
-  await audit(req, 'pricing.published', { version: made ? made.version : null, ...pd.summaryOf(changes), note: String((req.body && req.body.note) || '').slice(0, 200) || undefined });
+  const made = await recordVersion(req, { before, source: 'publish', note });
+  await audit(req, 'pricing.published', { version: made ? made.version : null, ...pd.summaryOf(changes), note: note || undefined });
   return c.ok(res, { published: changes.length, version: made ? made.version : null, ...pd.summaryOf(changes) });
 });
 
@@ -221,6 +250,77 @@ exports.rollback = c.handle(async (req, res) => {
   return c.ok(res, { restoredFrom: n, version: made ? made.version : null, ...pd.summaryOf(rows) });
 });
 
+const scheduleView = (x) => ({ id: x.scheduleId, effectiveAt: x.effectiveAt, note: x.note || '', status: x.status, summary: x.summary || null, by: x.createdBy || null, appliedAt: x.appliedAt || null, version: x.version ?? null, failure: x.failure || '', items: Array.isArray(x.items) ? x.items.length : 0 });
+
+/** GET .../pricing/schedules : the waiting ones first, then the most recent finished ones */
+exports.listSchedules = c.handle(async (req, res) => {
+  const rows = await req.data.find(PricingSchedule).sort({ effectiveAt: -1 }).limit(30).lean();
+  const waiting = rows.filter((r) => r.status === 'SCHEDULED' || r.status === 'APPLYING').sort((a, b) => new Date(a.effectiveAt) - new Date(b.effectiveAt));
+  const done = rows.filter((r) => !(r.status === 'SCHEDULED' || r.status === 'APPLYING')).slice(0, 10);
+  return c.ok(res, { waiting: waiting.map(scheduleView), recent: done.map(scheduleView) });
+});
+
+/** POST .../pricing/schedules/:id/cancel : the changes come back as drafts (a newer draft of the same rule is kept as it is) */
+exports.cancelSchedule = c.handle(async (req, res) => {
+  const id = String(req.params.id || '');
+  const cur = await req.data.findOne(PricingSchedule, { scheduleId: id }).lean();
+  if (!cur) return c.fail(res, 404, 'That schedule does not exist');
+  const claimed = await PricingSchedule.findOneAndUpdate({ tenantId: req.business.tenantId, scheduleId: id, status: 'SCHEDULED' }, { $set: { status: 'CANCELLED' } }, { new: true });
+  if (!claimed) return c.fail(res, 409, 'That schedule has already been applied or cancelled');
+  let restored = 0;
+  for (const it of claimed.items || []) {
+    if (await req.data.findOne(FareRuleDraft, { categoryId: it.categoryId, regionKey: it.regionKey }).lean()) continue;
+    await saveDraft(req, { categoryId: it.categoryId, regionId: it.regionId || null, regionKey: it.regionKey, currency: it.currency }, it.op, it.fields);
+    restored += 1;
+  }
+  await audit(req, 'pricing.schedule_cancelled', { scheduleId: id, restoredAsDrafts: restored });
+  return c.ok(res, { cancelled: id, restoredAsDrafts: restored });
+});
+
+/** Applies one claimed schedule (the server's own job, not a request). All checked first; on a problem nothing is applied and the schedule is FAILED with the reason. */
+async function applySchedule(schedule, now = new Date()) {
+  const tenant = await Tenant.findOne({ tenantId: schedule.tenantId }).lean();
+  const finish = (set) => PricingSchedule.updateOne({ scheduleId: schedule.scheduleId }, { $set: set });
+  if (!tenant) { await finish({ status: 'FAILED', failure: 'The business no longer exists' }); return { status: 'FAILED' }; }
+  const ctx = { business: tenant, admin: { adminId: 'system', email: schedule.createdBy || 'scheduled publish' }, ip: null, data: forTenant(schedule.tenantId) };
+  const items = (schedule.items || []).map((i) => ({ ...i, draftId: null }));
+  const { problems, plan, market } = await checkDrafts(ctx, items);
+  if (problems.length) {
+    const failure = problems.map((p) => p.message).join('; ').slice(0, 300);
+    await finish({ status: 'FAILED', failure });
+    await audit(ctx, 'pricing.schedule_failed', { scheduleId: schedule.scheduleId, failure });
+    return { status: 'FAILED', failure };
+  }
+  const live = await liveRules(ctx);
+  const before = pd.snapshotRules(live);
+  const changes = pd.draftChanges(live, items);
+  await applyPlan(ctx, plan, market, now);
+  const made = await recordVersion(ctx, { before, source: 'scheduled', note: schedule.note });
+  await finish({ status: 'DONE', appliedAt: now, version: made ? made.version : null, failure: '' });
+  await audit(ctx, 'pricing.published', { scheduleId: schedule.scheduleId, version: made ? made.version : null, ...pd.summaryOf(changes), note: schedule.note || undefined, scheduled: true });
+  return { status: 'DONE', version: made ? made.version : null };
+}
+
+/** The server's job: apply every schedule that has come due (and any left half-way by a server that stopped), oldest first. One server claims each. */
+async function runDueSchedules(now = new Date()) {
+  const stuckBefore = new Date(now.getTime() - 5 * 60 * 1000);
+  // what each one looked like when seen (id and status only), so a claim by another server in the meantime cannot be mistaken for the state we saw
+  const seen = (rows) => rows.map((r) => ({ scheduleId: r.scheduleId, status: r.status }));
+  const due = [
+    ...seen(await PricingSchedule.find({ status: 'SCHEDULED', effectiveAt: { $lte: now } }).sort({ effectiveAt: 1 }).limit(20).lean()),
+    ...seen(await PricingSchedule.find({ status: 'APPLYING', claimedAt: { $lt: stuckBefore } }).limit(20).lean())
+  ];
+  let applied = 0;
+  for (const d of due) {
+    const claim = await PricingSchedule.findOneAndUpdate({ scheduleId: d.scheduleId, status: d.status }, { $set: { status: 'APPLYING', claimedAt: now } }, { new: true });
+    if (!claim) continue; // another server took it
+    try { const r = await applySchedule(claim, now); if (r.status === 'DONE') applied += 1; } catch (e) { console.warn('[pricing] scheduled publish failed:', e.message); }
+  }
+  return applied;
+}
+
+exports.applySchedule = applySchedule;
+exports.runDueSchedules = runDueSchedules;
 exports.modeOf = modeOf;
 exports.saveDraft = saveDraft;
 exports.recordVersion = recordVersion;

@@ -510,6 +510,8 @@ exports.createRequest = async (req, res) => {
       fare_basis: estimate.fare_basis,
       fare_source: estimate.fare_source,
       fare_breakdown: estimate.breakdown || null,
+      pricing_version: estimate.pricing_version ?? null,
+      pricing_rule: estimate.pricing_rule || null,
       coupon: pricing.coupon && pricing.coupon.applied ? { code: pricing.coupon.couponDoc.code, coupon_id: pricing.coupon.couponDoc.couponId, discount_minor: pricing.coupon.discountMinor, funded_by: pricing.coupon.couponDoc.fundedBy || 'BUSINESS' } : null,
       region_id: estimate.region_id || null,
       category_id: estimate.category_id || null,

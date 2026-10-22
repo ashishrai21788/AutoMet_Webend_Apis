@@ -95,6 +95,9 @@ const tripDetailsSchema = new mongoose.Schema({
   // The driver's rating of the rider for this trip. Written once, after the trip is COMPLETED (POST /api/v1/rides/rate-rider).
   /** What the driver earned on this trip, fixed when it completed: { fareMinor, feeMinor, netMinor, percent, currency, at }. */
   driver_earning: { type: mongoose.Schema.Types.Mixed, default: null },
+  /** The pricing version that was live when this trip was priced (see PricingVersion), and the rule it was priced with: { rule_id, rule_updated_at, taxes: [{ name, ratePercent, appliesTo }] }. The trip keeps the tax rates it was charged even after pricing changes. */
+  pricing_version: { type: Number, default: null },
+  pricing_rule: { type: mongoose.Schema.Types.Mixed, default: null },
   /** The coupon this booking used: { code, coupon_id, discount_minor, funded_by }. The discount is already inside fare. */
   coupon: { type: mongoose.Schema.Types.Mixed, default: null },
   /** A tip the rider added after the ride, in minor units. 100% goes to the driver, in the same way the ride was paid. */
