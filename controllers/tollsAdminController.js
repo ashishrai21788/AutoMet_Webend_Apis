@@ -24,5 +24,6 @@ exports.update = c.handle(async (req, res) => {
   await req.data.update(Tenant, {}, { tollSettings: value });
   clearAppTenantCache();
   await audit(req, 'business.toll_settings_updated', { enabled: value.enabled, maxTollMinor: value.maxTollMinor });
+  await require('./configHistoryController').track(req, 'business.toll_settings_updated', { tollSettings: value });
   return c.ok(res, shape(req, value));
 });

@@ -25,6 +25,7 @@ const requireAdmin = createRequireAdmin({
 
 const appVersionsAdmin = require('../controllers/appVersionsController');
 const tollsAdmin = require('../controllers/tollsAdminController');
+const configHistory = require('../controllers/configHistoryController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
 const router = express.Router();
@@ -111,6 +112,9 @@ router.get('/business/overview', ...read, biz.overview);
 router.put('/business/settings', ...manage, biz.updateSettings);
 router.get('/business/app-versions', ...read, appVersionsAdmin.get);
 router.put('/business/app-versions', ...manage, appVersionsAdmin.update);
+router.get('/business/config-history', ...read, configHistory.list);
+router.get('/business/config-history/:version', ...read, configHistory.get);
+router.post('/business/config-history/:version/rollback', ...manage, configHistory.rollback);
 router.get('/business/toll-settings', ...read, tollsAdmin.get);
 router.put('/business/toll-settings', ...manage, tollsAdmin.update);
 router.post('/business/logo', ...manage, logo.parse, logo.upload);

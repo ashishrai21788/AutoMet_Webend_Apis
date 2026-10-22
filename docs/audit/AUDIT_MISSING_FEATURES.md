@@ -2,9 +2,9 @@
 
 ## Not implemented (in scope; suggested order)
 1. ~~Legal documents module~~ **Done in cycle 2** (see AUDIT_MASTER_REPORT.md). Still open: translations (one language per type today), the built-in fallback text still ships in the apps, and the owner must write and have the real text reviewed.
-2. **Configuration publish lifecycle**: draft, validate, publish, history, rollback of pricing and branding as immutable snapshots. Today edits are live immediately and only an audit row records them.
-3. **Minimum app version and forced update**, returned in public config and enforced by the apps.
-4. **Tolls**: a toll amount entered or confirmed per trip, shown to the rider, included in the fare and invoice, and in driver earnings. No code exists.
+2. **Configuration publish lifecycle**: settings history and rollback are done for business details, payouts, tolls, app versions and ride settings (cycle 3). Still open: draft then publish for **pricing** (fare rules, regions, categories), which are separate records and still go live when saved.
+3. ~~Minimum app version and forced update~~ **Done in cycle 3.**
+4. ~~Tolls~~ **Done in cycle 3** (entered by the driver, capped by the business). Still open: working a toll out from the route, and a toll-free vehicle or area setting.
 5. **Tax effective dates and rule versions** stored on each trip. Rates are read from the current fare rule; the trip keeps the amounts charged, but not the rule version.
 6. **Surge**: the fare engine accepts a multiplier and the rule stores a cap, but nothing sets a multiplier. Either add a demand-driven multiplier or remove the setting.
 7. **Branded build pipeline** from a business record (applicationId, icons, Firebase file, signing) with artifact verification.

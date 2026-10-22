@@ -19,6 +19,7 @@ exports.updateSettings = c.handle(async (req, res) => {
   try {
     await AdminAudit.create({ tenantId: req.business.tenantId, actorId: req.admin.adminId, actorEmail: req.admin.email, action: 'business.ride_settings_updated', targetType: 'business', targetId: req.business.tenantId, meta: value, ip: req.ip || null });
   } catch (e) { console.warn('[fleet] audit write failed:', e.message); }
+  await require('../configHistoryController').track(req, 'business.ride_settings_updated', { rideSettings: merged });
   return c.ok(res, rideSettingsOf(updated));
 });
 

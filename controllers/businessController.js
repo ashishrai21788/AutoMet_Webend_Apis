@@ -72,6 +72,7 @@ exports.updateSettings = handle(async (req, res) => {
   try {
     const updated = await req.data.update(Tenant, {}, value);
     await audit(req, 'business.settings_updated', 'business', req.business.tenantId, { fields: Object.keys(value) });
+    await require('./configHistoryController').track(req, 'business.settings_updated', value);
     return ok(res, shapes.publicTenant(updated));
   } catch (e) {
     if (DUP(e)) return fail(res, 409, 'That name is already used by another business', { name: 'Already in use' });

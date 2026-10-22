@@ -19,5 +19,6 @@ exports.update = c.handle(async (req, res) => {
   await req.data.update(Tenant, {}, { appVersions: value });
   clearAppTenantCache(); // the servers' own copy of the business is refreshed now, not after its cache runs out
   await audit(req, 'business.app_versions_updated', { rider: value.rider.minVersionCode, driver: value.driver.minVersionCode });
+  await require('./configHistoryController').track(req, 'business.app_versions_updated', { appVersions: value });
   return c.ok(res, { ...value, defaultMessage: versions.DEFAULT_MESSAGE });
 });

@@ -149,5 +149,6 @@ exports.updateSettings = c.handle(async (req, res) => {
   const value = { commissionPercent: Math.round(pct * 100) / 100, minWithdrawalMinor: toMinor(min, digits), cashWithdrawable: !!b.cashWithdrawable, processingNote: note };
   await req.data.update(Tenant, {}, { payoutSettings: value });
   await audit(req, 'payout.settings_updated', req.business.tenantId, value);
+  await require('./configHistoryController').track(req, 'payout.settings_updated', { payoutSettings: value });
   return c.ok(res, { commissionPercent: value.commissionPercent, minWithdrawal: min, cashWithdrawable: value.cashWithdrawable, processingNote: note, currency: currencyOf(req) });
 });

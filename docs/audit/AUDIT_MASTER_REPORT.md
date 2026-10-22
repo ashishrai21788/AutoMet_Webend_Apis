@@ -65,3 +65,21 @@ See `RELEASE_READINESS.md`: blocked by the gaps above.
 Defects found on the device and fixed in this cycle: unreadable consent dialog buttons; invisible coupon text; fare lines on the completed trip not adding up (no discount line); Book button showing the undiscounted range; booking errors shown as raw JSON.
 
 Admin dashboard in a real browser (local lab backend): Coupons (list, uses, create form; uses matched the phone: ride 2 used, ride 1 given back), Legal documents (list with agreement counts, editor with live preview, draft delete), Driver payouts (adjustment recorded and then seen in the driver earnings API: adjustments 25, total 469, available 95) and Incentives (empty state, create form) all rendered and worked. Not exercised in the browser: publishing a legal version, paying a withdrawal, saving a coupon or incentive.
+
+---
+
+# Cycle 3: minimum app version, tolls, settings history
+
+**Overall status: still NOT PRODUCTION READY** (see RELEASE_READINESS.md).
+
+| Area | Result | Evidence |
+|---|---|---|
+| Backend tests | PASS | `npm test`: 558 tests, 554 pass, 0 fail, 4 skipped (the same 4 as before) |
+| Minimum app version and forced update | PASS | tests; live 426 on Postgres; update screen on a OnePlus (readable buttons, Update opens the store, Close leaves the app, shown on the next screen, lifted when the minimum is removed); admin card in a browser |
+| Tolls | PASS | tests (limits, invoice line, earnings, no commission on tolls, trip list); two phones end to end (OnePlus rider, Xiaomi driver): prompt, limit refused, ₹40 toll accepted; rider details, history, invoice and PDF, driver complete screen, history, home and receipt all agree |
+| Coupon on a cash ride, two phones | PASS after fixes | the driver was told to collect the fare before the coupon, and estimated earnings ignored the business-paid coupon; fixed and re-run: collect ₹99 = 89 - 30 + 40, earnings ₹129 |
+| Settings history and rollback | PASS | 12 tests; live on Postgres (found and fixed a bug that reported ride settings as changed on every save); page in a browser: list, a version's changes, what a rollback would change, rollback (recorded as a new version, public config shows the restored values) |
+
+**Found by testing on devices and a real database, not by unit tests:** the invoice of a tolled trip failed to save (the stored invoice did not allow a toll line); the trip list showed the fare without the toll; the update dialog was lost when the splash screen finished; unreadable dialog buttons on two phones; the driver coupon figures above; a settings-history difference that only appeared with the real engine.
+
+**Settings history covers** business details, driver payouts, tolls, minimum app versions and ride settings. It does not cover fare rules, regions, categories, coupons or incentives (separate records; pricing is the next step) or legal documents (they already have draft, publish and immutable versions).
