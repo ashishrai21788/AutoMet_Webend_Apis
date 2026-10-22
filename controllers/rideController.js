@@ -1565,7 +1565,12 @@ exports.listTrips = async (req, res) => {
     // paging is counted on what was read, before the rider-visibility filter below drops any rows
     const read = trips.length;
     if (riderOnly) trips = trips.filter(riderMayListTrip);
-    const list = trips.map(({ _id, __v, start_otp_attempts, ...t }) => t);
+    const { digitsOf, toMinor } = require('../lib/riderInvoice');
+    const list = trips.map(({ _id, __v, start_otp_attempts, ...t }) => {
+      const d = digitsOf(t.currency || 'INR');
+      const toll = Math.max(0, Math.round(Number(t.toll_minor) || 0));
+      return { ...t, toll: toll / 10 ** d, ...(t.fare != null ? { total_paid: (toMinor(t.fare, d) + toll) / 10 ** d } : {}) };
+    });
     await addRideTypeNames(list);
     res.status(200).json({
       success: true,

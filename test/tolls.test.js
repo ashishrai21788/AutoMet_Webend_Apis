@@ -191,3 +191,17 @@ test('every invoice line kind the code produces is one the stored invoice accept
   kinds.add('CANCELLATION');
   for (const k of kinds) assert.ok(allowed.includes(`'${k}'`), `the invoice model must allow line kind ${k}`);
 });
+
+test('the rider trip list carries what was paid in all, so the list agrees with the receipt', async () => {
+  await setup({ enabled: true, maxToll: 300 });
+  const { listTrips } = require('../controllers/rideController');
+  await db.TripDetails.create({ trip_id: 'L1', request_id: 'RL1', user_id: 'U1', driver_id: 'D1', status: 'COMPLETED', fare: 172, currency: 'INR', toll_minor: 6000, pickup: { address: 'A' }, drop: { address: 'B' }, requested_at: new Date() });
+  await db.TripDetails.create({ trip_id: 'L2', request_id: 'RL2', user_id: 'U1', driver_id: 'D1', status: 'COMPLETED', fare: 100, currency: 'INR', pickup: { address: 'A' }, drop: { address: 'B' }, requested_at: new Date(Date.now() - 1000) });
+  let out; const res = { code: 200, status(c) { this.code = c; return this; }, json(b) { out = b; return this; } };
+  await listTrips({ query: { user_id: 'U1' } }, res);
+  const row = (id) => out.data.find((t) => t.trip_id === id);
+  assert.equal(row('L1').total_paid, 232);
+  assert.equal(row('L1').toll, 60);
+  assert.equal(row('L1').fare, 172, 'the fare itself is unchanged');
+  assert.equal(row('L2').total_paid, 100, 'no toll, same as the fare');
+});
