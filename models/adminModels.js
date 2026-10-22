@@ -28,6 +28,8 @@ const tenantSchema = new mongoose.Schema({
     type: new mongoose.Schema({ commissionPercent: { type: Number, default: 0, min: 0, max: 100 }, minWithdrawalMinor: { type: Number, default: 0, min: 0 }, cashWithdrawable: { type: Boolean, default: false }, processingNote: { type: String, default: '', trim: true, maxlength: 140 } }, { _id: false }),
     default: () => ({})
   },
+  /** How fare rule changes reach riders: direct (a save is live at once) or draft (saves wait to be published together). See controllers/pricingController.js. */
+  pricingWorkflow: { type: String, enum: ['direct', 'draft'], default: 'direct' },
   /** Whether drivers may enter a toll when ending a trip, and the most they may enter for one trip (minor units). See lib/tolls.js. */
   tollSettings: {
     type: new mongoose.Schema({ enabled: { type: Boolean, default: false }, maxTollMinor: { type: Number, default: 0, min: 0 } }, { _id: false }),

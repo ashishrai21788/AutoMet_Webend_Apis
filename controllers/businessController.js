@@ -6,6 +6,7 @@ const v = require('../lib/businessValidation');
 const { validateFareRuleInput, calculateFare, MAX_MONEY } = require('../lib/fareRules');
 const { computeSetup } = require('../lib/businessSetup');
 const { matchRegion, hasGeofence } = require('../lib/regionMatch');
+const pricing = require('./pricingController');
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, message: 'OK', data });
 const fail = (res, status, message, errors) => res.status(status).json({ success: false, message, errors: errors || undefined, data: null });
@@ -267,6 +268,14 @@ exports.saveFareRule = handle(async (req, res) => {
   const { value, errors } = validateFareRuleInput(req.body);
   if (Object.keys(errors).length) return invalid(res, errors);
 
+  // when the business reviews pricing before it goes live, this is a draft until it is published
+  if (pricing.modeOf(req.business) === 'draft') {
+    const d = await pricing.saveDraft(req, { categoryId: target.category.categoryId, regionId: target.regionId, regionKey: target.regionKey, currency: target.market.currency }, 'SAVE', value);
+    await audit(req, 'pricing.draft_saved', 'fare_rule', d.draftId, { category: target.category.name, regionId: target.regionId });
+    return ok(res, { ...pricing.draftView(d), draft: true });
+  }
+
+  const before = await pricing.liveSnapshot(req);
   const now = new Date();
   const rule = await req.data.update(
     FareRule,
@@ -275,14 +284,22 @@ exports.saveFareRule = handle(async (req, res) => {
     { upsert: true, setOnInsert: { ruleId: newId('fr'), createdAt: now } }
   );
   await audit(req, 'fare_rule.saved', 'fare_rule', rule.ruleId, { category: target.category.name, regionId: target.regionId });
+  await pricing.recordVersion(req, { before, source: 'direct' });
   return ok(res, shapes.publicFareRule(rule));
 });
 
 exports.deleteFareRule = handle(async (req, res) => {
   const rule = await req.data.findOne(FareRule, { ruleId: req.params.id });
   if (!rule) return fail(res, 404, 'Fare rule not found');
+  if (pricing.modeOf(req.business) === 'draft') {
+    const d = await pricing.saveDraft(req, { categoryId: rule.categoryId, regionId: rule.regionId || null, regionKey: rule.regionKey, currency: rule.currency }, 'DELETE', null);
+    await audit(req, 'pricing.draft_saved', 'fare_rule', d.draftId, { categoryId: rule.categoryId, regionId: rule.regionId, op: 'DELETE' });
+    return ok(res, { id: rule.ruleId, draft: true });
+  }
+  const before = await pricing.liveSnapshot(req);
   await req.data.remove(FareRule, { ruleId: rule.ruleId });
   await audit(req, 'fare_rule.deleted', 'fare_rule', rule.ruleId, { categoryId: rule.categoryId, regionId: rule.regionId });
+  await pricing.recordVersion(req, { before, source: 'direct' });
   return ok(res, { id: rule.ruleId });
 });
 

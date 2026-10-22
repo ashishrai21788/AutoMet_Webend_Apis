@@ -26,6 +26,7 @@ const requireAdmin = createRequireAdmin({
 const appVersionsAdmin = require('../controllers/appVersionsController');
 const tollsAdmin = require('../controllers/tollsAdminController');
 const configHistory = require('../controllers/configHistoryController');
+const pricingAdmin = require('../controllers/pricingController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
 const router = express.Router();
@@ -134,6 +135,14 @@ router.patch('/business/categories/:id', ...manage, biz.updateCategory);
 router.get('/business/fare-rules', ...read, biz.listFareRules);
 router.put('/business/fare-rules', ...pricing, biz.saveFareRule);
 router.delete('/business/fare-rules/:id', ...pricing, biz.deleteFareRule);
+router.get('/business/pricing/draft', ...read, pricingAdmin.getDraft);
+router.delete('/business/pricing/draft', ...pricing, pricingAdmin.discard);
+router.delete('/business/pricing/draft/:key', ...pricing, pricingAdmin.discard);
+router.post('/business/pricing/publish', ...pricing, pricingAdmin.publish);
+router.put('/business/pricing/workflow', ...pricing, pricingAdmin.setWorkflow);
+router.get('/business/pricing/versions', ...read, pricingAdmin.listVersions);
+router.get('/business/pricing/versions/:version', ...read, pricingAdmin.getVersion);
+router.post('/business/pricing/versions/:version/rollback', ...pricing, pricingAdmin.rollback);
 router.post('/business/fare-preview', ...read, biz.previewFare);
 
 router.get('/business/cancellation-policies', ...read, biz.listPolicies);

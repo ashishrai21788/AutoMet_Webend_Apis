@@ -83,3 +83,20 @@ Admin dashboard in a real browser (local lab backend): Coupons (list, uses, crea
 **Found by testing on devices and a real database, not by unit tests:** the invoice of a tolled trip failed to save (the stored invoice did not allow a toll line); the trip list showed the fare without the toll; the update dialog was lost when the splash screen finished; unreadable dialog buttons on two phones; the driver coupon figures above; a settings-history difference that only appeared with the real engine.
 
 **Settings history covers** business details, driver payouts, tolls, minimum app versions and ride settings. It does not cover fare rules, regions, categories, coupons or incentives (separate records; pricing is the next step) or legal documents (they already have draft, publish and immutable versions).
+
+---
+
+# Cycle 4: pricing drafts, publish and history
+
+**Overall status: still NOT PRODUCTION READY** (see RELEASE_READINESS.md).
+
+| Area | Result | Evidence |
+|---|---|---|
+| Backend tests | PASS | `npm test`: 571 tests, 567 pass, 0 fail, 4 skipped; 13 new in `test/pricingDrafts.test.js` |
+| Draft, publish, versions, rollback on the real engine | PASS | lab backend on Postgres, over HTTP: a draft left the live rule and the riders' estimate unchanged (171), publish made the new prices live (545), rollback restored them (171); every live change is a numbered version; switching modes is recorded in the settings history |
+| Pricing page in a browser | PASS | switch on; "Save as draft" saves a draft and says nothing changes for riders; pending panel with the new rule; publish with a note; both rules Live; history with who, when and notes; a version shows what it changed and what going back would change; rollback recorded as a new version |
+| Rider apps | not needed | the apps ask the server for the estimate; only live rules are ever read |
+
+**How it works:** a business chooses **direct** (a save goes live at once, as before; each save is still kept as a version) or **draft** (saves wait; Publish makes all of them live together). Publishing checks every draft first (category and region still exist, fields valid, live pricing did not change underneath the draft) and writes nothing if any fails; the writes are upserts and removals, so repeating an interrupted publish finishes it. Rides already booked keep their quoted fare. Rollback applies an old set of rules and is itself a version.
+
+**Limits:** no scheduled publish (a publish is immediate); regions, categories, cancellation policies, coupons and incentives are not drafted (separate records); the contract snapshots in `test/contract` were already out of date before this cycle (new fields from earlier cycles) and were not refreshed.
