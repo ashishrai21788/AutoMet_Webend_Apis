@@ -23,6 +23,7 @@ const requireAdmin = createRequireAdmin({
   loadTenant: (tenantId) => Tenant.findOne({ tenantId })
 });
 
+const appVersionsAdmin = require('../controllers/appVersionsController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
 const router = express.Router();
@@ -107,6 +108,8 @@ const pricing = [requireAdmin('pricing.manage'), withBusiness];
 router.get('/business', ...read, biz.getBusiness);
 router.get('/business/overview', ...read, biz.overview);
 router.put('/business/settings', ...manage, biz.updateSettings);
+router.get('/business/app-versions', ...read, appVersionsAdmin.get);
+router.put('/business/app-versions', ...manage, appVersionsAdmin.update);
 router.post('/business/logo', ...manage, logo.parse, logo.upload);
 router.delete('/business/logo', ...manage, logo.remove);
 router.put('/business/market', ...manage, biz.setMarket);

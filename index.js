@@ -272,6 +272,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/admin', require('./routes/adminRoutes'));
 // Which business a rider/driver request belongs to (X-App-Id header, default business when absent). Admin routes above do not use it.
 app.use('/api', appTenantMiddleware); // Admin dashboard API (collections: tenants, admin_users, admin_audit_logs)
+app.use('/api', require('./lib/appVersions').enforceMinAppVersion); // builds below the business's minimum app version get 426 UPDATE_REQUIRED (public config stays reachable)
 app.use('/api/users', require('./routes/userRoutes')); // User: register, login, verify-otp, profile, resend-otp, logout, notifications (collections: users, users_otp, users_notification)
 app.use('/api/user-app-analytics', require('./routes/userAppAnalyticsRoutes')); // User app analytics (collection: user_app_analytics)
 app.use('/api/driver-app-analytics', require('./routes/driverAppAnalyticsRoutes')); // Driver app analytics (collection: driver_app_analytics)
