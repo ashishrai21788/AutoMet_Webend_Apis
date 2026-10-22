@@ -100,6 +100,9 @@ const tripDetailsSchema = new mongoose.Schema({
   /** A tip the rider added after the ride, in minor units. 100% goes to the driver, in the same way the ride was paid. */
   tip_minor: { type: Number, default: 0, min: 0 },
   tip_at: { type: Date, default: null },
+  /** A toll the driver paid on the road, entered when ending the trip, in minor units. It is on top of fare: the rider pays it back, the driver receives all of it, no coupon or commission applies. */
+  toll_minor: { type: Number, default: 0, min: 0 },
+  toll_at: { type: Date, default: null },
 
   driver_rating: {
     stars: { type: Number, default: null, min: 1, max: 5 },

@@ -334,7 +334,7 @@ exports.trip = c.handle(async (req, res) => {
     region: region ? { id: region.regionId, name: `${region.city}${region.zoneName && region.zoneName !== 'All areas' ? ` · ${region.zoneName}` : ''}` } : null,
     category: category ? { id: category.categoryId, name: category.name } : null,
     note: t.ride_note || '',
-    fareDetail: { amount: t.fare ?? null, currency: t.currency || null, basis: t.fare_basis || null, source: t.fare_source || null, breakdown: t.fare_breakdown || null, estimatedDurationMin: t.estimated_duration_min ?? null },
+    fareDetail: { ...(() => { const d = require('../lib/riderInvoice').digitsOf(t.currency || 'INR'); const toll = Math.max(0, Math.round(Number(t.toll_minor) || 0)); const off = t.coupon && Number(t.coupon.discount_minor) > 0 ? Number(t.coupon.discount_minor) : 0; return { toll: toll / 10 ** d, discount: off / 10 ** d, couponCode: t.coupon && t.coupon.code ? t.coupon.code : null, totalPaid: t.fare != null ? (Math.round(Number(t.fare) * 10 ** d) + toll) / 10 ** d : null }; })(), amount: t.fare ?? null, currency: t.currency || null, basis: t.fare_basis || null, source: t.fare_source || null, breakdown: t.fare_breakdown || null, estimatedDurationMin: t.estimated_duration_min ?? null },
     cancellation: t.cancelled_at || t.cancelled_by ? { by: t.cancelled_by || null, stage: t.cancel_stage || null, reason: t.cancellation_reason || '', at: t.cancelled_at || null } : null,
     rejectReason: t.reject_reason || '',
     timeline: STEPS.filter(([field]) => t[field]).map(([field, label]) => ({ label, at: t[field] })).sort((a, b) => new Date(a.at) - new Date(b.at)),

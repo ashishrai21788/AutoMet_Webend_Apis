@@ -28,6 +28,11 @@ const tenantSchema = new mongoose.Schema({
     type: new mongoose.Schema({ commissionPercent: { type: Number, default: 0, min: 0, max: 100 }, minWithdrawalMinor: { type: Number, default: 0, min: 0 }, cashWithdrawable: { type: Boolean, default: false }, processingNote: { type: String, default: '', trim: true, maxlength: 140 } }, { _id: false }),
     default: () => ({})
   },
+  /** Whether drivers may enter a toll when ending a trip, and the most they may enter for one trip (minor units). See lib/tolls.js. */
+  tollSettings: {
+    type: new mongoose.Schema({ enabled: { type: Boolean, default: false }, maxTollMinor: { type: Number, default: 0, min: 0 } }, { _id: false }),
+    default: () => ({})
+  },
   /** Smallest build of each app that may still be used (rider, driver); older builds are told to update. See lib/appVersions.js. */
   appVersions: {
     type: new mongoose.Schema({

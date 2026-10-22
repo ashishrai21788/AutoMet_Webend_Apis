@@ -1050,7 +1050,8 @@ async function notifyRiderRideStatusUpdated(userId, tripId, status, fareInfo) {
         fare: String(fareInfo.fare),
         currency: String(fareInfo.currency || ''),
         distance_km: String(fareInfo.distance_km ?? ''),
-        payment_mode: String(fareInfo.payment_mode || 'CASH')
+        payment_mode: String(fareInfo.payment_mode || 'CASH'),
+        ...(fareInfo.toll ? { toll: String(fareInfo.toll), total_paid: String(fareInfo.total_paid) } : {})
       }
     : {};
   emitToUser(uid, 'ride_status_updated', { trip_id: tripId, status, ...(fareInfo || {}) });
@@ -1141,6 +1142,15 @@ exports.updateTripStatus = async (req, res) => {
         // proof, kept on the trip, that this start went through the code check
         if (tripStartOtp.enabled()) updatePayload.start_otp_verified_at = now;
       }
+      // A toll the driver paid is entered when ending the trip: checked against the business's limit, then fixed on the trip
+      let tollMinor = 0;
+      if (status === 'COMPLETED') {
+        const drvDoc = await createModel('drivers').findOne({ driverId: tripDetails.driver_id });
+        const toll = require('../lib/tolls').parseToll(req.body, drvDoc ? await tenantForAccount(drvDoc) : req.appTenant || null);
+        if (!toll.ok) return res.status(400).json({ success: false, message: toll.message, error: 'TOLL_INVALID', data: { code: 'TOLL_INVALID', trip_id: tripId } });
+        tollMinor = toll.minor;
+        if (tollMinor > 0) { updatePayload.toll_minor = tollMinor; updatePayload.toll_at = now; }
+      }
       const moved = await TripDetails.findOneAndUpdate(
         { trip_id: tripId, status: tripDetails.status },
         { $set: updatePayload },
@@ -1160,7 +1170,12 @@ exports.updateTripStatus = async (req, res) => {
         });
       }
       // On completion make sure the trip has a fare (trips created before fares existed get one computed now).
-      const fareInfo = status === 'COMPLETED' ? await ensureTripFare(tripDetails) : null;
+      let fareInfo = status === 'COMPLETED' ? await ensureTripFare(tripDetails) : null;
+      if (fareInfo && tollMinor > 0) {
+        const { digitsOf, toMinor } = require('../lib/riderInvoice');
+        const d = digitsOf(fareInfo.currency || 'INR');
+        fareInfo = { ...fareInfo, toll: tollMinor / 10 ** d, total_paid: (toMinor(fareInfo.fare, d) + tollMinor) / 10 ** d };
+      }
       // the driver's earnings on this trip are fixed now, so a later change of commission never rewrites them
       if (status === 'COMPLETED') {
         try {
@@ -1336,6 +1351,14 @@ exports.getRideDetails = async (req, res) => {
 
     const { _id, __v, ...rideDetails } = trip;
     const data = { ...rideDetails };
+    {
+      // what the rider paid in all: the fare (after any coupon) plus a toll the driver paid on the way
+      const { digitsOf, toMinor } = require('../lib/riderInvoice');
+      const d = digitsOf(trip.currency || 'INR');
+      const toll = Math.max(0, Math.round(Number(trip.toll_minor) || 0));
+      data.toll = toll / 10 ** d;
+      if (trip.fare != null) data.total_paid = (toMinor(trip.fare, d) + toll) / 10 ** d;
+    }
 
     const UserModel = createModel('users');
     const DriverModel = createModel('drivers');
