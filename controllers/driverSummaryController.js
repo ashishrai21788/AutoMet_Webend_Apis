@@ -317,6 +317,9 @@ async function tripDetail(req, res) {
     fare: {
       lines: earn.lines.map((l) => ({ label: l.label, amount: l.amount, kind: l.kind })),
       passengerFare: earn.passenger_fare,
+      // what the rider actually handed over, and the coupon amount the business pays the driver on top of it
+      riderPaid: earn.rider_paid,
+      couponCovered: earn.coupon_discount_funded || 0,
       platformFeePercent: earn.platform_fee_percent,
       platformFee: earn.platform_fee,
       earnings: earn.earnings,

@@ -205,3 +205,23 @@ test('the rider trip list carries what was paid in all, so the list agrees with 
   assert.equal(row('L1').fare, 172, 'the fare itself is unchanged');
   assert.equal(row('L2').total_paid, 100, 'no toll, same as the fare');
 });
+
+test('a cash ride with a business-funded coupon: the rider pays less than the fare the driver is paid on, and the driver screens can say so', () => {
+  const tenant = { market: { currency: 'INR' }, payoutSettings: { commissionPercent: 0 } };
+  const trip = { trip_id: 'T', fare: 182, currency: 'INR', payment_mode: 'CASH', toll_minor: 7500, coupon: { code: 'SAVE30', discount_minor: 3000, funded_by: 'BUSINESS' }, fare_breakdown: { lines: [{ label: 'Base', amount: 10 }, { label: 'Dist', amount: 52 }, { label: 'Time', amount: 150 }], fees: [], taxes: [] } };
+  const e = earningsFor(trip, tenant);
+  assert.equal(e.rider_paid, 257, 'what the rider hands over: fare after the coupon plus the toll');
+  assert.equal(e.coupon_discount_funded, 30);
+  assert.equal(e.passenger_fare, 287, 'the driver is paid on the fare before the coupon, plus the toll');
+  assert.equal(e.earnings, 287);
+  assert.equal(e.passenger_fare - e.coupon_discount_funded, e.rider_paid, 'the figures agree');
+});
+
+test('the offer sent to the driver says how much of a coupon the business pays on top of the fare', () => {
+  const { couponCoveredMajor } = require('../lib/driverEarnings');
+  assert.equal(couponCoveredMajor({ currency: 'INR', coupon: { discount_minor: 3000, funded_by: 'BUSINESS' } }), 30);
+  assert.equal(couponCoveredMajor({ currency: 'INR', coupon: { discount_minor: 3000 } }), 30, 'business-funded is the default');
+  assert.equal(couponCoveredMajor({ currency: 'INR', coupon: { discount_minor: 3000, funded_by: 'DRIVER' } }), 0, 'a driver-funded coupon is not paid by the business');
+  assert.equal(couponCoveredMajor({ currency: 'INR' }), 0);
+  assert.equal(couponCoveredMajor({ currency: 'INR', coupon: { discount_minor: 0 } }), 0);
+});

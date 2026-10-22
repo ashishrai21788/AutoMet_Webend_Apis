@@ -249,7 +249,9 @@ function ridePushPayload(trip, riderName, extras = {}) {
     estimated_duration: String(trip.estimated_duration_min),
     fare: String(trip.fare),
     currency: trip.currency,
-    payment_mode: trip.payment_mode || 'CASH'
+    payment_mode: trip.payment_mode || 'CASH',
+    // a coupon the business funds is paid to the driver on top of what the rider pays (major units), so the offer can show the true amount
+    coupon_covered: String(require('../lib/driverEarnings').couponCoveredMajor(trip))
   };
 }
 
