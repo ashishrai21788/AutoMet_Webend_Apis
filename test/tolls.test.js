@@ -180,3 +180,14 @@ test('the dashboard saves the toll settings, refuses an empty limit and records 
   assert.equal(db.AdminAudit.rows[0].action, 'business.toll_settings_updated');
   assert.deepEqual((await call(A.get)).body.data, { enabled: true, maxToll: 250, currency: 'INR' });
 });
+
+test('every invoice line kind the code produces is one the stored invoice accepts', () => {
+  // the in-memory test database does not check enums, so check the real model's list directly
+  const fs = require('node:fs');
+  const src = fs.readFileSync(require('node:path').join(__dirname, '../models/riderInvoiceModel.js'), 'utf8');
+  const allowed = (src.match(/kind: \{[^}]*enum: \[([^\]]*)\]/) || [])[1] || '';
+  const trip = { trip_id: 'T', fare: 172, currency: 'INR', toll_minor: 6000, fare_breakdown: { lines: [{ label: 'Base', amount: 10 }, { label: 'Dist', amount: 52 }, { label: 'Time', amount: 150 }], fees: [{ label: 'Fee', amount: 5 }], taxes: [{ label: 'GST', amount: 9 }] }, coupon: { code: 'X', discount_minor: 4000 } };
+  const kinds = new Set(linesFromTrip(trip, 2).lines.map((l) => l.kind));
+  kinds.add('CANCELLATION');
+  for (const k of kinds) assert.ok(allowed.includes(`'${k}'`), `the invoice model must allow line kind ${k}`);
+});

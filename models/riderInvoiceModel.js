@@ -8,7 +8,7 @@ const mongoose = require('../lib/db/mongoose');
 const lineSchema = new mongoose.Schema({
   label: { type: String, required: true },
   amountMinor: { type: Number, required: true },
-  kind: { type: String, enum: ['RIDE', 'FEE', 'TAX', 'DISCOUNT', 'CANCELLATION'], default: 'RIDE' }
+  kind: { type: String, enum: ['RIDE', 'FEE', 'TAX', 'DISCOUNT', 'TOLL', 'CANCELLATION'], default: 'RIDE' }
 }, { _id: false });
 
 const riderInvoiceSchema = new mongoose.Schema({
