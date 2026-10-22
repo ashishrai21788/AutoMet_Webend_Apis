@@ -64,4 +64,4 @@ See `RELEASE_READINESS.md`: blocked by the gaps above.
 
 Defects found on the device and fixed in this cycle: unreadable consent dialog buttons; invisible coupon text; fare lines on the completed trip not adding up (no discount line); Book button showing the undiscounted range; booking errors shown as raw JSON.
 
-Not re-checked on a device: admin dashboard pages (type-checked and linted only).
+Admin dashboard in a real browser (local lab backend): Coupons (list, uses, create form; uses matched the phone: ride 2 used, ride 1 given back), Legal documents (list with agreement counts, editor with live preview, draft delete), Driver payouts (adjustment recorded and then seen in the driver earnings API: adjustments 25, total 469, available 95) and Incentives (empty state, create form) all rendered and worked. Not exercised in the browser: publishing a legal version, paying a withdrawal, saving a coupon or incentive.
