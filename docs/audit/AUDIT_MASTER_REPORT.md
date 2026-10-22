@@ -50,3 +50,18 @@ See `RELEASE_READINESS.md`: blocked by the gaps above.
 **What was built:** a versioned legal documents module. Six types (privacy policy, rider terms, driver terms, location disclosure, account deletion, cancellation and refund), each with draft, publish with an effective date (a future date waits), never-edited published versions, history, optional required agreement, and an acceptance record per rider or driver and version. Public API and a public web page per document (the address Google Play asks for). Admin page with editor, live preview and publish dialog. Rider and driver apps show the published text (fallback: the built-in text) and ask for required agreement once per start, again after every new version.
 
 **Limits:** one language per type; text is plain (headings, bullets, paragraphs) by design so it is always safely escaped; a business must write and legally review its own text, this module does not make it sufficient.
+
+---
+
+# Cycle 2b: device verification (rider and driver apps, lab backend on a real phone)
+
+| Area | Result | Evidence |
+|---|---|---|
+| Legal consent, driver app | PASS | dialog listed the two published documents; Read opened the server text; I agree saved both acceptances (admin counts: drivers 1 each); restart showed no dialog |
+| Legal consent, rider app | PASS | same flow with rider terms; the dialog returns after reading until agreed; acceptance counts riders 1 each; a second sign-in did not ask again |
+| Rider coupon | PASS | row on the ride-type list; typed code visible; applied ("you save" line); Book button shows the discounted range; booking stores the discounted fare, coupon id and discount (172 = 212 - 40 and 182 = 212 - 30); completed-trip lines add up to the total with a "Coupon discount" line; the first request that timed out gave its use back |
+| Rider tip | PASS | tip row on the review screen; 5 stars + 20 submitted; driver earnings show tips 20, trip earnings 212 (business-funded coupon), total 232, available 40 (the business owes the discount on a cash ride) |
+
+Defects found on the device and fixed in this cycle: unreadable consent dialog buttons; invisible coupon text; fare lines on the completed trip not adding up (no discount line); Book button showing the undiscounted range; booking errors shown as raw JSON.
+
+Not re-checked on a device: admin dashboard pages (type-checked and linted only).

@@ -13,7 +13,7 @@
 ## Partial
 - Coupons: riders must know the code (no list of offers); one coupon per ride by design (no stacking).
 - Pagination: not audited for the admin audit log, reports and invoice lists.
-- The rider tip row and coupon row are built and compiled but were not seen on a device.
+- The rider coupon row and tip row were seen and exercised on a device (cycle 2b). Admin pages are still only type-checked.
 
 ## Deferred by instruction (not built in this phase)
 - **Chat.** No operational chat exists and none is claimed.
