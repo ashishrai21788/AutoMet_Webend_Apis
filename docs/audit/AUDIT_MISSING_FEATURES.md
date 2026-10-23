@@ -6,7 +6,7 @@
 3. ~~Minimum app version and forced update~~ **Done in cycle 3.**
 4. ~~Tolls~~ **Done in cycle 3** (entered by the driver, capped by the business). Still open: working a toll out from the route, and a toll-free vehicle or area setting.
 5. ~~Tax effective dates and rule versions~~ **Done**: a tax change can be scheduled for a date, and each trip stores the pricing version and the tax rates it was charged.
-6. **Surge**: the fare engine accepts a multiplier and the rule stores a cap, but nothing sets a multiplier. Either add a demand-driven multiplier or remove the setting.
+6. **Surge**: DONE (cycle 5). Demand-based multiplier within the rule cap, pause switch, rider label. Quote lock and cache are in memory per server instance.
 7. **Branded build pipeline** from a business record (applicationId, icons, Firebase file, signing) with artifact verification.
 8. Parts of the requested audit not performed in this cycle: independent per-area agents, accessibility and text-scaling pass, dark mode, full concurrency and network-failure suites on devices, performance with large data sets, a Play policy cross-check of every SDK, deployment and artifact verification.
 

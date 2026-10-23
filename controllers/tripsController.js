@@ -7,7 +7,7 @@ const { buildImmediateCreateResponse } = require('../lib/createRequestMode');
 const { isDriverReachable, getDriverFcmInfo, sendRideRequestPushWithRetry } = require('../lib/fcmTripPush');
 const { offerExtras } = require('../lib/rideOffer');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
-const { priceTrip, priceTripWithCoupon, loadPricingConfig } = require('../lib/tripPricing');
+const { priceTrip, priceTripWithCoupon, withSurge, loadPricingConfig } = require('../lib/tripPricing');
 const coupons = require('../lib/coupons');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
@@ -419,7 +419,7 @@ exports.createRequest = async (req, res) => {
       drop: { lat: dropLat, lng: dropLng },
       vehicleType: driver.vehicleType,
       categoryId: requestedCategoryId || undefined
-    }, { tenant, userId, code: couponCode });
+    }, { tenant, userId, code: couponCode, surge: { mode: 'book', loadFreeDrivers: () => freeDriversOf(user) } });
     if (!pricing.ok) {
       return res.status(pricing.status).json({ success: false, message: pricing.message, error: pricing.code, data: { driver_id: driverId } });
     }
@@ -671,7 +671,7 @@ exports.estimate = async (req, res) => {
       drop: { lat: dropLat, lng: dropLng },
       vehicleType,
       categoryId: categoryId || undefined
-    }, { tenant, userId: req.user ? (req.user.userId || req.authActorId) : null, code: body.coupon_code != null ? String(body.coupon_code).trim() : '' });
+    }, { tenant, userId: req.user ? (req.user.userId || req.authActorId) : null, code: body.coupon_code != null ? String(body.coupon_code).trim() : '', surge: { mode: 'estimate', loadFreeDrivers: () => freeDriversOf(req.user) } });
     if (!pricing.ok) {
       return res.status(pricing.status).json({ success: false, message: pricing.message, error: pricing.code });
     }
@@ -690,6 +690,7 @@ exports.estimate = async (req, res) => {
         region_id: estimate.region_id || null,
         category_id: estimate.category_id || null,
         breakdown: estimate.fare_source === 'BUSINESS_RULES' ? estimate.breakdown : undefined,
+        surge_multiplier: estimate.surge_multiplier > 1 ? estimate.surge_multiplier : undefined,
         coupon: pricing.coupon ? { code: pricing.coupon.code, applied: !!pricing.coupon.applied, discount: pricing.coupon.discount || 0, message: pricing.coupon.message } : undefined,
         payment_mode: 'CASH'
       }
@@ -713,6 +714,19 @@ exports.estimate = async (req, res) => {
  * business configured in the admin dashboard: service regions (centre point and radius), the categories offered in
  * the pickup's region, and the fare rules. Nothing is stored.
  */
+/** The business's online drivers that are not on a ride: the supply side of surge. Called only when a fare rule has surge on. */
+async function freeDriversOf(user) {
+  const online = await createModel('drivers').find({ isOnline: true }).limit(500).lean();
+  const sameShop = [];
+  for (const d of online) {
+    if (user ? await sameBusiness(user, d) : true) sameShop.push(d);
+  }
+  if (!sameShop.length) return [];
+  const busy = await TripDetails.find({ driver_id: { $in: sameShop.map((d) => d.driverId) }, status: { $in: ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'] } }).select('driver_id').lean();
+  const busyIds = new Set(busy.map((t) => t.driver_id));
+  return sameShop.filter((d) => !busyIds.has(d.driverId));
+}
+
 exports.rideOptions = async (req, res) => {
   try {
     const body = req.body || {};
@@ -764,7 +778,7 @@ exports.rideOptions = async (req, res) => {
 
     const options = [];
     for (const category of offered) {
-      const priced = priceTrip(config, { pickup, drop, categoryId: category.categoryId });
+      const priced = priceTrip(config, await withSurge(config, { pickup, drop, categoryId: category.categoryId }, { tenant, userId: user ? (user.userId || req.authActorId) : null, surge: { mode: 'estimate', loadFreeDrivers: async () => free } }));
       if (!priced.ok) continue; // not priced yet (or not offered here): the rider is not shown a ride they cannot book
       // a driver whose app has not reported a position yet still counts: dispatch can offer them the ride
       const near = rankCandidates(free, pickup, { categoryId: category.categoryId, categoryName: category.name });
@@ -789,6 +803,7 @@ exports.rideOptions = async (req, res) => {
         estimated_duration_min: est.duration_min,
         duration_min_low: est.duration_min_low != null ? est.duration_min_low : est.duration_min,
         duration_min_high: est.duration_min_high != null ? est.duration_min_high : est.duration_min,
+        surge_multiplier: est.surge_multiplier > 1 ? est.surge_multiplier : undefined,
         drivers_nearby: near.length,
         eta_min: nearest == null ? null : etaMinutes(nearest),
         available: near.length > 0

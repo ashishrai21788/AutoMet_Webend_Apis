@@ -11,7 +11,7 @@
 | regions (centre and radius) | Regions | tenant | `service_regions` | public config | service availability | availability | `lib/regionMatch.js` in pricing | same | PASS |
 | vehicle categories | Categories | tenant | `vehicle_categories` | public config, ride options | ride type list | request map icon | pricing, dispatch | same | PASS |
 | fare rules (base, km, minute, minimum, fees, taxes) | Pricing | tenant, category, region | `fare_rules` | `trips/estimate`, ride options | shows the server fare | earnings | `lib/fareRules.js` | none (read per request) | PASS |
-| surge maximum multiplier | Pricing | rule | `fare_rules.surge` | none | none | none | **stored, never applied** | n/a | PARTIAL |
+| surge maximum multiplier | Pricing | rule | `fare_rules.surge` | none | none | none | applied by demand within this cap (`lib/surge.js`); pause switch in `surgeSettings` | n/a | PASS |
 | driver commission percent, payout rules | Driver Payouts, Payout settings | tenant | `tenants.payoutSettings` | none (server side) | none | earnings screens | `lib/driverMoney.js` | read per request | PASS |
 | coupons | Coupons | tenant | `coupons` | estimate, create-request | apply row | earnings through the trip | `lib/coupons.js` | none | PASS |
 | incentives and goals | Incentives and Goals | tenant | `driver_incentives` | `driver/earnings/incentives` | n/a | cards and screen | `lib/incentives.js` | none | PASS |

@@ -102,3 +102,16 @@ Admin dashboard in a real browser (local lab backend): Coupons (list, uses, crea
 **Scheduled publish and the pricing version on each trip (added after the first cycle 4 push):** a publish can be set for a future time (2 minutes to a year ahead); the drafts are frozen into a schedule and the server applies them together at the time (all checked first; one server claims each; an interrupted run is retried after 5 minutes; a failure applies nothing and keeps the reason; cancelling restores the drafts). Each trip stores the pricing version live when it was priced and the tax rates it was charged. Evidence: 579 backend tests (575 pass, 0 fail, 4 skipped); on Postgres the server applied a GST change at its scheduled time and a trip priced afterwards carried version 3 and GST 5%; in a browser the Schedule option, the waiting-schedule card and the trip detail line ("Priced with pricing version 3; taxes charged: GST 5%") were seen.
 
 **Limits:** regions, categories, cancellation policies, coupons and incentives are not drafted (separate records); the contract snapshots in `test/contract` were already out of date before this cycle (new fields from earlier cycles) and were not refreshed.
+
+## Cycle 5: demand-based surge
+
+| Area | Result | Evidence |
+|---|---|---|
+| Backend tests | PASS | `npm test`: 589 tests, 585 pass, 0 fail, 4 skipped; 10 new in `test/surgePricing.test.js` |
+| Surge on the real engine | PASS | Postgres lab over HTTP: rule off 171; on with quiet demand 171; demand 5 / supply 1 gave x2.5 capped to 2 = 342 with a surge line; booked fare equalled the quote; pause gave 171, resume 342; lowering the cap to 1.5 gave 256.5; changes in settings history |
+| Admin page | PASS | Surge panel shows areas, waiting riders, free drivers and multiplier; pause switch works |
+| Rider app (OnePlus) | PASS | ride row shows "High demand x2 - 15 min" at 424-504; info dialog explains the multiplier and that the rider is never charged more than shown |
+
+**How it works:** demand is riders with the app open plus requests in the last 10 minutes within 3 km of the pickup (minimum 3); supply is free online drivers within 3 km. Ratio ladder 1.5/2/3/4 gives x1.2/1.5/2/2.5, capped by the rule, held 60 s. A 5-minute quote lock means a booking never costs more than the quote. Only rules with surge enabled are affected.
+
+**Limits:** quote lock and cache are in memory per server instance (fine for one instance).

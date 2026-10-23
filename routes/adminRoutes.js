@@ -27,6 +27,7 @@ const appVersionsAdmin = require('../controllers/appVersionsController');
 const tollsAdmin = require('../controllers/tollsAdminController');
 const configHistory = require('../controllers/configHistoryController');
 const pricingAdmin = require('../controllers/pricingController');
+const surgeAdmin = require('../controllers/surgeAdminController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
 const router = express.Router();
@@ -140,6 +141,8 @@ router.delete('/business/pricing/draft', ...pricing, pricingAdmin.discard);
 router.delete('/business/pricing/draft/:key', ...pricing, pricingAdmin.discard);
 router.post('/business/pricing/publish', ...pricing, pricingAdmin.publish);
 router.put('/business/pricing/workflow', ...pricing, pricingAdmin.setWorkflow);
+router.get('/business/surge', ...read, surgeAdmin.get);
+router.put('/business/surge-settings', ...pricing, surgeAdmin.update);
 router.get('/business/pricing/schedules', ...read, pricingAdmin.listSchedules);
 router.post('/business/pricing/schedules/:id/cancel', ...pricing, pricingAdmin.cancelSchedule);
 router.get('/business/pricing/versions', ...read, pricingAdmin.listVersions);

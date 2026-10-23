@@ -31,7 +31,7 @@ Status key is in AUDIT_MASTER_REPORT.md. "Evidence" names the test or run; a bla
 | Feature | Status | Evidence |
 |---|---|---|
 | Multi-tenant data isolation | PASS | `test/apptenant.api.test.js`, `test/roleboundary.api.test.js`, `test/security.test.js` |
-| Fare rules and taxes | PASS with gaps | `lib/fareRules.js`; taxes have no effective date; **surge is stored in the rule but never applied** (`lib/tripPricing.js`) |
+| Fare rules and taxes | PASS with gaps | `lib/fareRules.js`; taxes have no effective date; surge follows demand within the rule cap (`lib/surge.js`) |
 | Coupons | PASS | see above |
 | Commission and earnings | PASS | `lib/driverMoney.js`; the split is fixed on the trip at completion; `test/driverEarnings.test.js` |
 | Payouts and ledger | PASS | tests; the admin pays and records the bank reference |
