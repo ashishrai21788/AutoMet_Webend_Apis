@@ -262,7 +262,7 @@ async function exportCsv(req, res) {
   }
   for (const a of adjAll.filter((x) => adjWithin(x, win.from, win.to)).sort((x, y) => new Date(x.at) - new Date(y.at))) {
     net += a.amountMinor;
-    lines.push([dateLabel(new Date(a.at), tz, { day: '2-digit', month: 'short', year: 'numeric' }), dateLabel(new Date(a.at), tz, { hour: '2-digit', minute: '2-digit', hour12: true }), a.kind === 'INCENTIVE' ? 'Incentive bonus' : 'Adjustment', a.title || a.reason || '', '', '', '', fmtMajor(a.amountMinor, digits).toFixed(digits)].map(csvCell).join(','));
+    lines.push([dateLabel(new Date(a.at), tz, { day: '2-digit', month: 'short', year: 'numeric' }), dateLabel(new Date(a.at), tz, { hour: '2-digit', minute: '2-digit', hour12: true }), a.kind === 'INCENTIVE' ? 'Incentive bonus' : a.kind === 'PENALTY' ? 'Cancellation penalty' : 'Adjustment', a.title || a.reason || '', '', '', '', fmtMajor(a.amountMinor, digits).toFixed(digits)].map(csvCell).join(','));
   }
   lines.push(['Total', '', `${cur.length} trips`, '', fmtMajor(fare, digits).toFixed(digits), fmtMajor(fee, digits).toFixed(digits), fmtMajor(tips, digits).toFixed(digits), fmtMajor(net, digits).toFixed(digits)].map(csvCell).join(','));
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="earnings-${range}.csv"`, 'Cache-Control': 'private, no-store' });
@@ -337,7 +337,7 @@ async function transactions(req, res) {
   const rows = [];
   for (const t of s.all) { const x = money.tripMoney(t, req.business); rows.push({ kind: 'EARNING', id: t.trip_id, at: at(t), ...m(x.netMinor, s.digits), title: x.cash ? 'Cash ride' : 'Online ride', sub: `Trip ${t.trip_id}`, mode: String(t.payment_mode || 'CASH').toUpperCase() }); }
   for (const t of s.all.filter((x) => Number(x.tip_minor) > 0)) rows.push({ kind: 'TIP', id: `tip_${t.trip_id}`, at: t.tip_at || at(t), ...m(Number(t.tip_minor), s.digits), title: 'Tip', sub: `Trip ${t.trip_id}`, mode: String(t.payment_mode || 'CASH').toUpperCase() });
-  for (const a of s.adj) rows.push({ kind: a.kind, id: a.adjustmentId, at: a.at, ...m(a.amountMinor, s.digits), title: a.kind === 'INCENTIVE' ? 'Incentive bonus' : (a.amountMinor < 0 ? 'Adjustment (debit)' : 'Adjustment'), sub: a.title && a.kind === 'INCENTIVE' ? a.title : (a.reason || ''), mode: 'BANK' });
+  for (const a of s.adj) rows.push({ kind: a.kind, id: a.adjustmentId, at: a.at, ...m(a.amountMinor, s.digits), title: a.kind === 'INCENTIVE' ? 'Incentive bonus' : a.kind === 'PENALTY' ? 'Cancellation penalty' : (a.amountMinor < 0 ? 'Adjustment (debit)' : 'Adjustment'), sub: a.title && a.kind === 'INCENTIVE' ? a.title : (a.reason || ''), mode: 'BANK' });
   for (const p of s.payouts.filter((x) => x.status === 'PAID')) rows.push({ kind: 'PAYOUT', id: p.payoutId, at: p.paidAt, ...m(-p.amountMinor, s.digits), title: 'Payout', sub: [p.bankLabel, p.accountLast4 ? `••••${p.accountLast4}` : '', p.reference].filter(Boolean).join('  '), mode: 'BANK' });
   rows.sort((x, y) => new Date(y.at) - new Date(x.at));
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50); const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);

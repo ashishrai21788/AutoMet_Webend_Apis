@@ -142,3 +142,17 @@ Result: all seven scenarios match on both Mongo and Postgres, and twice in a row
 **Scope decision:** full drafts and scheduled publish (as for fare rules) were not built for cancellation policies. The policies are a few small records applied at the moment of a cancellation, so the proportionate protection is a record of every change with before and after, and one-click restore (itself recorded). Every save, removal and restore writes a change (`cancellation_policy_changes`); a restore over a later edit asks first (`force`).
 
 **Found on the way:** the dashboard said cancellation fees are "not charged yet". The rider fee is charged (`lib/cancellationFee.js`); the driver penalty and free-cancellations-per-day are stored and never applied. The text now says so, and the driver penalty is recorded as open.
+
+## Cycle 8: the driver cancellation penalty
+
+The policy's `driver.penaltyFee` and `driver.graceCancellations` were stored and never applied (found in cycle 7). Now: when a driver cancels a ride they had accepted, the first `graceCancellations` cancellations of the business's day are free; each further one takes `penaltyFee` from the driver's earnings.
+
+| Area | Result | Evidence |
+|---|---|---|
+| Backend tests | PASS | `npm test`: 608 tests, 604 pass, 0 fail, 4 skipped; 11 new in `test/driverPenalty.test.js`; all seven contract scenarios match |
+| Money | PASS | a `PENALTY` ledger entry (negative, one per trip), `trip.driver_penalty_minor`; counted as an adjustment so it lowers earnings and the withdrawable balance; nothing without a policy, with a zero penalty or for a trip with no business; a ledger failure never blocks the cancel |
+| Warning before cancelling | PASS | `POST /api/v1/rides/driver-cancel-preview` uses the same calculation as the charge; the driver app asks first and shows the cost in the dialog; if the check cannot load, the dialog still opens |
+| On a phone (OnePlus, lab driver app, Postgres) | PASS | 1st cancel today: free (preview 0, charged 0). 2nd: the dialog said "Cancelling now costs you ₹25, taken from your earnings."; after confirming, today's earnings went from ₹342 to ₹317; the earnings feed showed "Cancellation penalty · Cancelled trip amt_id_000004 · -25"; the region policy (the one that applies to these trips) was used, not the category-wide one |
+| Privacy | PASS | the penalty is kept off every trip payload (rider and driver details, the trip, the list); a test fails if a serializer lets it through |
+
+**Rules chosen:** the day is the business's calendar day in its own time zone; only driver cancellations after accepting count; the first N are free, each later one costs the fee; a region's policy wins over the category's general one. **Not covered:** a penalty on a no-show by the driver, an admin waiving a penalty (an admin can add a credit adjustment for now), and showing the penalty on the trip in the admin trip detail.

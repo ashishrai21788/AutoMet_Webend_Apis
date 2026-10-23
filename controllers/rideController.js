@@ -15,6 +15,7 @@ const { positionOf, presenceOf } = require('../lib/driverLocation');
 const { loadPricingConfig } = require('../lib/tripPricing');
 const { tenantForAccount } = require('../lib/appTenant');
 const { policyFor, riderCancelFee } = require('../lib/cancellationFee');
+const driverPenalty = require('../lib/driverPenalty');
 
 /** The business's cancellation policy for a trip's category, or null (a trip of the default business has none). */
 async function cancellationPolicyOf(trip) {
@@ -882,6 +883,11 @@ exports.cancelRideByDriver = async (req, res) => {
     }
     await logTripEvent(tripId, 'CANCELLED_BY_DRIVER', { cancelled_by: 'DRIVER', cancel_stage: 'after_accept', cancellation_reason: reason || undefined, cancelled_at: now.toISOString() });
     clearTripRateLimitForDriver(driverId);
+    // beyond the day's free cancellations the business's policy takes a penalty from the driver's earnings; a failure here is logged, never blocks the cancel
+    let penalty = { penalty: 0, penaltyMinor: 0, currency: null, freeLeft: 0 };
+    try {
+      penalty = await driverPenalty.chargeForCancel({ trip: cancelled.toObject ? cancelled.toObject() : cancelled, policy: await cancellationPolicyOf(trip), now });
+    } catch (e) { console.error('[cancelRideByDriver] penalty not recorded for', tripId, e.message); }
     try {
       emitToUser(trip.user_id, 'ride_status_updated', { trip_id: tripId, status: 'CANCELLED_BY_DRIVER', cancelled_by: 'DRIVER', cancellation_reason: reason || undefined });
     } catch (e) { /* the push below still tells the rider */ }
@@ -892,10 +898,33 @@ exports.cancelRideByDriver = async (req, res) => {
       data: { type: 'ride_status_updated', trip_id: tripId, status: 'CANCELLED_BY_DRIVER', cancelled_by: 'DRIVER' },
       dataOnly: true
     }).catch(() => {});
-    res.status(200).json({ success: true, message: 'Ride cancelled', data: { ride_id: tripId, status: 'CANCELLED_BY_DRIVER', cancellation_reason: reason } });
+    res.status(200).json({ success: true, message: 'Ride cancelled', data: { ride_id: tripId, status: 'CANCELLED_BY_DRIVER', cancellation_reason: reason, driver_penalty: penalty.penalty, driver_penalty_currency: penalty.currency, free_cancellations_left: penalty.freeLeft } });
   } catch (error) {
     console.error('[cancelRideByDriver]', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to cancel the ride' });
+  }
+};
+
+/**
+ * POST /api/v1/rides/driver-cancel-preview
+ * What cancelling would cost this driver right now, for the warning before they confirm. Body: { trip_id, driver_id }.
+ * Nothing is changed. { applies, penalty, currency, free_cancellations_left }; applies is false when the ride can no longer be cancelled.
+ */
+exports.driverCancelPreview = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const tripId = String(body.ride_id ?? body.trip_id ?? '').trim();
+    const driverId = String(body.driver_id ?? '').trim();
+    if (!tripId || !driverId) return res.status(400).json({ success: false, message: 'Missing required fields: trip_id, driver_id', data: null });
+    const trip = await TripDetails.findOne({ trip_id: tripId }).lean();
+    if (!trip) return res.status(404).json({ success: false, message: 'Ride not found', data: { ride_id: tripId } });
+    if (trip.driver_id !== driverId) return res.status(403).json({ success: false, message: 'Only the driver of this ride can ask this', data: { ride_id: tripId } });
+    const cancellable = ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED'].includes(trip.status);
+    const p = cancellable ? await driverPenalty.previewForCancel({ trip, policy: await cancellationPolicyOf(trip), now: new Date() }) : { penalty: 0, currency: null, freeLeft: 0 };
+    return res.status(200).json({ success: true, data: { ride_id: tripId, applies: cancellable, penalty: p.penalty, currency: p.currency, free_cancellations_left: p.freeLeft } });
+  } catch (error) {
+    console.error('[driverCancelPreview]', error);
+    return res.status(500).json({ success: false, message: error.message || 'Could not check', data: null });
   }
 };
 
@@ -1278,7 +1307,7 @@ exports.getActiveRide = async (req, res) => {
       });
     }
 
-    const { _id, __v, start_otp_attempts, ...rideRecord } = trip; // internal counter, never part of a payload
+    const { _id, __v, start_otp_attempts, driver_penalty_minor, ...rideRecord } = trip; // internal counter and the driver's penalty, never part of a rider payload
     if (needsReceipt) rideRecord.needs_receipt = true;
     // a driver looking at an offer sees what the push carried: who is asking, how far the pickup is, how many rides they have done
     if (driverId && trip.status === 'REQUESTED') {
@@ -1426,6 +1455,7 @@ exports.getRideDetails = async (req, res) => {
       if (startCode) data.start_otp = startCode; // absent unless the feature is on and a code is due
     }
     delete data.start_otp_attempts;
+    delete data.driver_penalty_minor;
 
     res.status(200).json({
       success: true,
@@ -1460,7 +1490,7 @@ exports.getTrip = async (req, res) => {
     if (!mayReadTrip(req, trip)) {
       return res.status(403).json({ success: false, message: 'You can only view your own trips', data: null });
     }
-    const { _id, __v, start_otp_attempts, ...rest } = trip;
+    const { _id, __v, start_otp_attempts, driver_penalty_minor, ...rest } = trip;
     res.status(200).json({ success: true, data: rest });
   } catch (error) {
     console.error('[getTrip]', error);
@@ -1566,7 +1596,7 @@ exports.listTrips = async (req, res) => {
     const read = trips.length;
     if (riderOnly) trips = trips.filter(riderMayListTrip);
     const { digitsOf, toMinor } = require('../lib/riderInvoice');
-    const list = trips.map(({ _id, __v, start_otp_attempts, ...t }) => {
+    const list = trips.map(({ _id, __v, start_otp_attempts, driver_penalty_minor, ...t }) => {
       const d = digitsOf(t.currency || 'INR');
       const toll = Math.max(0, Math.round(Number(t.toll_minor) || 0));
       return { ...t, toll: toll / 10 ** d, ...(t.fare != null ? { total_paid: (toMinor(t.fare, d) + toll) / 10 ** d } : {}) };

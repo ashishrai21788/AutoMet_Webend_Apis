@@ -42,6 +42,13 @@ router.post(
   rideController.cancelRideByDriver
 );
 
+// what cancelling would cost the driver right now (the warning before they confirm)
+router.post(
+  '/driver-cancel-preview',
+  requireAuth({ roles: ['driver'], enforceBodyDriverId: true }),
+  rideController.driverCancelPreview
+);
+
 // the driver rates the rider after a finished ride
 router.post(
   '/rate-rider',

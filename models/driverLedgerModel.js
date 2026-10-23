@@ -4,13 +4,15 @@ const mongoose = require('../lib/db/mongoose');
  * Money the business adds to or takes from a driver's earnings outside a trip fare, in whole minor units.
  *   INCENTIVE   a bonus earned by reaching an incentive's target (credited once per incentive per driver, by the system)
  *   ADJUSTMENT  a correction an admin made, with the reason (positive adds, negative takes away)
+ *   PENALTY     taken from the driver for cancelling an accepted ride beyond the free cancellations of the day (always negative;
+ *               refId is the trip; from the business's cancellation policy)
  * These are owed to the driver by the business, so they count towards the balance the driver can withdraw.
  */
 const driverAdjustmentSchema = new mongoose.Schema({
   tenantId: { type: String, required: true, index: true },
   adjustmentId: { type: String, required: true, unique: true },
   driverId: { type: String, required: true, index: true },
-  kind: { type: String, enum: ['INCENTIVE', 'ADJUSTMENT'], required: true },
+  kind: { type: String, enum: ['INCENTIVE', 'ADJUSTMENT', 'PENALTY'], required: true },
   amountMinor: { type: Number, required: true },
   currency: { type: String, required: true },
   title: { type: String, default: '' },
