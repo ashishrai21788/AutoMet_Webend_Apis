@@ -169,3 +169,62 @@ test('no trip payload carries the penalty a driver was charged', async () => {
     ['the list', await run(rideController.listTrips, { query: { driver_id: 'D1' } })]
   ]) { assert.ok(body.includes('T1'), `${name} returned the trip: ${body.slice(0, 120)}`); assert.ok(!body.includes('driver_penalty_minor'), `${name} must not carry the penalty`); }
 });
+
+// ---- the dashboard: what the trip shows, and waiving a penalty ----
+const admin = require('../controllers/driverPenaltyAdminController');
+const waive = async (id, body, business = { tenantId: 't1' }) => {
+  let out; const res = { code: 200, status(c) { this.code = c; return this; }, json(b) { out = { code: this.code, body: b }; return this; } };
+  await admin.waive({ params: { id }, body, business, admin: { adminId: 'A1', email: 'fin@t.local' }, ip: '1.1.1.1' }, res);
+  return out;
+};
+const waivers = () => db.DriverAdjustment.rows.filter((a) => a.kind === 'PENALTY_WAIVER');
+
+test('the trip shows the penalty the driver was charged, and nothing when there was none', async () => {
+  await reset({ penaltyFee: 25, graceCancellations: 1 });
+  await addTrip('T1'); await addTrip('T2');
+  await cancel('T1');
+  assert.equal(await admin.penaltyOf('t1', db.TripDetails.rows.find((t) => t.trip_id === 'T1')), null, 'a free cancellation has no penalty');
+  await cancel('T2');
+  const p = await admin.penaltyOf('t1', db.TripDetails.rows.find((t) => t.trip_id === 'T2'));
+  assert.deepEqual([p.amount, p.currency, p.waived], [25, 'INR', false]);
+});
+
+test('waiving gives the penalty back once, with the reason and who did it, and the driver nets zero', async () => {
+  await reset({ penaltyFee: 25, graceCancellations: 0 });
+  await addTrip('T1');
+  await cancel('T1');
+  assert.equal((await waive('T1', {})).code, 400, 'a reason is required');
+  assert.equal((await waive('T1', { reason: 'ok' })).code, 400, 'a short reason is refused');
+  const r = await waive('T1', { reason: 'Rider asked the driver to cancel' });
+  assert.equal(r.code, 200, JSON.stringify(r.body).slice(0, 200));
+  assert.deepEqual([r.body.data.waived, r.body.data.waivedBy, r.body.data.reason], [true, 'fin@t.local', 'Rider asked the driver to cancel']);
+  assert.equal(waivers().length, 1);
+  assert.deepEqual([waivers()[0].amountMinor, waivers()[0].refId, waivers()[0].driverId], [2500, 'T1', 'D1']);
+  const all = db.DriverAdjustment.rows;
+  assert.equal(money.totals([], { market: { currency: 'INR' } }, all).totalMinor, 0, 'the penalty and its waiver cancel out');
+  assert.ok(db.AdminAudit.rows.some((a) => a.action === 'driver_penalty.waived' && a.targetId === 'T1'));
+  const again = await waive('T1', { reason: 'Second click by another admin' });
+  assert.equal(again.code, 409, 'it cannot be given back twice');
+  assert.equal(waivers().length, 1);
+  assert.equal((await admin.penaltyOf('t1', db.TripDetails.rows[0])).waived, true);
+});
+
+test('there is nothing to waive without a penalty, and another business cannot waive this one', async () => {
+  await reset({ penaltyFee: 25, graceCancellations: 1 });
+  await addTrip('T1'); await addTrip('T2');
+  await cancel('T1'); // free
+  assert.equal((await waive('T1', { reason: 'Nothing was charged' })).code, 409);
+  await cancel('T2'); // charged
+  assert.equal((await waive('NOPE', { reason: 'Unknown trip here' })).code, 404);
+  assert.equal((await waive('T2', { reason: 'Not my business' }, { tenantId: 't2' })).code, 404, 'another business cannot see the trip');
+  assert.equal(waivers().length, 0);
+});
+
+test('two admins waiving at the same moment give it back once', async () => {
+  await reset({ penaltyFee: 25, graceCancellations: 0 });
+  await addTrip('T1');
+  await cancel('T1');
+  const results = await Promise.all([waive('T1', { reason: 'First admin, same moment' }), waive('T1', { reason: 'Second admin, same moment' })]);
+  assert.deepEqual(results.map((r) => r.code).sort(), [200, 409]);
+  assert.equal(waivers().length, 1);
+});

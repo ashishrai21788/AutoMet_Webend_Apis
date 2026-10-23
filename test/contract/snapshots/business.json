@@ -4478,6 +4478,7 @@
               "id": "<driverId>",
               "name": "Dee Driver Jr"
             },
+            "driverPenalty": null,
             "drop": "Hinjewadi, Pune",
             "dropPoint": {
               "lat": 18.5912,

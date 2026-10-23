@@ -204,7 +204,7 @@ function createFakeDb() {
     PlatformInvoice: fakeModel({ uniques: ['invoiceId', 'number'], defaults: () => ({ issuedAt: new Date(), refundedAmount: 0, refunds: [], remindersSent: [], lapsedAt: null }) }),
     PlatformCounter: fakeModel({ uniques: ['key'] }),
     DriverDutySession: fakeModel({ }),
-    DriverAdjustment: fakeModel({ uniques: ['adjustmentId', { fields: ['tenantId', 'driverId', 'refId'], only: { kind: 'INCENTIVE' } }], defaults: () => ({ at: new Date(), createdAt: new Date(), createdBy: 'system' }) }),
+    DriverAdjustment: fakeModel({ uniques: ['adjustmentId', { fields: ['tenantId', 'driverId', 'refId'], only: { kind: 'INCENTIVE' } }, { fields: ['tenantId', 'driverId', 'refId'], only: { kind: 'PENALTY_WAIVER' } }], defaults: () => ({ at: new Date(), createdAt: new Date(), createdBy: 'system' }) }),
     Incentive: fakeModel({ uniques: ['incentiveId'], defaults: () => ({ active: true, bonusMinor: 0, createdAt: new Date(), updatedAt: new Date() }) }),
     FareRuleDraft: fakeModel({ uniques: ['draftId', ['tenantId', 'categoryId', 'regionKey']], defaults: () => ({ op: 'SAVE', createdAt: new Date(), updatedAt: new Date() }) }),
     PricingSchedule: fakeModel({ uniques: ['scheduleId'], defaults: () => ({ status: 'SCHEDULED', createdAt: new Date() }) }),

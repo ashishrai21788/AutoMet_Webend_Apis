@@ -172,3 +172,18 @@ Every list the dashboard and the driver app can open was checked for a page size
 - Driver trip history for "all time" (the app's default is a week): 5,000 trips took about 2.8 to 3.6 s. About 0.5 ms per trip. Reading the rows is about a third of it; building a display row for every trip and the per-day totals is the rest. Fixing it means database-side totals.
 - Driver earnings overview and payouts (`completedTrips`): reads up to 20,000 completed trips on each call, about 1.5 s at 5,000. **Beyond 20,000 completed trips the lifetime totals and the withdrawable balance would silently under-count** (about 3 years at 20 trips a day). Recommended: keep running per-driver totals, or sum in the database.
 - `routes/driverRoutes.js` (unbounded `Driver.find()`) is not mounted anywhere and cannot be reached; it is dead code and can be deleted.
+
+## Cycle 10: seeing and waiving a driver penalty from the dashboard
+
+Finishes cycle 8. The trip page now shows the penalty a driver was charged, and a finance admin can give it back.
+
+| Area | Result | Evidence |
+|---|---|---|
+| Backend tests | PASS | `npm test`: 619 tests, 615 pass, 0 fail, 4 skipped; 4 new waiver tests in `test/driverPenalty.test.js`; 7 contract scenarios match on Mongo and Postgres (the only snapshot change is `driverPenalty: null` on the admin trip detail) |
+| Once only, on real Postgres | PASS | 8 waivers started at the same moment for one trip: 1 won, 7 refused as duplicates, 0 other errors; waivers for other trips, penalties and incentives with the same trip id are unaffected; the ledger netted correctly |
+| Dashboard in a browser | PASS | the trip page shows "Driver cancellation penalty: ₹25.00, Taken from the driver"; "Waive the penalty" opens a reason dialog (a reason of 5+ characters is required, the dialog says so); after confirming: status Waived, by whom and when, the reason, a toast, and the button is gone |
+| Ledger | PASS | the driver's earnings feed shows "Cancellation penalty waived +25" beside "Cancellation penalty -25"; the dashboard's adjustments list shows both; a second waive is refused with 409 |
+
+**How it works:** a waiver is a positive `PENALTY_WAIVER` ledger entry for the same amount (reason, who, when), allowed once per trip by a unique index (a different key shape from the incentive index, so the two never overlap on MongoDB). Needs the `payments.manage` permission and is written to the audit log (`driver_penalty.waived`). Nothing new is added to any trip payload.
+
+**Still not covered:** a penalty for a driver no-show; waiving part of a penalty (it is all or nothing).

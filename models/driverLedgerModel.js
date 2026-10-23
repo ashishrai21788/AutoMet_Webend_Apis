@@ -6,13 +6,14 @@ const mongoose = require('../lib/db/mongoose');
  *   ADJUSTMENT  a correction an admin made, with the reason (positive adds, negative takes away)
  *   PENALTY     taken from the driver for cancelling an accepted ride beyond the free cancellations of the day (always negative;
  *               refId is the trip; from the business's cancellation policy)
+ *   PENALTY_WAIVER  gives a penalty back (positive, same amount; refId is the trip; once per trip; an admin did it, with a reason)
  * These are owed to the driver by the business, so they count towards the balance the driver can withdraw.
  */
 const driverAdjustmentSchema = new mongoose.Schema({
   tenantId: { type: String, required: true, index: true },
   adjustmentId: { type: String, required: true, unique: true },
   driverId: { type: String, required: true, index: true },
-  kind: { type: String, enum: ['INCENTIVE', 'ADJUSTMENT', 'PENALTY'], required: true },
+  kind: { type: String, enum: ['INCENTIVE', 'ADJUSTMENT', 'PENALTY', 'PENALTY_WAIVER'], required: true },
   amountMinor: { type: Number, required: true },
   currency: { type: String, required: true },
   title: { type: String, default: '' },
@@ -24,6 +25,8 @@ const driverAdjustmentSchema = new mongoose.Schema({
 }, { collection: 'driver_adjustments' });
 driverAdjustmentSchema.index({ tenantId: 1, driverId: 1, at: -1 });
 driverAdjustmentSchema.index({ tenantId: 1, driverId: 1, refId: 1 }, { unique: true, partialFilterExpression: { kind: 'INCENTIVE' } });
+// a different key shape from the one above (it includes kind), so the two partial indexes never describe the same index
+driverAdjustmentSchema.index({ tenantId: 1, driverId: 1, kind: 1, refId: 1 }, { unique: true, partialFilterExpression: { kind: 'PENALTY_WAIVER' } });
 
 const DriverAdjustment = mongoose.models.DriverAdjustment || mongoose.model('DriverAdjustment', driverAdjustmentSchema);
 

@@ -28,6 +28,7 @@ const tollsAdmin = require('../controllers/tollsAdminController');
 const configHistory = require('../controllers/configHistoryController');
 const pricingAdmin = require('../controllers/pricingController');
 const cancellationHistory = require('../controllers/cancellationHistoryController');
+const driverPenaltyAdmin = require('../controllers/driverPenaltyAdminController');
 const surgeAdmin = require('../controllers/surgeAdminController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
@@ -224,6 +225,7 @@ router.post('/business/riders/:id/status', requireAdmin('riders.manage'), withBu
 router.get('/business/trips', requireAdmin('trips.view'), withBusiness, ops.trips);
 router.get('/business/trips/:id', requireAdmin('trips.view'), withBusiness, ops.trip);
 router.post('/business/trips/:id/cancel', requireAdmin('trips.manage'), withBusiness, ops.cancelTrip);
+router.post('/business/trips/:id/waive-driver-penalty', requireAdmin('payments.manage'), withBusiness, driverPenaltyAdmin.waive);
 
 router.get('/business/drivers', ...viewDrivers, fleetDrivers.list);
 router.post('/business/drivers', ...manageDrivers, fleetDrivers.create);
