@@ -63,7 +63,16 @@ module.exports = async function ride(t) {
   await call('ride 1: status out of order', { method: 'PATCH', path: `/api/v1/rides/${tripId}/status`, body: { status: 'COMPLETED' }, token: driverToken });
   await call('ride 1: status unknown', { method: 'PATCH', path: `/api/v1/rides/${tripId}/status`, body: { status: 'FLYING' }, token: driverToken, expectStatus: 400 });
   for (const status of ['DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING', 'COMPLETED']) {
-    await call(`ride 1: status ${status}`, { method: 'PATCH', path: `/api/v1/rides/${tripId}/status`, body: { status }, token: driverToken });
+    let body = { status };
+    if (status === 'ON_GOING') {
+      // the driver cannot start without the rider's 4-digit code; a wrong one is refused
+      await call('ride 1: start without the code', { method: 'PATCH', path: `/api/v1/rides/${tripId}/status`, body: { status }, token: driverToken, expectStatus: 400 });
+      await call('ride 1: start with a wrong code', { method: 'PATCH', path: `/api/v1/rides/${tripId}/status`, body: { status, otp: '00000' }, token: driverToken, expectStatus: 403 });
+      const seen = await call('ride 1: the rider reads the start code', { path: `/api/v1/rides/details?trip_id=${tripId}&user_id=${userId}`, token: riderToken, expectStatus: 200 });
+      t.alias(seen.body.data.start_otp, 'startCode');
+      body = { status, otp: seen.body.data.start_otp };
+    }
+    await call(`ride 1: status ${status}`, { method: 'PATCH', path: `/api/v1/rides/${tripId}/status`, body, token: driverToken, expectStatus: 200 });
     recordPushes(`ride 1: the rider is told ${status}`);
   }
   await call('ride 1: details when completed (rider)', { path: `/api/v1/rides/details?trip_id=${tripId}&user_id=${userId}`, token: riderToken });

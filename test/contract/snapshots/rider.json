@@ -13,6 +13,18 @@
         "body": {
           "data": {
             "appId": "<appId1>",
+            "appVersions": {
+              "driver": {
+                "message": "A newer version of the app is required. Please update to continue.",
+                "minVersionCode": 0,
+                "storeUrl": ""
+              },
+              "rider": {
+                "message": "A newer version of the app is required. Please update to continue.",
+                "minVersionCode": 0,
+                "storeUrl": ""
+              }
+            },
             "business": {
               "appName": "AutoMet",
               "brandColor": "#f5a300",
@@ -28,6 +40,10 @@
               "requireEligibleDrivers": false
             },
             "serviceAvailable": false,
+            "tolls": {
+              "enabled": false,
+              "maxToll": 0
+            },
             "vehicleCategories": [],
             "version": "<hash16>"
           },
@@ -102,6 +118,7 @@
               "accessToken": null,
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": null,
               "email": "rae@contract.test",
               "fcmToken": null,
@@ -251,6 +268,7 @@
               "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": "device-1",
               "email": "rae@contract.test",
               "fcmToken": "fcm-token-1",
@@ -365,6 +383,7 @@
               "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": "device-1",
               "email": "rae@contract.test",
               "fcmToken": "fcm-token-1",
@@ -458,6 +477,7 @@
               "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": "device-1",
               "email": "rae@contract.test",
               "fcmToken": "fcm-token-1",
@@ -513,6 +533,7 @@
               "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": "device-1",
               "email": "rae@contract.test",
               "fcmToken": "fcm-token-2",
@@ -539,10 +560,29 @@
       }
     },
     {
-      "step": "detail: by userId",
+      "step": "detail: no token",
       "request": {
         "method": "GET",
         "path": "/api/users/detail/<userId>"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "detail: by userId",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/detail/<userId>",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -552,12 +592,10 @@
             "user": {
               "__v": 0,
               "_id": "<id1>",
-              "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
-              "deviceId": "device-1",
+              "deletedAt": null,
               "email": "rae@contract.test",
-              "fcmToken": "fcm-token-2",
               "firstName": "Rae",
               "fullName": "Rae Rider",
               "id": "<id1>",
@@ -568,6 +606,11 @@
               "phone": "+919800000001",
               "profilePhoto": null,
               "role": "user",
+              "stats": {
+                "member_since": "<date>",
+                "total_km": 0,
+                "total_rides": 0
+              },
               "suspendedAt": null,
               "suspendedReason": null,
               "tenantId": "<appId1>",
@@ -584,16 +627,15 @@
       "step": "detail: unknown userId",
       "request": {
         "method": "GET",
-        "path": "/api/users/detail/U_does_not_exist"
+        "path": "/api/users/detail/U_does_not_exist",
+        "auth": "bearer"
       },
       "response": {
-        "status": 404,
+        "status": 403,
         "contentType": "application/json",
         "body": {
-          "data": {
-            "userId": "U_does_not_exist"
-          },
-          "message": "User not found",
+          "data": null,
+          "message": "You can only view your own profile",
           "success": false
         }
       }
@@ -621,7 +663,7 @@
       }
     },
     {
-      "step": "profile: missing userId",
+      "step": "profile: userId comes from the sign-in",
       "request": {
         "method": "PUT",
         "path": "/api/users/profile",
@@ -631,16 +673,36 @@
         "auth": "bearer"
       },
       "response": {
-        "status": 400,
+        "status": 200,
         "contentType": "application/json",
         "body": {
           "data": {
-            "missingFields": {
-              "userId": true
+            "user": {
+              "__v": 0,
+              "_id": "<id1>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deletedAt": null,
+              "email": "rae@contract.test",
+              "firstName": "Raye",
+              "fullName": "Raye Rider",
+              "id": "<id1>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Rider",
+              "phone": "+919800000001",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<appId1>",
+              "updatedAt": "<date>",
+              "userId": "<userId>"
             }
           },
-          "message": "Missing required field: userId",
-          "success": false
+          "message": "Profile updated successfully",
+          "success": true
         }
       }
     },
@@ -687,12 +749,10 @@
             "user": {
               "__v": 0,
               "_id": "<id1>",
-              "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
-              "deviceId": "device-1",
+              "deletedAt": null,
               "email": "rae@contract.test",
-              "fcmToken": "fcm-token-2",
               "firstName": "Raye",
               "fullName": "Raye Rider-Lee",
               "id": "<id1>",
@@ -719,7 +779,8 @@
       "step": "detail: after update",
       "request": {
         "method": "GET",
-        "path": "/api/users/detail/<userId>"
+        "path": "/api/users/detail/<userId>",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -729,12 +790,10 @@
             "user": {
               "__v": 0,
               "_id": "<id1>",
-              "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
-              "deviceId": "device-1",
+              "deletedAt": null,
               "email": "rae@contract.test",
-              "fcmToken": "fcm-token-2",
               "firstName": "Raye",
               "fullName": "Raye Rider-Lee",
               "id": "<id1>",
@@ -745,6 +804,11 @@
               "phone": "+919800000001",
               "profilePhoto": null,
               "role": "user",
+              "stats": {
+                "member_since": "<date>",
+                "total_km": 0,
+                "total_rides": 0
+              },
               "suspendedAt": null,
               "suspendedReason": null,
               "tenantId": "<appId1>",
@@ -838,6 +902,8 @@
         "contentType": "application/json",
         "body": {
           "data": {
+            "has_more": false,
+            "next_skip": 2,
             "notifications": [
               {
                 "createdAt": "<date>",
@@ -981,6 +1047,8 @@
         "contentType": "application/json",
         "body": {
           "data": {
+            "has_more": false,
+            "next_skip": 2,
             "notifications": [
               {
                 "createdAt": "<date>",
@@ -1083,6 +1151,8 @@
         "contentType": "application/json",
         "body": {
           "data": {
+            "has_more": false,
+            "next_skip": 1,
             "notifications": [
               {
                 "createdAt": "<date>",
@@ -1154,6 +1224,7 @@
               "accessToken": null,
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": null,
               "email": "rae@contract.test",
               "fcmToken": null,

@@ -294,6 +294,7 @@
             "id": "<vc_4>",
             "imageUrl": "",
             "luggageCapacity": null,
+            "mapIconUrl": "",
             "name": "Sedan",
             "passengerCapacity": 4,
             "regionIds": [
@@ -469,7 +470,12 @@
               "line": "1 Main Road",
               "state": "Maharashtra"
             },
-            "appReportedVehicle": null,
+            "appReportedVehicle": {
+              "colour": null,
+              "model": "Maruti Dzire",
+              "registrationNumber": "MH12AB1234",
+              "type": "Sedan"
+            },
             "assignedAt": "<date>",
             "canViewDocuments": true,
             "createdAt": "<date>",
@@ -545,6 +551,7 @@
               "accessToken": null,
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": null,
               "email": "rae@contract.test",
               "fcmToken": null,
@@ -600,6 +607,7 @@
               "accessToken": "<jwt>",
               "accountStatus": "ACTIVE",
               "createdAt": "<date>",
+              "deletedAt": null,
               "deviceId": "rider-device-1",
               "email": "rae@contract.test",
               "fcmToken": "rider-fcm-1",
@@ -656,6 +664,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -670,6 +679,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-1",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -687,12 +697,12 @@
               "id": "<id9>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": false,
               "isOnline": false,
               "isPhoneVerified": false,
               "isProfileComplete": false,
-              "isVehicleAdded": false,
+              "isVehicleAdded": true,
               "isVerified": false,
               "lastActive": "<date>",
               "lastName": "Driver",
@@ -714,6 +724,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -734,12 +750,12 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -787,6 +803,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -801,6 +818,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-1",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -818,12 +836,12 @@
               "id": "<id9>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": true,
               "isOnline": false,
               "isPhoneVerified": false,
               "isProfileComplete": false,
-              "isVehicleAdded": false,
+              "isVehicleAdded": true,
               "isVerified": false,
               "lastActive": "<date>",
               "lastName": "Driver",
@@ -845,6 +863,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -865,12 +889,12 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -921,6 +945,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -935,6 +960,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-1",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1053,6 +1079,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1067,6 +1094,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-1",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1308,11 +1336,172 @@
       }
     },
     {
+      "step": "ride 1: the rider reads the start code",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rides/details?trip_id=amt_id_000001&user_id=<userId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "arrived_at": "<date>",
+            "cancel_fee_currency": "INR",
+            "cancel_fee_now": 0,
+            "cancel_stage": null,
+            "cancellation_fee": 0,
+            "cancellation_fee_reason": null,
+            "cancellation_reason": null,
+            "cancelled_at": null,
+            "cancelled_by": null,
+            "category_id": "<vc_4>",
+            "completed_at": null,
+            "coupon": null,
+            "created_at": "<date>",
+            "currency": "INR",
+            "dispatch_attempted": [
+              "<driverId>"
+            ],
+            "dispatch_attempts": 1,
+            "dispatch_mode": "MANUAL",
+            "distance_km": 16.9,
+            "driver": {
+              "driver_id": "<driverId>",
+              "email": "dee@contract.test",
+              "first_name": "Dee",
+              "fuel_type": null,
+              "full_name": "Dee Driver",
+              "id_verified": false,
+              "last_name": "Driver",
+              "phone": "+919811111111",
+              "profile_photo": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "seats": 0,
+              "total_rides": 0,
+              "vehicle_color": null,
+              "vehicle_model": "Dzire",
+              "vehicle_number": "MH12AB1234",
+              "vehicle_type": "Sedan",
+              "verified": true
+            },
+            "driver_earning": null,
+            "driver_id": "<driverId>",
+            "driver_location": {
+              "heading": 0,
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "state": "LIVE",
+              "updated_at": "<date>"
+            },
+            "driver_on_the_way_at": "<date>",
+            "driver_rating": {
+              "comment": null,
+              "rated_at": null,
+              "stars": null,
+              "tags": []
+            },
+            "driver_response": "ACCEPTED",
+            "drop": {
+              "address": "Hinjewadi, Pune",
+              "lat": 18.5912,
+              "lng": 73.7389
+            },
+            "estimated_duration_min": 47,
+            "fare": 294.8,
+            "fare_basis": "ESTIMATE",
+            "fare_breakdown": {
+              "discount": 0,
+              "fare": 289.8,
+              "fees": [
+                {
+                  "amount": 5,
+                  "key": "booking",
+                  "label": "Booking fee"
+                }
+              ],
+              "feesTotal": 5,
+              "lines": [
+                {
+                  "amount": 40,
+                  "key": "base",
+                  "label": "Base fare"
+                },
+                {
+                  "amount": 202.8,
+                  "key": "distance",
+                  "label": "Distance (16.9 km)"
+                },
+                {
+                  "amount": 47,
+                  "key": "time",
+                  "label": "Time (47 min)"
+                }
+              ],
+              "taxes": [],
+              "taxesTotal": 0,
+              "total": 294.8
+            },
+            "fare_source": "BUSINESS_RULES",
+            "payment_mode": "CASH",
+            "pickup": {
+              "address": "Shivajinagar, Pune",
+              "lat": 18.5314,
+              "lng": 73.8446
+            },
+            "pricing_rule": {
+              "rule_id": "<fr_5>",
+              "rule_updated_at": "<date>",
+              "taxes": []
+            },
+            "pricing_version": 2,
+            "push_message_id": "projects/contract/messages/fake-1",
+            "push_sent": true,
+            "push_sent_at": "<date>",
+            "push_status": "DELIVERED",
+            "region_id": "<rg_3>",
+            "reject_reason": null,
+            "request_id": "req-biz-1",
+            "requested_at": "<date>",
+            "responded_at": "<date>",
+            "ride_note": null,
+            "rider_rating": {
+              "comment": null,
+              "rated_at": null,
+              "stars": null,
+              "tags": []
+            },
+            "rider_receipt_ack_at": null,
+            "share_token": null,
+            "start_otp": "<startCode>",
+            "start_otp_verified_at": null,
+            "started_at": null,
+            "status": "ARRIVED",
+            "tenant_id": "<defaultAppId>",
+            "timeout_at": "<date>",
+            "tip_at": null,
+            "tip_minor": 0,
+            "toll": 0,
+            "toll_at": null,
+            "toll_minor": 0,
+            "total_paid": 294.8,
+            "trip_id": "amt_id_000001",
+            "updated_at": "<date>",
+            "user_id": "<userId>",
+            "vehicle_type": "Sedan"
+          },
+          "success": true
+        }
+      }
+    },
+    {
       "step": "ride 1: ON_GOING",
       "request": {
         "method": "PATCH",
         "path": "/api/v1/rides/amt_id_000001/status",
         "body": {
+          "otp": "<startCode>",
           "status": "ON_GOING"
         },
         "auth": "bearer"
@@ -2045,6 +2234,7 @@
               "id": "<vc_4>",
               "imageUrl": "",
               "luggageCapacity": null,
+              "mapIconUrl": "",
               "name": "Sedan",
               "passengerCapacity": 4,
               "regionIds": [
@@ -2110,6 +2300,7 @@
             "id": "<vc_12>",
             "imageUrl": "",
             "luggageCapacity": null,
+            "mapIconUrl": "",
             "name": "Mini",
             "passengerCapacity": 3,
             "regionIds": [
@@ -2145,6 +2336,7 @@
             "id": "<vc_12>",
             "imageUrl": "",
             "luggageCapacity": null,
+            "mapIconUrl": "",
             "name": "Mini Plus",
             "passengerCapacity": 3,
             "regionIds": [
@@ -2178,6 +2370,7 @@
               "id": "<vc_4>",
               "imageUrl": "",
               "luggageCapacity": null,
+              "mapIconUrl": "",
               "name": "Sedan",
               "passengerCapacity": 4,
               "regionIds": [
@@ -2194,6 +2387,7 @@
               "id": "<vc_12>",
               "imageUrl": "",
               "luggageCapacity": null,
+              "mapIconUrl": "",
               "name": "Mini Plus",
               "passengerCapacity": 3,
               "regionIds": [
@@ -4296,6 +4490,7 @@
               "amount": 294.8,
               "basis": "ESTIMATE",
               "breakdown": {
+                "discount": 0,
                 "fare": 289.8,
                 "fees": [
                   {
@@ -4326,9 +4521,15 @@
                 "taxesTotal": 0,
                 "total": 294.8
               },
+              "couponCode": null,
               "currency": "INR",
+              "discount": 0,
               "estimatedDurationMin": 47,
-              "source": "BUSINESS_RULES"
+              "pricingVersion": 2,
+              "source": "BUSINESS_RULES",
+              "taxBasis": [],
+              "toll": 0,
+              "totalPaid": 294.8
             },
             "id": "amt_id_000001",
             "note": "",

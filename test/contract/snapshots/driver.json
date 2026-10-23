@@ -294,6 +294,7 @@
             "id": "<vc_4>",
             "imageUrl": "",
             "luggageCapacity": null,
+            "mapIconUrl": "",
             "name": "Sedan",
             "passengerCapacity": 4,
             "regionIds": [
@@ -469,7 +470,12 @@
               "line": "1 Main Road",
               "state": "Maharashtra"
             },
-            "appReportedVehicle": null,
+            "appReportedVehicle": {
+              "colour": null,
+              "model": "Maruti Dzire",
+              "registrationNumber": "MH12AB1234",
+              "type": "Sedan"
+            },
             "assignedAt": "<date>",
             "canViewDocuments": true,
             "createdAt": "<date>",
@@ -562,24 +568,23 @@
       }
     },
     {
-      "step": "self sign-up is closed",
+      "step": "self sign-up needs a name and a phone",
       "request": {
         "method": "POST",
         "path": "/api/drivers",
-        "body": {
-          "fullName": "New Person",
-          "phone": "+919822222222"
-        }
+        "body": {}
       },
       "response": {
-        "status": 403,
+        "status": 400,
         "contentType": "application/json",
         "body": {
           "data": {
-            "collection": "drivers",
-            "method": "POST"
+            "missingFields": {
+              "name": true,
+              "phoneNumber": true
+            }
           },
-          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "message": "Missing required fields: name, phoneNumber",
           "success": false
         }
       }
@@ -677,6 +682,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -691,6 +697,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-1",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -708,12 +715,12 @@
               "id": "<id8>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": false,
               "isOnline": false,
               "isPhoneVerified": false,
               "isProfileComplete": false,
-              "isVehicleAdded": false,
+              "isVehicleAdded": true,
               "isVerified": false,
               "lastActive": "<date>",
               "lastName": "Driver",
@@ -735,6 +742,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -755,12 +768,12 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -808,6 +821,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -822,6 +836,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-1",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -839,12 +854,12 @@
               "id": "<id8>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": true,
               "isOnline": false,
               "isPhoneVerified": false,
               "isProfileComplete": false,
-              "isVehicleAdded": false,
+              "isVehicleAdded": true,
               "isVerified": false,
               "lastActive": "<date>",
               "lastName": "Driver",
@@ -866,6 +881,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -886,12 +907,12 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -1065,6 +1086,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1079,6 +1101,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1096,12 +1119,12 @@
               "id": "<id8>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": true,
               "isOnline": false,
               "isPhoneVerified": false,
               "isProfileComplete": false,
-              "isVehicleAdded": false,
+              "isVehicleAdded": true,
               "isVerified": false,
               "lastActive": "<date>",
               "lastName": "Driver",
@@ -1123,6 +1146,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -1143,12 +1172,12 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -1189,6 +1218,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1203,6 +1233,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1267,10 +1298,10 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
               "verification_status": "INCOMPLETE",
               "walletBalance": 0,
@@ -1318,6 +1349,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1332,6 +1364,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1396,10 +1429,10 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
               "verification_status": "INCOMPLETE",
               "walletBalance": 0,
@@ -1496,6 +1529,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1510,6 +1544,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1574,10 +1609,10 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
               "verification_status": "INCOMPLETE",
               "walletBalance": 0,
@@ -1621,6 +1656,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1635,6 +1671,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1652,12 +1689,12 @@
               "id": "<id8>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": true,
               "isOnline": false,
               "isPhoneVerified": false,
               "isProfileComplete": false,
-              "isVehicleAdded": false,
+              "isVehicleAdded": true,
               "isVerified": false,
               "lastActive": "<date>",
               "lastName": "Driver-Rao",
@@ -1679,6 +1716,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -1699,12 +1742,12 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -1719,7 +1762,8 @@
       "step": "status of a driver",
       "request": {
         "method": "GET",
-        "path": "/api/drivers/status/<driverId>"
+        "path": "/api/drivers/status/<driverId>",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -1741,6 +1785,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1755,6 +1800,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -1772,12 +1818,12 @@
               "id": "<id8>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": true,
               "isOnline": false,
               "isPhoneVerified": false,
               "isProfileComplete": false,
-              "isVehicleAdded": false,
+              "isVehicleAdded": true,
               "isVerified": false,
               "lastActive": "<date>",
               "lastName": "Driver-Rao",
@@ -1799,6 +1845,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -1819,12 +1871,12 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null,
+              "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -1854,10 +1906,29 @@
       }
     },
     {
+      "step": "status of a driver: no sign-in is refused",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/status/<driverId>"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
       "step": "vehicle details: read",
       "request": {
         "method": "GET",
-        "path": "/api/drivers/<driverId>/vehicle-details"
+        "path": "/api/drivers/<driverId>/vehicle-details",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -1913,14 +1984,32 @@
               },
               "vehicleInsuranceImages": [],
               "vehicleManufacturingYear": null,
-              "vehicleModel": null,
-              "vehicleNumber": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
               "vehicleRegistrationImages": [],
-              "vehicleType": null
+              "vehicleType": "Sedan"
             }
           },
           "message": "Vehicle details retrieved successfully",
           "success": true
+        }
+      }
+    },
+    {
+      "step": "vehicle details: no sign-in is refused",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/<driverId>/vehicle-details"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
         }
       }
     },
@@ -1983,6 +2072,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -1997,6 +2087,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -2094,67 +2185,14 @@
         "path": "/api/drivers/<driverId>/vehicle-details"
       },
       "response": {
-        "status": 200,
+        "status": 401,
         "contentType": "application/json",
         "body": {
           "data": {
-            "retrievedAt": "<date>",
-            "vehicleDetails": {
-              "_id": "<id8>",
-              "aadhaarNumber": null,
-              "chassisNumber": null,
-              "createdAt": "<date>",
-              "currentLocation": {
-                "coordinates": [
-                  0,
-                  0
-                ],
-                "type": "Point"
-              },
-              "driverId": "<driverId>",
-              "driverName": "Deepa Driver-Rao",
-              "drivingLicenseImages": [],
-              "drivingLicenseIssueDate": null,
-              "drivingLicenseIssuingAuthority": null,
-              "email": "dee@contract.test",
-              "engineNumber": null,
-              "expiry_date": null,
-              "firstName": "Deepa",
-              "id": "<id8>",
-              "idProofImages": [],
-              "id_proof_type": null,
-              "isLoggedin": true,
-              "isOnline": false,
-              "isProfileComplete": false,
-              "isVerified": false,
-              "lastActive": "<date>",
-              "lastName": "Driver-Rao",
-              "licenseExpiry": null,
-              "licenseNumber": null,
-              "license_type": null,
-              "onlineAs": 0,
-              "phone": "+919811111111",
-              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
-              "role": "driver",
-              "updatedAt": "<date>",
-              "vehicleColor": "White",
-              "vehicleInsurance": {
-                "insuranceAmount": null,
-                "insuranceCompany": null,
-                "insuranceExpiryDate": null,
-                "isInsuranceValid": false,
-                "policyNumber": null
-              },
-              "vehicleInsuranceImages": [],
-              "vehicleManufacturingYear": 2021,
-              "vehicleModel": "Dzire",
-              "vehicleNumber": "MH12AB1234",
-              "vehicleRegistrationImages": [],
-              "vehicleType": "Sedan"
-            }
+            "error": "Authorization header missing or invalid format"
           },
-          "message": "Vehicle details retrieved successfully",
-          "success": true
+          "message": "Access token required",
+          "success": false
         }
       }
     },
@@ -2214,6 +2252,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -2228,6 +2267,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -2385,7 +2425,8 @@
       "step": "status of a driver: online",
       "request": {
         "method": "GET",
-        "path": "/api/drivers/status/<driverId>"
+        "path": "/api/drivers/status/<driverId>",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -2407,6 +2448,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -2421,6 +2463,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -2438,7 +2481,7 @@
               "id": "<id8>",
               "idProofImages": [],
               "id_proof_type": null,
-              "isDocumentsUploaded": false,
+              "isDocumentsUploaded": true,
               "isLoggedin": true,
               "isOnline": true,
               "isPhoneVerified": false,
@@ -2472,6 +2515,12 @@
                 "startDate": "<date>",
                 "transactionId": null
               },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
               "onlineAs": 0,
               "operatingRegionId": "<rg_3>",
               "phone": "+919811111111",
@@ -2497,7 +2546,7 @@
               "vehicleRegistrationImages": [],
               "vehicleType": "Sedan",
               "verificationExpiresAt": null,
-              "verification_status": "INCOMPLETE",
+              "verification_status": "APPROVED",
               "walletBalance": 0,
               "wentOfflineAt": null,
               "wentOfflineReason": null
@@ -3024,7 +3073,8 @@
       "step": "analytics: driver summary",
       "request": {
         "method": "GET",
-        "path": "/api/drivers/<driverId>/analytics"
+        "path": "/api/drivers/<driverId>/analytics",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -3053,6 +3103,24 @@
             "description": "mapAppearances = map_screen_opened only (once per session, no overcounting). todayTotalViewed = map_screen_opened + visible_driver_snapshot. currentlyViewing = active search live (TTL). totalVisibilityDuration* = how many ms/min/hours this driver was visible on users' maps in the period (approximate, from first→last event per session). See MAP_ANALYTICS_DESIGN.md."
           },
           "success": true
+        }
+      }
+    },
+    {
+      "step": "analytics: driver summary needs a sign-in",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers/<driverId>/analytics"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
         }
       }
     },
@@ -3146,6 +3214,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -3160,6 +3229,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": "driver-device-2",
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",
@@ -3305,6 +3375,7 @@
               "bankAccount": {
                 "accountHolderName": null,
                 "accountNumber": null,
+                "bankName": null,
                 "ifscCode": null
               },
               "cancelledRides": 0,
@@ -3319,6 +3390,7 @@
                 "type": "Point"
               },
               "dateOfBirth": "<date>",
+              "deletedAt": null,
               "deviceId": null,
               "driverId": "<driverId>",
               "driverVerificationStatus": "APPROVED",

@@ -513,6 +513,18 @@
           "business": {
             "_id": "<id2>",
             "appName": "Zed Rides Pune",
+            "appVersions": {
+              "driver": {
+                "message": "",
+                "minVersionCode": 0,
+                "storeUrl": ""
+              },
+              "rider": {
+                "message": "",
+                "minVersionCode": 0,
+                "storeUrl": ""
+              }
+            },
             "billingDetails": null,
             "brandColor": "#f5a300",
             "city": "Mumbai",
@@ -522,13 +534,27 @@
             "market": null,
             "name": "Zed Cabs",
             "packageName": "com.zed.rider",
+            "payoutSettings": {
+              "cashWithdrawable": false,
+              "commissionPercent": 0,
+              "minWithdrawalMinor": 0,
+              "processingNote": ""
+            },
             "plan": "trial",
+            "pricingWorkflow": "direct",
             "slug": "zed-cabs",
             "status": "active",
             "subscription": null,
             "supportEmail": "",
             "supportPhone": "",
+            "surgeSettings": {
+              "paused": false
+            },
             "tenantId": "<zedAppId>",
+            "tollSettings": {
+              "enabled": false,
+              "maxTollMinor": 0
+            },
             "updatedAt": "<date>"
           },
           "counts": {

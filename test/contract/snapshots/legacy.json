@@ -223,28 +223,6 @@
       }
     },
     {
-      "step": "closed: drivers create",
-      "request": {
-        "method": "POST",
-        "path": "/api/drivers",
-        "body": {
-          "name": "x"
-        }
-      },
-      "response": {
-        "status": 403,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "collection": "drivers",
-            "method": "POST"
-          },
-          "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
-          "success": false
-        }
-      }
-    },
-    {
       "step": "closed: drivers one",
       "request": {
         "method": "GET",
@@ -300,6 +278,208 @@
             "method": "DELETE"
           },
           "message": "Generic CRUD on /drivers is disabled. Use dedicated /api/drivers/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: driver_issues list",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_issues"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "driver_issues",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /driver_issues is disabled. Use dedicated /api/driver_issues/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: driver_issues create",
+      "request": {
+        "method": "POST",
+        "path": "/api/driver_issues",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "driver_issues",
+            "method": "POST"
+          },
+          "message": "Generic CRUD on /driver_issues is disabled. Use dedicated /api/driver_issues/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: driver_issues one",
+      "request": {
+        "method": "GET",
+        "path": "/api/driver_issues/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "driver_issues",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /driver_issues is disabled. Use dedicated /api/driver_issues/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: driver_issues update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/driver_issues/123",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "driver_issues",
+            "method": "PUT"
+          },
+          "message": "Generic CRUD on /driver_issues is disabled. Use dedicated /api/driver_issues/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: driver_issues delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/driver_issues/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "driver_issues",
+            "method": "DELETE"
+          },
+          "message": "Generic CRUD on /driver_issues is disabled. Use dedicated /api/driver_issues/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers_notification list",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers_notification"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers_notification",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /drivers_notification is disabled. Use dedicated /api/drivers_notification/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers_notification create",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers_notification",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers_notification",
+            "method": "POST"
+          },
+          "message": "Generic CRUD on /drivers_notification is disabled. Use dedicated /api/drivers_notification/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers_notification one",
+      "request": {
+        "method": "GET",
+        "path": "/api/drivers_notification/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers_notification",
+            "method": "GET"
+          },
+          "message": "Generic CRUD on /drivers_notification is disabled. Use dedicated /api/drivers_notification/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers_notification update",
+      "request": {
+        "method": "PUT",
+        "path": "/api/drivers_notification/123",
+        "body": {
+          "name": "x"
+        }
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers_notification",
+            "method": "PUT"
+          },
+          "message": "Generic CRUD on /drivers_notification is disabled. Use dedicated /api/drivers_notification/* routes.",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "closed: drivers_notification delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/drivers_notification/123"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "collection": "drivers_notification",
+            "method": "DELETE"
+          },
+          "message": "Generic CRUD on /drivers_notification is disabled. Use dedicated /api/drivers_notification/* routes.",
           "success": false
         }
       }
@@ -383,7 +563,7 @@
       }
     },
     {
-      "step": "faqs: empty list",
+      "step": "faqs: list",
       "request": {
         "method": "GET",
         "path": "/api/driver_faqs"
@@ -396,354 +576,6 @@
           "data": [],
           "message": "No drivers found",
           "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: create without the fields every record needs",
-      "request": {
-        "method": "POST",
-        "path": "/api/driver_faqs",
-        "body": {
-          "question": "No name or phone"
-        }
-      },
-      "response": {
-        "status": 500,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "details": "Driver_faqs validation failed: phone: Path `phone` is required., name: Path `name` is required."
-          },
-          "message": "Server error",
-          "success": false
-        }
-      }
-    },
-    {
-      "step": "faqs: create",
-      "request": {
-        "method": "POST",
-        "path": "/api/driver_faqs",
-        "body": {
-          "answer": "Tap the switch on the home screen.",
-          "meta": {
-            "audience": "drivers",
-            "nested": {
-              "deep": [
-                1,
-                2,
-                {
-                  "three": 3
-                }
-              ]
-            }
-          },
-          "name": "Going online",
-          "note": null,
-          "order": 1,
-          "phone": "+910000000001",
-          "published": true,
-          "question": "How do I go online?",
-          "rating": 4.5,
-          "tags": [
-            "start",
-            "basics"
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<faq1>",
-            "createdAt": "<date>",
-            "name": "Going online",
-            "phone": "+910000000001",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "message": "driver_faqs created successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: create another, different fields",
-      "request": {
-        "method": "POST",
-        "path": "/api/driver_faqs",
-        "body": {
-          "name": "Payouts",
-          "order": 2,
-          "phone": "+910000000002",
-          "question": "Where is my payout?",
-          "translations": {
-            "hi": "मेरा भुगतान कहाँ है?"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<faq2>",
-            "createdAt": "<date>",
-            "name": "Payouts",
-            "phone": "+910000000002",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "message": "driver_faqs created successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: create from an empty body",
-      "request": {
-        "method": "POST",
-        "path": "/api/driver_faqs",
-        "body": {}
-      },
-      "response": {
-        "status": 500,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "details": "Driver_faqs validation failed: phone: Path `phone` is required., name: Path `name` is required."
-          },
-          "message": "Server error",
-          "success": false
-        }
-      }
-    },
-    {
-      "step": "faqs: a duplicate phone",
-      "request": {
-        "method": "POST",
-        "path": "/api/driver_faqs",
-        "body": {
-          "name": "Again",
-          "phone": "+910000000001"
-        }
-      },
-      "response": {
-        "status": 400,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "field": "phone"
-          },
-          "message": "Phone number already exists",
-          "success": false
-        }
-      }
-    },
-    {
-      "step": "faqs: list",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_faqs"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "count": "2",
-          "data": [
-            {
-              "__v": 0,
-              "_id": "<faq1>",
-              "createdAt": "<date>",
-              "name": "Going online",
-              "phone": "+910000000001",
-              "role": "user",
-              "updatedAt": "<date>"
-            },
-            {
-              "__v": 0,
-              "_id": "<faq2>",
-              "createdAt": "<date>",
-              "name": "Payouts",
-              "phone": "+910000000002",
-              "role": "user",
-              "updatedAt": "<date>"
-            }
-          ],
-          "message": "2 driver(s) found",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: read one",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_faqs/<faq1>"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<faq1>",
-            "createdAt": "<date>",
-            "name": "Going online",
-            "phone": "+910000000001",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: read one that does not exist",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_faqs/<id1>"
-      },
-      "response": {
-        "status": 404,
-        "contentType": "application/json",
-        "body": {
-          "error": "driver_faqs not found"
-        }
-      }
-    },
-    {
-      "step": "faqs: read with an id that is not an id",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_faqs/not-an-id"
-      },
-      "response": {
-        "status": 500,
-        "contentType": "application/json",
-        "body": {
-          "details": "Cast to ObjectId failed for value \"not-an-id\" (type string) at path \"_id\" for model \"Driver_faqs\"",
-          "error": "Server error"
-        }
-      }
-    },
-    {
-      "step": "faqs: update",
-      "request": {
-        "method": "PUT",
-        "path": "/api/driver_faqs/<faq1>",
-        "body": {
-          "answer": "Open the app and use the duty switch.",
-          "extra": {
-            "added": true
-          },
-          "meta.audience": "everyone",
-          "order": 10
-        }
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<faq1>",
-            "createdAt": "<date>",
-            "name": "Going online",
-            "phone": "+910000000001",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "message": "driver_faqs updated successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: read after the update",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_faqs/<faq1>"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<faq1>",
-            "createdAt": "<date>",
-            "name": "Going online",
-            "phone": "+910000000001",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: update with an empty body",
-      "request": {
-        "method": "PUT",
-        "path": "/api/driver_faqs/<faq2>",
-        "body": {}
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<faq2>",
-            "createdAt": "<date>",
-            "name": "Payouts",
-            "phone": "+910000000002",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "message": "driver_faqs updated successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: update one that does not exist",
-      "request": {
-        "method": "PUT",
-        "path": "/api/driver_faqs/<id1>",
-        "body": {
-          "a": 1
-        }
-      },
-      "response": {
-        "status": 404,
-        "contentType": "application/json",
-        "body": {
-          "error": "driver_faqs not found"
-        }
-      }
-    },
-    {
-      "step": "faqs: update with an id that is not an id",
-      "request": {
-        "method": "PUT",
-        "path": "/api/driver_faqs/not-an-id",
-        "body": {
-          "a": 1
-        }
-      },
-      "response": {
-        "status": 500,
-        "contentType": "application/json",
-        "body": {
-          "details": "Cast to ObjectId failed for value \"not-an-id\" (type string) at path \"_id\" for model \"Driver_faqs\"",
-          "error": "Server error"
         }
       }
     },
@@ -765,25 +597,10 @@
       }
     },
     {
-      "step": "faqs: delete",
+      "step": "faqs: read one that does not exist",
       "request": {
-        "method": "DELETE",
-        "path": "/api/driver_faqs/<faq2>"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "message": "driver_faqs deleted successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "faqs: delete again",
-      "request": {
-        "method": "DELETE",
-        "path": "/api/driver_faqs/<faq2>"
+        "method": "GET",
+        "path": "/api/driver_faqs/<id1>"
       },
       "response": {
         "status": 404,
@@ -794,276 +611,66 @@
       }
     },
     {
-      "step": "faqs: delete with an id that is not an id",
-      "request": {
-        "method": "DELETE",
-        "path": "/api/driver_faqs/not-an-id"
-      },
-      "response": {
-        "status": 500,
-        "contentType": "application/json",
-        "body": {
-          "details": "Cast to ObjectId failed for value \"not-an-id\" (type string) at path \"_id\" for model \"Driver_faqs\"",
-          "error": "Server error"
-        }
-      }
-    },
-    {
-      "step": "faqs: list after the delete",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_faqs"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "count": "1",
-          "data": [
-            {
-              "__v": 0,
-              "_id": "<faq1>",
-              "createdAt": "<date>",
-              "name": "Going online",
-              "phone": "+910000000001",
-              "role": "user",
-              "updatedAt": "<date>"
-            }
-          ],
-          "message": "1 driver(s) found",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "drivers_notification: create",
+      "step": "faqs: create is refused",
       "request": {
         "method": "POST",
-        "path": "/api/drivers_notification",
+        "path": "/api/driver_faqs",
         "body": {
-          "date": "<day>",
-          "description": "A note",
-          "driverId": "D-LEGACY-1",
-          "isUnread": true,
-          "name": "Note",
-          "phone": "+910000000003",
-          "title": "Hello"
+          "name": "x",
+          "phone": "+910000000001"
         }
       },
       "response": {
-        "status": 201,
+        "status": 403,
         "contentType": "application/json",
         "body": {
           "data": {
-            "__v": 0,
-            "_id": "<note1>",
-            "createdAt": "<date>",
-            "name": "Note",
-            "phone": "+910000000003",
-            "role": "user",
-            "updatedAt": "<date>"
+            "collection": "driver_faqs",
+            "method": "POST"
           },
-          "message": "drivers_notification created successfully",
-          "success": true
+          "message": "/driver_faqs is read-only here.",
+          "success": false
         }
       }
     },
     {
-      "step": "drivers_notification: list",
-      "request": {
-        "method": "GET",
-        "path": "/api/drivers_notification"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "count": "1",
-          "data": [
-            {
-              "__v": 0,
-              "_id": "<note1>",
-              "createdAt": "<date>",
-              "name": "Note",
-              "phone": "+910000000003",
-              "role": "user",
-              "updatedAt": "<date>"
-            }
-          ],
-          "message": "1 driver(s) found",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "drivers_notification: update",
+      "step": "faqs: update is refused",
       "request": {
         "method": "PUT",
-        "path": "/api/drivers_notification/<note1>",
+        "path": "/api/driver_faqs/<id1>",
         "body": {
-          "isUnread": false
+          "a": 1
         }
       },
       "response": {
-        "status": 200,
+        "status": 403,
         "contentType": "application/json",
         "body": {
           "data": {
-            "__v": 0,
-            "_id": "<note1>",
-            "createdAt": "<date>",
-            "name": "Note",
-            "phone": "+910000000003",
-            "role": "user",
-            "updatedAt": "<date>"
+            "collection": "driver_faqs",
+            "method": "PUT"
           },
-          "message": "drivers_notification updated successfully",
-          "success": true
+          "message": "/driver_faqs is read-only here.",
+          "success": false
         }
       }
     },
     {
-      "step": "drivers_notification: read one",
-      "request": {
-        "method": "GET",
-        "path": "/api/drivers_notification/<note1>"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<note1>",
-            "createdAt": "<date>",
-            "name": "Note",
-            "phone": "+910000000003",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "driver_issues: create",
-      "request": {
-        "method": "POST",
-        "path": "/api/driver_issues",
-        "body": {
-          "driverId": "D-LEGACY-1",
-          "issueText": "The app is slow",
-          "name": "Issue",
-          "phone": "+910000000004",
-          "status": "issue submitted"
-        }
-      },
-      "response": {
-        "status": 201,
-        "contentType": "application/json",
-        "body": {
-          "data": {
-            "__v": 0,
-            "_id": "<issue1>",
-            "createdAt": "<date>",
-            "name": "Issue",
-            "phone": "+910000000004",
-            "role": "user",
-            "updatedAt": "<date>"
-          },
-          "message": "driver_issues created successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "driver_issues: list",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_issues"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "count": "1",
-          "data": [
-            {
-              "__v": 0,
-              "_id": "<issue1>",
-              "createdAt": "<date>",
-              "name": "Issue",
-              "phone": "+910000000004",
-              "role": "user",
-              "updatedAt": "<date>"
-            }
-          ],
-          "message": "1 driver(s) found",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "driver_issues: delete",
+      "step": "faqs: delete is refused",
       "request": {
         "method": "DELETE",
-        "path": "/api/driver_issues/<issue1>"
+        "path": "/api/driver_faqs/<id1>"
       },
       "response": {
-        "status": 200,
+        "status": 403,
         "contentType": "application/json",
         "body": {
-          "message": "driver_issues deleted successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "driver_issues: list after the delete",
-      "request": {
-        "method": "GET",
-        "path": "/api/driver_issues"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "count": "0",
-          "data": [],
-          "message": "No drivers found",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "drivers_notification: delete",
-      "request": {
-        "method": "DELETE",
-        "path": "/api/drivers_notification/<note1>"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "message": "drivers_notification deleted successfully",
-          "success": true
-        }
-      }
-    },
-    {
-      "step": "drivers_notification: list after the delete",
-      "request": {
-        "method": "GET",
-        "path": "/api/drivers_notification"
-      },
-      "response": {
-        "status": 200,
-        "contentType": "application/json",
-        "body": {
-          "count": "0",
-          "data": [],
-          "message": "No drivers found",
-          "success": true
+          "data": {
+            "collection": "driver_faqs",
+            "method": "DELETE"
+          },
+          "message": "/driver_faqs is read-only here.",
+          "success": false
         }
       }
     }

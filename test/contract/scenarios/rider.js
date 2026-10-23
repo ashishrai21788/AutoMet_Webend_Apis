@@ -34,14 +34,15 @@ module.exports = async function rider({ call, peek, seed, alias }) {
   const ver2 = await call('verify-otp: login', { method: 'POST', path: '/api/users/verify-otp', body: { userId, otp: otp3 || otp2, device_id: 'device-1', fcm_id: 'fcm-token-2' }, expectStatus: 200 });
   const token2 = ver2.body.data.accessToken || (ver2.body.data.user && ver2.body.data.user.accessToken) || token;
 
-  await call('detail: by userId', { path: `/api/users/detail/${userId}`, expectStatus: 200 });
-  await call('detail: unknown userId', { path: '/api/users/detail/U_does_not_exist' });
+  await call('detail: no token', { path: `/api/users/detail/${userId}`, expectStatus: 401 });
+  await call('detail: by userId', { path: `/api/users/detail/${userId}`, token: token2, expectStatus: 200 });
+  await call('detail: unknown userId', { path: '/api/users/detail/U_does_not_exist', token: token2 });
 
   await call('profile: no token', { method: 'PUT', path: '/api/users/profile', body: { userId, firstName: 'Raye' }, expectStatus: 401 });
-  await call('profile: missing userId', { method: 'PUT', path: '/api/users/profile', body: { firstName: 'Raye' }, token: token2, expectStatus: 400 });
+  await call('profile: userId comes from the sign-in', { method: 'PUT', path: '/api/users/profile', body: { firstName: 'Raye' }, token: token2, expectStatus: 200 });
   await call('profile: empty first name', { method: 'PUT', path: '/api/users/profile', body: { userId, firstName: '  ' }, token: token2, expectStatus: 400 });
   await call('profile: update', { method: 'PUT', path: '/api/users/profile', body: { userId, firstName: 'Raye', lastName: 'Rider-Lee' }, token: token2, expectStatus: 200 });
-  await call('detail: after update', { path: `/api/users/detail/${userId}`, expectStatus: 200 });
+  await call('detail: after update', { path: `/api/users/detail/${userId}`, token: token2, expectStatus: 200 });
 
   await call('update-token: missing fields', { method: 'POST', path: '/api/users/update-token', body: { userId }, token: token2, expectStatus: 400 });
   await call('update-token', { method: 'POST', path: '/api/users/update-token', body: { userId, fcm_id: 'fcm-token-3', device_id: 'device-2' }, token: token2, expectStatus: 200 });

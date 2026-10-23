@@ -101,7 +101,7 @@ Admin dashboard in a real browser (local lab backend): Coupons (list, uses, crea
 
 **Scheduled publish and the pricing version on each trip (added after the first cycle 4 push):** a publish can be set for a future time (2 minutes to a year ahead); the drafts are frozen into a schedule and the server applies them together at the time (all checked first; one server claims each; an interrupted run is retried after 5 minutes; a failure applies nothing and keeps the reason; cancelling restores the drafts). Each trip stores the pricing version live when it was priced and the tax rates it was charged. Evidence: 579 backend tests (575 pass, 0 fail, 4 skipped); on Postgres the server applied a GST change at its scheduled time and a trip priced afterwards carried version 3 and GST 5%; in a browser the Schedule option, the waiting-schedule card and the trip detail line ("Priced with pricing version 3; taxes charged: GST 5%") were seen.
 
-**Limits:** regions, categories, cancellation policies, coupons and incentives are not drafted (separate records); the contract snapshots in `test/contract` were already out of date before this cycle (new fields from earlier cycles) and were not refreshed.
+**Limits:** regions, categories, cancellation policies, coupons and incentives are not drafted (separate records). (The contract snapshots were refreshed in cycle 6.)
 
 ## Cycle 5: demand-based surge
 
@@ -115,3 +115,18 @@ Admin dashboard in a real browser (local lab backend): Coupons (list, uses, crea
 **How it works:** demand is riders with the app open plus requests in the last 10 minutes within 3 km of the pickup (minimum 3); supply is free online drivers within 3 km. Ratio ladder 1.5/2/3/4 gives x1.2/1.5/2/2.5, capped by the rule, held 60 s. A 5-minute quote lock means a booking never costs more than the quote. Only rules with surge enabled are affected.
 
 **Limits:** quote lock and cache are in memory per server instance (fine for one instance).
+
+## Cycle 6: contract snapshots refreshed
+
+The seven contract scenarios (`npm run contract`, 507 recorded steps) had fallen behind: new fields (`mapIconUrl`, `appVersions`), and four deliberate changes that the scenarios did not yet follow. Each difference was traced before re-recording, not accepted blindly. A first re-record would have hidden a regression-looking change (`ON_GOING` answering 400); the cause was the rider start code, which is deliberate, so the scenarios now read the code from the rider and send it, and also check that no code (400) and a wrong code (403) are refused.
+
+| Change seen | Cause |
+|---|---|
+| rider detail needs a sign-in | secure rider profile (`dff61a5`) |
+| driver status, vehicle details need a sign-in | driver routes closed to anonymous callers |
+| `POST /api/drivers` needs a name and phone (400, was 403) | app self-registration reopened on purpose (`b79bad5`) |
+| starting a trip needs the 4-digit start code | `lib/tripStartOtp.js` |
+| `GET /api/v1/rides/:id` answers 200 (was 404) | endpoint now exists |
+| legacy generic collection routes: all creates, updates and deletes refused | hardening |
+
+Result: all seven scenarios match on both Mongo and Postgres, and twice in a row (the start code is aliased because it changes with the accept time). Backend suite unchanged.

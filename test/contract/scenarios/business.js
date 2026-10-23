@@ -36,7 +36,14 @@ module.exports = async function business(t) {
   const trip1 = r1.body.data && r1.body.data.trip_id;
   await call('ride 1: accept', { method: 'POST', path: '/api/v1/trips/driver-response', body: { trip_id: trip1, driver_id: driverId, response: 'ACCEPTED' }, token: driverToken });
   for (const status of ['DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING', 'COMPLETED']) {
-    await call(`ride 1: ${status}`, { method: 'PATCH', path: `/api/v1/rides/${trip1}/status`, body: { status }, token: driverToken });
+    let body = { status };
+    if (status === 'ON_GOING') {
+      // the rider reads the start code from their trip and tells the driver, who must type it
+      const seen = await call('ride 1: the rider reads the start code', { path: `/api/v1/rides/details?trip_id=${trip1}&user_id=${userId}`, token: riderToken, expectStatus: 200 });
+      t.alias(seen.body.data.start_otp, 'startCode');
+      body = { status, otp: seen.body.data.start_otp };
+    }
+    await call(`ride 1: ${status}`, { method: 'PATCH', path: `/api/v1/rides/${trip1}/status`, body, token: driverToken, expectStatus: 200 });
   }
   const r2 = await call('ride 2: request', { method: 'POST', path: '/api/v1/trips/create-request', body: trip(2), token: riderToken });
   const trip2 = r2.body.data && r2.body.data.trip_id;

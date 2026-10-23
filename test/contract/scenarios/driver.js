@@ -1,7 +1,7 @@
 /**
  * The driver app: sign-in (login, OTP), profile, fields, vehicle details, online status, location heartbeat, notifications,
  * issue reports, analytics, FAQs and logout, plus what the driver app's old generic routes now answer.
- * The driver exists because the dashboard created it (driver self sign-up is closed: POST /api/drivers answers 403).
+ * The driver exists because the dashboard created it (the app can also register itself: POST /api/drivers needs a name and a phone).
  */
 const { configuredBusiness, driverSignIn } = require('./common');
 
@@ -12,7 +12,7 @@ module.exports = async function driver(t) {
 
   await call('login: missing phone', { method: 'POST', path: '/api/drivers/login', body: {}, expectStatus: 400 });
   await call('login: unknown phone', { method: 'POST', path: '/api/drivers/login', body: { phoneNumber: '+919899999999' }, expectStatus: 404 });
-  await call('self sign-up is closed', { method: 'POST', path: '/api/drivers', body: { fullName: 'New Person', phone: '+919822222222' }, expectStatus: 403 });
+  await call('self sign-up needs a name and a phone', { method: 'POST', path: '/api/drivers', body: {}, expectStatus: 400 });
   await call('generic read of all drivers is closed', { path: '/api/drivers', expectStatus: 403 });
   await call('generic read of one driver is closed', { path: `/api/drivers/${driverId}`, expectStatus: 403 });
 
@@ -45,7 +45,7 @@ module.exports = async function driver(t) {
   await call('online: go online', { method: 'PUT', path: '/api/drivers/online-status', body: { driverId, isOnline: true, onlineAs: 0 }, token });
   await call('location: bad coordinates', { method: 'POST', path: '/api/drivers/location', body: { driverId, lat: 95, lng: 73.85 }, token });
   await call('location: heartbeat', { method: 'POST', path: '/api/drivers/location', body: { driverId, lat: 18.5204, lng: 73.8567, accuracy: 12, heading: 90, speed: 5 }, token });
-  await call('status of a driver: online', { path: `/api/drivers/status/${driverId}`, expectStatus: 200 });
+  await call('status of a driver: online', { path: `/api/drivers/status/${driverId}`, token, expectStatus: 200 });
 
   await seed('driver_notification', { driverId, title: 'New ride area', description: 'Demand is high in Pune', date: '2026-10-01', isUnread: true, type: 'Informational', notification_id: 'dn-1', createdAt: new Date('2026-10-01T10:00:00Z') });
   const second = await seed('driver_notification', { driverId, title: 'Payout', description: 'Weekly summary', date: '2026-10-02', isUnread: true, type: 'Informational', notification_id: 'dn-2', createdAt: new Date('2026-10-02T10:00:00Z') });
