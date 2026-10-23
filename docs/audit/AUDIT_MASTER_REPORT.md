@@ -156,3 +156,19 @@ The policy's `driver.penaltyFee` and `driver.graceCancellations` were stored and
 | Privacy | PASS | the penalty is kept off every trip payload (rider and driver details, the trip, the list); a test fails if a serializer lets it through |
 
 **Rules chosen:** the day is the business's calendar day in its own time zone; only driver cancellations after accepting count; the first N are free, each later one costs the fee; a region's policy wins over the category's general one. **Not covered:** a penalty on a no-show by the driver, an admin waiving a penalty (an admin can add a credit adjustment for now), and showing the penalty on the trip in the admin trip detail.
+
+## Cycle 9: pagination and data volume
+
+Every list the dashboard and the driver app can open was checked for a page size or row cap, and the ones that grow with data were measured on the real models over in-process Postgres.
+
+| Area | Result | Evidence |
+|---|---|---|
+| Admin lists (trips, riders, drivers, vehicles, audit, support, payouts, coupons and redemptions, legal versions, platform invoices and audit) | PASS | all page (page size clamped to 100, audit limit to 200) or cap their rows (reports 20,000 and say "partial"; exports 20,000) |
+| Legal acceptances page | FIXED | it loaded up to 200,000 acceptance rows to count them. It now counts per published version in the database (two counts per version) and an index serves the counts. A test fails if the rows are loaded; checked on Postgres (versions, drafts, riders vs drivers, another business left out) |
+| Driver trip history for a day, week or month | FIXED | it read the driver's whole history on every open. Measured with 5,000 trips: "this week" 1,491 ms before, 131 ms after. The database bound is wide on purpose (a trip with neither moment set is kept) and the exact filter is unchanged; 6 tests on both engines show the same trips and counts as before for every range |
+| Backend tests | PASS | 615 tests, 611 pass, 0 fail, 4 skipped; 7 contract scenarios match |
+
+**Still open (measured, not fixed):**
+- Driver trip history for "all time" (the app's default is a week): 5,000 trips took about 2.8 to 3.6 s. About 0.5 ms per trip. Reading the rows is about a third of it; building a display row for every trip and the per-day totals is the rest. Fixing it means database-side totals.
+- Driver earnings overview and payouts (`completedTrips`): reads up to 20,000 completed trips on each call, about 1.5 s at 5,000. **Beyond 20,000 completed trips the lifetime totals and the withdrawable balance would silently under-count** (about 3 years at 20 trips a day). Recommended: keep running per-driver totals, or sum in the database.
+- `routes/driverRoutes.js` (unbounded `Driver.find()`) is not mounted anywhere and cannot be reached; it is dead code and can be deleted.

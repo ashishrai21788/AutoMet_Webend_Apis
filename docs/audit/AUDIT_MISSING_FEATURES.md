@@ -12,7 +12,7 @@
 
 ## Partial
 - Coupons: riders must know the code (no list of offers); one coupon per ride by design (no stacking).
-- Pagination: not audited for the admin audit log, reports and invoice lists.
+- Pagination and data volume: audited in cycle 9 (see AUDIT_MASTER_REPORT.md). Two scaling limits remain open: the driver earnings overview and the driver history for "all time" read every trip of the driver.
 - The rider coupon row and tip row were seen and exercised on a device (cycle 2b). The admin pages were opened in a browser against the lab backend (cycle 2b).
 
 ## Deferred by instruction (not built in this phase)

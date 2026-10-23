@@ -202,7 +202,13 @@ async function trips(req, res) {
   const sort = ['oldest', 'earnings'].includes(String(req.query.sort)) ? String(req.query.sort) : 'newest';
   const bounds = DT.rangeBounds(range, now, startOfDay(now, tz));
 
-  const all = (await TripDetails.find({ driver_id: driver.driverId, status: { $in: DT.HISTORY_STATUSES } }).lean())
+  // A week, month or day only needs the trips from the period before it on (for the comparison); reading the driver's whole history for that
+  // grows with every ride they ever did. The database bound is wide on purpose (a trip with neither moment set is kept); the exact test
+  // stays DT.inWindow below.
+  const since = bounds.prevFrom || bounds.from;
+  const query = { driver_id: driver.driverId, status: { $in: DT.HISTORY_STATUSES } };
+  if (since) query.$or = [{ completed_at: { $gte: since } }, { cancelled_at: { $gte: since } }, { completed_at: null, cancelled_at: null }];
+  const all = (await TripDetails.find(query).lean())
     .sort((x, y) => (new Date(DT.happenedAt(y) || 0) - new Date(DT.happenedAt(x) || 0)) || String(y.trip_id).localeCompare(String(x.trip_id)));
   const inRange = all.filter((t) => DT.inWindow(t, bounds.from, bounds.to));
   const before = bounds.prevFrom ? all.filter((t) => DT.inWindow(t, bounds.prevFrom, bounds.prevTo)) : [];

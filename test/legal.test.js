@@ -148,3 +148,22 @@ test('consent: required documents are pending until accepted, only the version i
   const counts = (await admin(A.acceptances)).body.data.items;
   assert.equal(counts.find((x) => x.type === 'PRIVACY_POLICY' && x.version === 1).riders, 1);
 });
+
+test('the acceptance counts are counted in the database, not by loading every acceptance', async () => {
+  for (const m of ['LegalDocument', 'LegalAcceptance', 'AdminAudit', 'Tenant']) await db[m].deleteMany({}); // a real delete, so it also holds on Postgres
+  await withTenant();
+  await publish('PRIVACY_POLICY');
+  await publish('TERMS_RIDER');
+  const at = new Date();
+  const agree = (role, accountId, type, version) => db.LegalAcceptance.create({ tenantId: 't1', role, accountId, type, version, at });
+  for (let i = 0; i < 5; i += 1) await agree('rider', `R${i}`, 'PRIVACY_POLICY', 1);
+  await agree('driver', 'D1', 'PRIVACY_POLICY', 1);
+  await agree('driver', 'D2', 'PRIVACY_POLICY', 1);
+  await db.LegalAcceptance.create({ tenantId: 't2', role: 'rider', accountId: 'X', type: 'PRIVACY_POLICY', version: 1, at }); // another business
+  const original = db.LegalAcceptance.find;
+  db.LegalAcceptance.find = () => { throw new Error('the acceptance rows must not be loaded'); };
+  try {
+    const items = (await admin(A.acceptances)).body.data.items;
+    assert.deepEqual(items.map((x) => [x.type, x.version, x.riders, x.drivers]), [['PRIVACY_POLICY', 1, 5, 2]], 'a version nobody agreed to is left out, and another business is not counted');
+  } finally { db.LegalAcceptance.find = original; }
+});

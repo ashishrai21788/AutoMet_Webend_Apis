@@ -38,6 +38,7 @@ const legalAcceptanceSchema = new mongoose.Schema({
   ip: { type: String, default: null }
 }, { collection: 'legal_acceptances' });
 legalAcceptanceSchema.index({ tenantId: 1, role: 1, accountId: 1, type: 1, version: 1 }, { unique: true });
+legalAcceptanceSchema.index({ tenantId: 1, type: 1, version: 1, role: 1 }); // the counts on the dashboard
 
 const LegalDocument = mongoose.models.LegalDocument || mongoose.model('LegalDocument', legalDocumentSchema);
 const LegalAcceptance = mongoose.models.LegalAcceptance || mongoose.model('LegalAcceptance', legalAcceptanceSchema);

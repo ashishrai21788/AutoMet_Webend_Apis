@@ -124,9 +124,17 @@ exports.deleteDraft = c.handle(async (req, res) => {
   return c.ok(res, { id: gone.docId });
 });
 
+/** How many riders and drivers agreed to each published version. Counted in the database: the rows themselves are never loaded. */
 exports.acceptances = c.handle(async (req, res) => {
-  const rows = await LegalAcceptance.find({ tenantId: req.business.tenantId }).limit(200000).lean();
-  const map = new Map();
-  for (const r of rows) { const k = `${r.type}|${r.version}`; const x = map.get(k) || { type: r.type, version: r.version, riders: 0, drivers: 0 }; if (r.role === 'driver') x.drivers += 1; else x.riders += 1; map.set(k, x); }
-  return c.ok(res, { items: [...map.values()].sort((a, b) => a.type.localeCompare(b.type) || b.version - a.version) });
+  const tenantId = req.business.tenantId;
+  const docs = await LegalDocument.find({ tenantId, status: 'PUBLISHED' }).select('type version').lean();
+  const versions = [...new Map(docs.map((d) => [`${d.type}|${d.version}`, { type: d.type, version: d.version }])).values()];
+  const items = (await Promise.all(versions.map(async (v) => {
+    const [riders, drivers] = await Promise.all([
+      LegalAcceptance.countDocuments({ tenantId, type: v.type, version: v.version, role: 'rider' }),
+      LegalAcceptance.countDocuments({ tenantId, type: v.type, version: v.version, role: 'driver' })
+    ]);
+    return { type: v.type, version: v.version, riders, drivers };
+  }))).filter((x) => x.riders || x.drivers);
+  return c.ok(res, { items: items.sort((a, b) => a.type.localeCompare(b.type) || b.version - a.version) });
 });
