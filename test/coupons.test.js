@@ -177,3 +177,19 @@ test('admin: create validates, codes are unique per business, and a used coupon 
   assert.equal(list.body.data.total, 1);
   assert.ok(db.AdminAudit.rows.some((r) => r.action === 'coupon.created'));
 });
+
+test('admin: the list shows the real number of uses, with cancelled bookings already given back', async () => {
+  reset();
+  const c = await db.Coupon.create(mk({ code: 'SHOWN', totalLimit: 5, perUserLimit: 1 }));
+  for (const [i, status] of [['A', 'REQUESTED'], ['B', 'REQUESTED'], ['C', 'COMPLETED']].map(([x, s]) => [x, s])) {
+    assert.equal((await coupons.reserve({ tenantId: 't1', coupon: db.Coupon.rows[0], userId: 'U' + i, tripId: 'S' + i, discountMinor: 100 })).ok, true);
+    await db.TripDetails.create({ trip_id: 'S' + i, request_id: 'RS' + i, user_id: 'U' + i, driver_id: 'D', status, pickup: { address: 'a' }, drop: { address: 'b' } });
+  }
+  assert.equal((await admin(A.list)).body.data.items[0].redeemed ?? (await admin(A.list)).body.data.items[0].used, 3, 'three live uses to start');
+  db.TripDetails.rows.find((t) => t.trip_id === 'SA').status = 'CANCELLED_BY_USER';
+  db.TripDetails.rows.find((t) => t.trip_id === 'SB').status = 'CANCELLED_BY_DRIVER';
+  const item = (await admin(A.list)).body.data.items[0];
+  assert.equal(item.redeemed ?? item.used, 1, 'only the completed ride still holds a use, without anyone booking or opening the redemptions first');
+  assert.equal(db.Coupon.rows[0].redeemed, 1);
+  assert.equal(c.couponId, db.Coupon.rows[0].couponId);
+});

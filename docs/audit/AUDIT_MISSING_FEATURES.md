@@ -12,7 +12,7 @@
 
 ## Partial
 - Coupons: riders must know the code (no list of offers); one coupon per ride by design (no stacking).
-- Pagination and data volume: audited in cycle 9 (see AUDIT_MASTER_REPORT.md). Two scaling limits remain open: the driver earnings overview and the driver history for "all time" read every trip of the driver.
+- Pagination and data volume: audited in cycle 9 (see AUDIT_MASTER_REPORT.md). The lifetime totals and withdrawable balance now count every trip (cycle 11). Still open: the driver history for "all time" builds a row for every trip (about 3 s at 5,000 trips).
 - The rider coupon row and tip row were seen and exercised on a device (cycle 2b). The admin pages were opened in a browser against the lab backend (cycle 2b).
 
 ## Deferred by instruction (not built in this phase)

@@ -20,6 +20,15 @@ function createPgDb() {
   const TripEvent = require('../../models/tripEventModel');
   const { DriverIssue } = require('../../models/supportModels');
   const billing = require('../../models/platformBilling');
+  const pricing = require('../../models/pricingModels');
+  const coupons = require('../../models/couponModel');
+  const ledger = require('../../models/driverLedgerModel');
+  const legalModels = require('../../models/legalModel');
+  const { ConfigVersion } = require('../../models/configVersionModel');
+  const { DriverDutySession } = require('../../models/driverDutySessionModel');
+  const { DriverPayout } = require('../../models/driverPayoutModel');
+  const { RiderInvoice } = require('../../models/riderInvoiceModel');
+  const { RiderPresence } = require('../../models/riderPresenceModel');
 
   const db = {
     Tenant: admin.Tenant, AdminUser: admin.AdminUser, AdminAudit: admin.AdminAudit,
@@ -29,18 +38,61 @@ function createPgDb() {
     DriverDocument: fleet.DriverDocument, Vehicle: fleet.Vehicle, VehicleDocument: fleet.VehicleDocument,
     DriverVehicleAssignment: fleet.DriverVehicleAssignment, EntityHistory: fleet.EntityHistory,
     TripDetails, TripEvent, DriverIssue,
+    // models added by later cycles, so the same tests also run on the real Postgres engine
+    FareRuleDraft: pricing.FareRuleDraft, PricingVersion: pricing.PricingVersion, PricingSchedule: pricing.PricingSchedule, CancellationPolicyChange: pricing.CancellationPolicyChange,
+    Coupon: coupons.Coupon, CouponUse: coupons.CouponUse, CouponRedemption: coupons.CouponRedemption,
+    DriverAdjustment: ledger.DriverAdjustment, Incentive: ledger.Incentive, LegalDocument: legalModels.LegalDocument, LegalAcceptance: legalModels.LegalAcceptance,
+    ConfigVersion, DriverDutySession, DriverPayout, RiderInvoice, RiderPresence,
     PlatformInvoice: billing.PlatformInvoice, PlatformCounter: billing.PlatformCounter, PlatformPlan: billing.PlatformPlan, PlatformSettings: billing.PlatformSettings
   };
   const models = Object.values(db);
-  for (const m of models) m.rows = [];
-
   let refreshing = false;
+  const edits = [];
+  // A test clears or trims a model's rows the way it does with the stand-in (rows.length = 0, rows.splice(i, n)). The matching rows are
+  // deleted from the database before the next database operation of the server under test. The helper's own refreshes pass straight through.
+  const mirrorOf = (m) => new Proxy([], {
+    set(target, key, value) {
+      if (!refreshing && key === 'length' && value < target.length) for (const d of target.slice(value)) edits.push({ m, id: d._id, remove: true });
+      target[key] = value;
+      return true;
+    },
+    get(target, key) {
+      if (key === 'splice' && !refreshing) {
+        return (start, count, ...items) => {
+          const from = start < 0 ? Math.max(0, target.length + start) : Math.min(start, target.length);
+          const n = count === undefined ? target.length - from : Math.max(0, Math.min(count, target.length - from));
+          for (const d of target.slice(from, from + n)) edits.push({ m, id: d._id, remove: true });
+          return Array.prototype.splice.call(target, from, n, ...items);
+        };
+      }
+      return target[key];
+    }
+  });
+  for (const m of models) m.rows = mirrorOf(m);
+
+  // The stand-in accepts fixtures that leave out fields the real models require. These defaults fill in only what a test omitted, so the
+  // same tests run on the real models; the product's own validation is untouched.
+  const FIXTURE_DEFAULTS = {
+    Tenant: (d, n) => ({ packageName: d.packageName || `in.fixture.t${n}`, appName: d.appName || d.name || 'Fixture', slug: d.slug || `fixture-${n}` }),
+    Driver: (d) => ({ passwordHash: d.passwordHash || 'x', lastName: d.lastName || 'Fixture', email: d.email || `fixture-${d.driverId || Math.random().toString(36).slice(2)}@fixture.test` }),
+    User: (d, n) => ({ phone: d.phone || `+9190000${String(n).padStart(5, '0')}`, firstName: d.firstName || 'Fixture', lastName: d.lastName || 'User' }),
+    TripDetails: (d, n) => ({ request_id: d.request_id || `fx-${n}`, timeout_at: d.timeout_at || new Date(), driver_id: d.driver_id || 'FX', pickup: d.pickup && d.pickup.lat != null ? d.pickup : { address: 'A', lat: 1, lng: 1, ...(d.pickup || {}) }, drop: d.drop && d.drop.lat != null ? d.drop : { address: 'B', lat: 2, lng: 2, ...(d.drop || {}) } }),
+    ServiceRegion: (d) => ({ country: d.country || 'IN' }),
+    Vehicle: (d) => ({ registrationKey: d.registrationKey || String(d.registrationNumber || d.vehicleId || 'FX').replace(/[^A-Za-z0-9]/g, '').toUpperCase(), passengerCapacity: d.passengerCapacity || 4, categoryId: d.categoryId || 'c1' }),
+    VehicleCategory: (d) => ({ rideType: d.rideType || 'economy', passengerCapacity: d.passengerCapacity || 4 })
+  };
+  let fixtureCount = 0;
+  for (const [name, fill] of Object.entries(FIXTURE_DEFAULTS)) {
+    const M = db[name];
+    const create = M.create.bind(M);
+    M.create = (doc, ...rest) => (doc && typeof doc === 'object' && !Array.isArray(doc) ? create({ ...doc, ...fill(doc, ++fixtureCount) }, ...rest) : create(doc, ...rest));
+  }
+
   // like the stand-in, the mirror shows every field (including select:false ones such as hashes)
   const everything = (m) => { const hidden = []; m.schema.eachPath((p, t) => { if (t.options && t.options.select === false) hidden.push(`+${p}`); }); return hidden.join(' '); };
 
   // A test may edit a mirrored row directly (row.status = 'X') as it could with the stand-in. The edit is written to the
   // database before the next database operation of the server under test.
-  const edits = [];
   const watched = (m, doc) => new Proxy(doc, {
     set(target, key, value) { target[key] = value; edits.push({ m, id: target._id, set: { [key]: value } }); return true; },
     deleteProperty(target, key) { delete target[key]; edits.push({ m, id: target._id, unset: key }); return true; }
@@ -54,7 +106,9 @@ function createPgDb() {
       while (edits.length) {
         const e = edits.shift();
         const col = mongoose.connection.db.collection(e.m.collection.name);
-        await col.updateOne({ _id: e.id }, e.unset ? { $unset: { [e.unset]: 1 } } : { $set: e.set });
+        // the mirror holds ids as strings; the collection holds them as the engine stores them
+        if (e.remove) await e.m.deleteOne({ _id: e.id });
+        else await col.updateOne({ _id: e.id }, e.unset ? { $unset: { [e.unset]: 1 } } : { $set: e.set });
       }
     } finally { flushing = false; }
   };

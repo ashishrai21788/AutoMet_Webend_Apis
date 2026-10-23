@@ -75,10 +75,13 @@ exports.list = c.handle(async (req, res) => {
   const filter = { tenantId: req.business.tenantId };
   const q = String(req.query.q || '').trim().toUpperCase().slice(0, 30);
   if (q) filter.code = { $regex: c.escapeRegex(q) };
-  const [rows, total] = await Promise.all([
+  let [rows, total] = await Promise.all([
     Coupon.find(filter).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
     Coupon.countDocuments(filter)
   ]);
+  // Uses of cancelled or unanswered bookings are given back when someone next looks, so look now: the count shown must be the real one.
+  const given = await Promise.all(rows.map((r) => coupons.reconcile(req.business.tenantId, { couponId: r.couponId })));
+  if (given.some((n) => n > 0)) rows = await Coupon.find({ tenantId: req.business.tenantId, couponId: { $in: rows.map((r) => r.couponId) } }).sort({ createdAt: -1 }).lean();
   const wanted = String(req.query.state || '').toUpperCase();
   const items = rows.map((x) => view(x, digits)).filter((x) => !wanted || x.state === wanted);
   return c.ok(res, { items, total, page, pageSize, currency: currencyOf(req) });

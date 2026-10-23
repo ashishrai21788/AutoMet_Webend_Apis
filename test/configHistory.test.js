@@ -50,6 +50,9 @@ test('only tracked settings are copied, never anything else on the business reco
   assert.deepEqual(s.payoutSettings, { commissionPercent: 10 });
 });
 
+// a setting never touched reads as nothing on the in-memory stand-in and as its defaults on the real (Postgres) models: the same to the app
+const isUnset = (v) => v == null || (v.enabled === false && !v.maxTollMinor);
+
 test('the first save keeps the settings as they were (version 1) and the new ones (version 2)', async () => {
   await reset();
   const r = await admin(tolls.update, { body: { enabled: true, maxToll: 250 } });
@@ -57,7 +60,7 @@ test('the first save keeps the settings as they were (version 1) and the new one
   const rows = db.ConfigVersion.rows.slice().sort((x, y) => x.version - y.version);
   assert.equal(rows.length, 2);
   assert.equal(rows[0].source, 'baseline');
-  assert.equal(rows[0].snapshot.tollSettings, null, 'before: nothing was set');
+  assert.ok(isUnset(rows[0].snapshot.tollSettings), 'before: nothing was set (or only its defaults, as the Postgres models read it)');
   assert.deepEqual(rows[1].snapshot.tollSettings, { enabled: true, maxTollMinor: 25000 });
   assert.deepEqual(rows[1].changed, ['tolls']);
   assert.equal(rows[1].actorEmail, 'a@t.local');
@@ -119,7 +122,7 @@ test('rolling back to the baseline removes a setting that did not exist before',
   await admin(tolls.update, { body: { enabled: true, maxToll: 100 } });
   const r = await admin(H.rollback, { params: { version: '1' } });
   assert.equal(r.code, 200);
-  assert.equal(db.Tenant.rows[0].tollSettings, null);
+  assert.ok(isUnset(db.Tenant.rows[0].tollSettings), 'back to nothing set (or only its defaults)');
 });
 
 test('rolling back to settings that already match is refused, and an unknown version is a 404', async () => {

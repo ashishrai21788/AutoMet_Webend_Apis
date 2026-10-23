@@ -40,9 +40,37 @@ const ctx = (req) => {
 const fmtMajor = (minor, digits) => minor / 10 ** digits;
 const m = (minor, digits) => ({ minor, amount: fmtMajor(minor, digits) });
 
-/** All completed trips for this driver (most recent 20000). */
-async function completedTrips(req) {
-  return TripDetails.find({ driver_id: req.ownDriver.driverId, status: 'COMPLETED' }).limit(20000).lean();
+const RECENT_LIMIT = 20000;
+const CHUNK = 2000;
+
+/** The driver's most recent completed trips (newest first, at most RECENT_LIMIT): what the charts, trends and feed are drawn from. */
+async function completedTrips(req, limit = RECENT_LIMIT) {
+  return TripDetails.find({ driver_id: req.ownDriver.driverId, status: 'COMPLETED' }).sort({ completed_at: -1, _id: -1 }).limit(limit).lean();
+}
+
+const SUM_FIELDS = ['trips', 'fareMinor', 'feeMinor', 'netMinor', 'cashNetMinor', 'onlineNetMinor', 'cashFeeMinor', 'onlineFeeMinor', 'cashFareMinor', 'onlineFareMinor', 'tipMinor', 'cashTipMinor', 'onlineTipMinor', 'cashDiscountMinor', 'surgeNetMinor', 'normalNetMinor', 'surgeTrips'];
+
+/**
+ * The lifetime totals over EVERY completed trip of the driver, with their incentives and adjustments, however many there are.
+ * Read in chunks and added up, so the balance a driver can withdraw never depends on how many trips fit in memory at once.
+ */
+async function lifetimeTotals(req, adj, chunk = CHUNK) {
+  const life = money.totals([], req.business, adj);
+  let after = null;
+  for (;;) {
+    const where = { driver_id: req.ownDriver.driverId, status: 'COMPLETED' };
+    if (after !== null) where.trip_id = { $gt: after }; // the trip id is unique on every engine, so it is a safe place to resume from
+    const rows = await TripDetails.find(where).sort({ trip_id: 1 }).limit(chunk).lean();
+    if (!rows.length) break;
+    const part = money.totals(rows, req.business, []);
+    for (const k of SUM_FIELDS) life[k] += part[k];
+    life.currency = life.currency || part.currency;
+    const last = rows[rows.length - 1].trip_id;
+    if (rows.length < chunk || last == null || last === after) break; // done, or it cannot move forward: never read the same rows twice
+    after = last;
+  }
+  life.totalMinor = life.netMinor + life.tipMinor + life.incentiveMinor + life.adjustMinor;
+  return life;
 }
 
 /** Incentives and admin adjustments for this driver. Bonuses already earned are credited first, so every figure includes them. */
@@ -293,7 +321,7 @@ async function state(req) {
   const all = await completedTrips(req);
   const [adj, payouts] = await Promise.all([ledger(req, all), DriverPayout.find({ tenantId: req.business.tenantId, driverId: req.ownDriver.driverId }).lean()]);
   const settings = money.settingsOf(req.business);
-  const life = money.totals(all, req.business, adj);
+  const life = await lifetimeTotals(req, adj);
   const bal = money.balanceOf(life, payouts, settings);
   return { digits, currency, all, adj, payouts, settings, life, bal };
 }
@@ -403,5 +431,7 @@ const safe = (fn) => async (req, res) => {
 
 module.exports = {
   overview: safe(overview), incentivesList: safe(incentivesList), analytics: safe(analytics), exportCsv: safe(exportCsv), payoutsSummary: safe(payoutsSummary),
-  transactions: safe(transactions), saveBank: safe(saveBank), withdraw: safe(withdraw), cancelWithdrawal: safe(cancelWithdrawal)
+  transactions: safe(transactions), saveBank: safe(saveBank), withdraw: safe(withdraw), cancelWithdrawal: safe(cancelWithdrawal),
+  // exported so the tests can drive them directly
+  lifetimeTotals, completedTrips
 };

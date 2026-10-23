@@ -157,6 +157,7 @@ test('the warning is for the ride\'s own driver and only while the ride can stil
 
 test('no trip payload carries the penalty a driver was charged', async () => {
   await reset({ penaltyFee: 25, graceCancellations: 0 });
+  await db.User.deleteMany({});
   await db.User.create({ userId: 'U1', phone: '+919800000000', firstName: 'Asha' });
   await addTrip('T1', { pickup: { address: 'A', lat: 1, lng: 1 }, drop: { address: 'B', lat: 2, lng: 2 } });
   assert.equal((await cancel('T1')).body.data.driver_penalty, 25);

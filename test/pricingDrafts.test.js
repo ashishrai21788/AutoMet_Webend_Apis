@@ -352,3 +352,17 @@ test('a business that never versioned its pricing prices trips without a version
   const tenant = await db.Tenant.findOne({ tenantId: 't1' }).lean();
   assert.equal((await loadPricingConfig(tenant)).pricingVersion, null);
 });
+
+test('several admins publishing the same drafts at the same moment leave one history entry, and the rules live once', async () => {
+  await reset('draft');
+  await call(biz.saveFareRule, { body: { categoryId: 'c1', regionId: null, ...rule({ baseFare: 77 }) } });
+  await call(biz.saveFareRule, { body: { categoryId: 'c2', regionId: null, ...rule({ baseFare: 88 }) } });
+  const results = await Promise.all([1, 2, 3, 4].map((i) => call(P.publish, { body: { note: `admin ${i}` } })));
+  assert.ok(results.every((r) => r.code === 200 || r.code === 409), JSON.stringify(results.map((r) => r.code)));
+  assert.equal(liveOf('c1').baseFare, 77);
+  assert.equal(liveOf('c2').baseFare, 88);
+  assert.equal(db.FareRuleDraft.rows.length, 0, 'the drafts are gone');
+  const versions = (await db.PricingVersion.find({ tenantId: 't1' }).lean()).sort((a, b) => a.version - b.version); // from the database itself, not a mirror
+  assert.deepEqual(versions.map((v) => v.version), [1, 2], 'a starting point and one published version, not one per admin');
+  assert.equal(new Set(versions.map((v) => v.version)).size, versions.length);
+});

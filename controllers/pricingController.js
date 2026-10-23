@@ -65,7 +65,14 @@ async function recordVersion(req, { before, source, note = '', rollbackOf = null
       try {
         return await PricingVersion.create({ tenantId, version: next, rules: after, summary: pd.summaryOf(rows), source, note: String(note || '').slice(0, 200), rollbackOf, ...who, createdAt: new Date() });
       } catch (e) {
-        if (e && e.code === 11000) { next += 1; continue; }
+        if (e && e.code === 11000) {
+          // another change took this number at the same moment. If it left the pricing exactly as ours does (two admins publishing the
+          // same drafts together), that version already says it: do not write the same history entry again.
+          const taken = (await PricingVersion.find({ tenantId }).sort({ version: -1 }).limit(1).lean())[0];
+          if (taken && pd.diffSnapshots(taken.rules, after).length === 0) return taken;
+          next = (taken ? taken.version : next) + 1;
+          continue;
+        }
         throw e;
       }
     }
