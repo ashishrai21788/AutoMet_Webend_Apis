@@ -317,7 +317,7 @@ test('a schedule half-applied by a server that stopped is picked up again after 
   sch.status = 'APPLYING'; sch.claimedAt = new Date(Date.now() - 10 * 60 * 1000);
   assert.equal(await P.runDueSchedules(new Date(Date.now() + 3 * 3600 * 1000)), 1);
   assert.equal(liveOf('c1').baseFare, 55);
-  assert.equal(sch.status, 'DONE');
+  assert.equal((await db.PricingSchedule.findOne({ scheduleId: sch.scheduleId }).lean()).status, 'DONE', 'read from the database itself, not the row held from before');
 });
 
 test('switching back to direct is refused while a schedule is waiting', async () => {

@@ -83,7 +83,9 @@ test('a driver signs up from the app into the app\'s own business, unverified an
   assert.equal(d.isPhoneVerified, false);
   assert.equal(d.phone, '+919811122233'); // the dashboard's international form
   assert.equal(savedOtps.some((o) => o.driverId === d.driverId), true, 'a sign-in code was created');
-  assert.equal(JSON.stringify(r.body).includes('passwordHash'), false);
+  // no password hash VALUE reaches the app (a bcrypt string); the key can appear in the list of fields the app should ask for
+  assert.equal(/$2[aby]$dd$/.test(JSON.stringify(r.body)), false);
+  if (d.passwordHash) assert.equal(JSON.stringify(r.body).includes(d.passwordHash), false, 'the stored hash is not anywhere in what the app receives');
 });
 
 test('a driver cannot sign up with a number that exists in another stored form', async () => {

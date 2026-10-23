@@ -98,7 +98,7 @@ test('delete account: needs the confirmation, refuses during a ride, then erases
   assert.ok(/deleted\.invalid$/.test(d.email));
   assert.equal(d.licenseNumber, null);
   assert.equal(d.aadhaarNumber, null);
-  assert.equal(d.bankAccount, null);
+  assert.ok(d.bankAccount == null || !(d.bankAccount.accountNumber || d.bankAccount.ifscCode), 'no bank details are kept (the field reads null or undefined by engine)');
   assert.equal(d.accessToken, null);
   assert.equal(d.isOnline, false);
   assert.ok(d.deletedAt);

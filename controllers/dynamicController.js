@@ -495,13 +495,19 @@ const createDriver = async (req, res, DriverModel) => {
     await otpRecord.save();
     
     // Get the complete driver data from database to ensure all fields are included
-    const completeDriver = await DriverModel.findById(driver._id).lean();
+    // (if the re-read finds nothing, the driver just created is used: the sign-up itself succeeded and must not become a 500)
+    // A plain copy of the stored data: no engine internals (a document's own bookkeeping holds a second copy of every field, hash included).
+    const reread = (await DriverModel.findById(driver._id).lean()) || driver;
+    const completeDriver = JSON.parse(JSON.stringify(reread && reread._doc ? reread._doc : (reread && reread.toObject ? reread.toObject() : reread)));
     
     // Remove password hash from response
     delete completeDriver.passwordHash;
     
     // Ensure all fields are present in response
     const driverWithAllFields = ensureAllDriverFields(completeDriver);
+    // the password hash never goes to the app. Removed from the object that is actually sent, after every step that copies or fills it
+    // (on the Postgres engine the earlier delete does not reach it).
+    delete driverWithAllFields.passwordHash;
     
     // Set proper headers for mobile compatibility
     res.setHeader('Content-Type', 'application/json; charset=utf-8');

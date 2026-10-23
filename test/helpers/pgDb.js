@@ -74,19 +74,29 @@ function createPgDb() {
   // same tests run on the real models; the product's own validation is untouched.
   const FIXTURE_DEFAULTS = {
     Tenant: (d, n) => ({ packageName: d.packageName || `in.fixture.t${n}`, appName: d.appName || d.name || 'Fixture', slug: d.slug || `fixture-${n}` }),
-    Driver: (d) => ({ passwordHash: d.passwordHash || 'x', lastName: d.lastName || 'Fixture', email: d.email || `fixture-${d.driverId || Math.random().toString(36).slice(2)}@fixture.test` }),
+    Driver: (d, n) => ({ passwordHash: d.passwordHash || 'x', lastName: d.lastName || 'Fixture', firstName: d.firstName || 'Fixture', phone: d.phone || `+9191000${String(n).padStart(5, '0')}`, email: d.email || `fixture-${d.driverId || Math.random().toString(36).slice(2)}@fixture.test` }),
     User: (d, n) => ({ phone: d.phone || `+9190000${String(n).padStart(5, '0')}`, firstName: d.firstName || 'Fixture', lastName: d.lastName || 'User' }),
     TripDetails: (d, n) => ({ request_id: d.request_id || `fx-${n}`, timeout_at: d.timeout_at || new Date(), driver_id: d.driver_id || 'FX', pickup: d.pickup && d.pickup.lat != null ? d.pickup : { address: 'A', lat: 1, lng: 1, ...(d.pickup || {}) }, drop: d.drop && d.drop.lat != null ? d.drop : { address: 'B', lat: 2, lng: 2, ...(d.drop || {}) } }),
     ServiceRegion: (d) => ({ country: d.country || 'IN' }),
     Vehicle: (d) => ({ registrationKey: d.registrationKey || String(d.registrationNumber || d.vehicleId || 'FX').replace(/[^A-Za-z0-9]/g, '').toUpperCase(), passengerCapacity: d.passengerCapacity || 4, categoryId: d.categoryId || 'c1' }),
+    DriverDocument: (d) => ({ file: d.file || { key: `fixture/${d.docId || 'doc'}`, mime: 'image/jpeg', size: 1024, originalName: 'fixture.jpg' } }),
+    VehicleDocument: (d) => ({ file: d.file || { key: `fixture/${d.docId || 'doc'}`, mime: 'image/jpeg', size: 1024, originalName: 'fixture.jpg' } }),
     VehicleCategory: (d) => ({ rideType: d.rideType || 'economy', passengerCapacity: d.passengerCapacity || 4 })
   };
   let fixtureCount = 0;
-  for (const [name, fill] of Object.entries(FIXTURE_DEFAULTS)) {
-    const M = db[name];
-    const create = M.create.bind(M);
-    M.create = (doc, ...rest) => (doc && typeof doc === 'object' && !Array.isArray(doc) ? create({ ...doc, ...fill(doc, ++fixtureCount) }, ...rest) : create(doc, ...rest));
-  }
+  // The product re-registers a model's statics (including create) whenever it asks for the model again, which would drop these defaults.
+  // So they are put back before every database operation (cheap: it only wraps a create that is not already wrapped).
+  const WRAPPED = Symbol('fixtureDefaults');
+  const applyFixtureDefaults = () => {
+    for (const [name, fill] of Object.entries(FIXTURE_DEFAULTS)) {
+      const M = db[name];
+      if (!M || M.create[WRAPPED]) continue;
+      const create = M.create.bind(M);
+      M.create = (doc, ...rest) => (doc && typeof doc === 'object' && !Array.isArray(doc) ? create({ ...doc, ...fill(doc, ++fixtureCount) }, ...rest) : create(doc, ...rest));
+      M.create[WRAPPED] = true;
+    }
+  };
+  applyFixtureDefaults();
 
   // like the stand-in, the mirror shows every field (including select:false ones such as hashes)
   const everything = (m) => { const hidden = []; m.schema.eachPath((p, t) => { if (t.options && t.options.select === false) hidden.push(`+${p}`); }); return hidden.join(' '); };
@@ -145,6 +155,7 @@ function createPgDb() {
     }
     // refresh only after a transaction that wrote rows (table creation, which every first query waits for, must not wait on a refresh)
     c.transaction = async (fn) => {
+      applyFixtureDefaults();
       await ready;
       if (!refreshing) await flushEdits();
       const written = new Set();
@@ -153,6 +164,7 @@ function createPgDb() {
       return out;
     };
     c.query = async (text, params) => {
+      applyFixtureDefaults();
       await ready;
       if (!refreshing && !flushing) await flushEdits();
       const out = await query(text, params);

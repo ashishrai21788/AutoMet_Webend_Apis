@@ -213,7 +213,23 @@ Asked to test every earlier cycle that had not been fully tested and finish what
 | Full journey on two real phones (OnePlus rider, Redmi driver) against the lab | sign-in; search; ride options with fare range and "1 min away"; coupon applied (279 to 259); request reached the driver; accept; arrived; a wrong start code refused ("That code is not correct"), the right one started the ride; end ride (with a confirmation); both sides show the fare line by line; the rider reviewed and tipped 20, which reached the driver's earnings; the driver's day total updated. Also notifications, ride history and profile |
 
 **Not done / still open (honest list)**
-- **The full backend test suite on the Postgres engine** (`TEST_DB=postgres npm test`): 544 of 625 pass. The 81 that fail are test-fixture strictness (the in-memory stand-in accepts drivers and vehicles with fields the real models require) and a stale-mirror interaction I could not isolate. I raised it from 449 (the helper was missing 16 models and the fixtures were stricter still). Not product bugs: every one of those areas ran green in the live Postgres lab and the contract suite. Worth finishing, not urgent.
+- **The full backend test suite on the Postgres engine**: closed in cycle 12 (all 68 files pass). In cycle 11, 544 of 625 passed. The 81 that failed are test-fixture strictness (the in-memory stand-in accepts drivers and vehicles with fields the real models require) and a stale-mirror interaction I could not isolate. I raised it from 449 (the helper was missing 16 models and the fixtures were stricter still). Not product bugs: every one of those areas ran green in the live Postgres lab and the contract suite. Worth finishing, not urgent.
 - Android lint was started for both apps and stopped after more than ten minutes on the rider app; it has not been run.
 - The large-text accessibility test on a phone needs the font size set on the device by its owner.
 - Driver history for "all time" is slow with thousands of trips (see cycle 9).
+
+
+## Cycle 12: the Postgres test gap closed, and two production bugs it found
+
+The 81 tests that failed on the Postgres engine in cycle 11 were chased down. **All 68 test files now pass on Postgres** (each file run on its own with a four-minute cap). On the in-memory engine the backend has 626 tests, 622 pass, 0 fail, 4 skipped; the contract scenarios match 7 of 7. Most of the failures were test-fixture strictness and a stale-reference habit, but **two were real product bugs that only the real engine could show**:
+
+| Bug | Effect in production | Fix |
+|---|---|---|
+| Surge demand: `.select(pickup)` passed the pickup coordinates object where a field name belongs, so on a real engine the recent requests were never read | recent ride requests never counted as demand, so surge under-counted (cycle 5) | `.select('pickup')` |
+| The "document expiring soon" warning built a date from a stored Date by string interpolation, which gives an invalid date | **the early warning for a driver's expiring licence, insurance or registration never appeared** (expired and rejected were fine) | the calendar day is taken from a Date or a YYYY-MM-DD string; a new test with a Date fails on the old code |
+
+**What the test helper needed:** all 38 models (16 were missing); fixture defaults for fields the real models require but the in-memory stand-in does not (re-applied before every database operation, because the product re-registers a model's statics when it asks for the model again, which had been silently dropping them); `rows.length = 0` and `rows.splice` honoured as real deletes; a few assertions that said "undefined" where an unset field reads null on the real engine; two that held a row from before a write and read it afterwards (now read from the database).
+
+**A false alarm, recorded because I first believed it:** a driver sign-up response seemed to contain the password hash on Postgres. It does not: the live Postgres server, with the original code, returns none. It came from a fallback path I had just added, in a test where the re-read returned nothing. The fallback is kept (it now returns a clean plain copy), but this is not a security fix.
+
+**Android lint (driver app): 47 errors, 1,428 warnings.** The rider app's lint never finished (stuck 48 minutes on the same step, then stopped). Of the driver's errors, none changes behaviour that I could find: the location calls the lint flags are guarded (a foreground service that only runs with permission, or an earlier check); the "not constrained" and `app:tint` items are in old layouts that render correctly; the rest are API-level notes. The warnings are housekeeping (729 unused resources, 265 hard-coded strings). Not changed: editing dozens of old Android files without being able to test each is more risk than the lint is worth. The report is at `AutoMet_driver/app/build/reports/lint-results-debug.html`.

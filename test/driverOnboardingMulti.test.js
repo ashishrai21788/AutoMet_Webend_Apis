@@ -242,7 +242,7 @@ test('area: invalid combinations are refused with a field message, valid ones ar
   assert.equal(foreign.status, 400, 'another business\'s region and category are not found');
   const empty = await appCall(ctx.a2, 'PUT', '/area', { body: {} });
   assert.equal(empty.status, 400);
-  assert.equal(db.Driver.rows.find((d) => d.driverId === ctx.a2.driverId).operatingRegionId, undefined, 'nothing was saved by the failed calls');
+  assert.ok(db.Driver.rows.find((d) => d.driverId === ctx.a2.driverId).operatingRegionId == null, 'nothing was saved by the failed calls (unset reads as undefined or null, by engine)');
 });
 
 test('vehicle: needs the area first; plate rules; one vehicle per driver; no taking another driver\'s plate', async () => {

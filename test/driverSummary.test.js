@@ -319,3 +319,13 @@ test('ride details: the fare lines, the driver\'s earnings, the timeline, and on
   assert.equal(pdf.code, 200);
   assert.equal(Buffer.from(pdf.body).subarray(0, 4).toString(), '%PDF');
 });
+
+test('a document whose expiry is a Date (what the real database returns) still raises the "expiring soon" warning', async () => {
+  await seed();
+  const inDays = (n) => new Date(NOW + n * 86400000);
+  await db.DriverDocument.create({ tenantId: 't1', docId: 'ddD', driverId: 'D1', type: 'DRIVING_LICENCE', status: 'APPROVED', expiryDate: inDays(10) });
+  const a = (await call()).body.data.alerts.find((x) => x.type === 'DRIVING_LICENCE');
+  assert.ok(a, 'the warning exists');
+  assert.equal(a.kind, 'EXPIRING');
+  assert.ok(a.daysLeft >= 9 && a.daysLeft <= 11, `about ten days left, got ${a.daysLeft}`);
+});

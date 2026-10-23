@@ -83,7 +83,9 @@ async function summary(req, res) {
       if (status === 'REJECTED') alerts.push({ ...base, kind: 'REJECTED', reason: d.rejectionReason || '' });
       else if (status === 'EXPIRED') alerts.push({ ...base, kind: 'EXPIRED', expiryDate: d.expiryDate || null });
       else if (status === 'APPROVED' && d.expiryDate) {
-        const days = Math.ceil((new Date(`${d.expiryDate}T23:59:59Z`).getTime() - now.getTime()) / DAY_MS);
+        // the expiry is a Date from the database (or a YYYY-MM-DD string): count to the end of that calendar day either way
+        const day = d.expiryDate instanceof Date ? d.expiryDate.toISOString().slice(0, 10) : String(d.expiryDate).slice(0, 10);
+        const days = Math.ceil((new Date(`${day}T23:59:59Z`).getTime() - now.getTime()) / DAY_MS);
         if (days <= EXPIRY_WARNING_DAYS) alerts.push({ ...base, kind: 'EXPIRING', expiryDate: d.expiryDate, daysLeft: days });
       }
     }
