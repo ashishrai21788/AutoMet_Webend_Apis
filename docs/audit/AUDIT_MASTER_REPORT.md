@@ -130,3 +130,15 @@ The seven contract scenarios (`npm run contract`, 507 recorded steps) had fallen
 | legacy generic collection routes: all creates, updates and deletes refused | hardening |
 
 Result: all seven scenarios match on both Mongo and Postgres, and twice in a row (the start code is aliased because it changes with the accept time). Backend suite unchanged.
+
+## Cycle 7: cancellation policy history and restore
+
+| Area | Result | Evidence |
+|---|---|---|
+| Backend tests | PASS | `npm test`: 597 tests, 593 pass, 0 fail, 4 skipped; 8 new in `test/cancellationHistory.test.js`; all seven contract scenarios still match |
+| On Postgres over HTTP | PASS | save, change, restore, restore again (unchanged), restore over a later change (409 CHANGED_SINCE, nothing changed), force, delete and restore of a deletion, unknown change 404; history newest first |
+| Dashboard in a browser | PASS | "Cancellation policy history" card on Pricing: who, when, each term before and after, a Removed badge; the restore confirmation dialog; restoring added a new "Restored" entry |
+
+**Scope decision:** full drafts and scheduled publish (as for fare rules) were not built for cancellation policies. The policies are a few small records applied at the moment of a cancellation, so the proportionate protection is a record of every change with before and after, and one-click restore (itself recorded). Every save, removal and restore writes a change (`cancellation_policy_changes`); a restore over a later edit asks first (`force`).
+
+**Found on the way:** the dashboard said cancellation fees are "not charged yet". The rider fee is charged (`lib/cancellationFee.js`); the driver penalty and free-cancellations-per-day are stored and never applied. The text now says so, and the driver penalty is recorded as open.

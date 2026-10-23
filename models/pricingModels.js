@@ -66,7 +66,26 @@ const pricingScheduleSchema = new mongoose.Schema({
 }, { collection: 'pricing_schedules' });
 pricingScheduleSchema.index({ status: 1, effectiveAt: 1 });
 
+/** Every change to a cancellation policy: what the terms were before and after, who did it, and a restore if it undid an earlier change. */
+const cancellationPolicyChangeSchema = new mongoose.Schema({
+  tenantId: { type: String, required: true, index: true },
+  changeId: { type: String, required: true, unique: true },
+  policyId: { type: String, default: null },
+  categoryId: { type: String, required: true },
+  regionId: { type: String, default: null },
+  regionKey: { type: String, required: true },
+  op: { type: String, enum: ['SAVE', 'DELETE', 'RESTORE'], required: true },
+  before: { type: mongoose.Schema.Types.Mixed, default: null }, // the terms before (null: there was no policy)
+  after: { type: mongoose.Schema.Types.Mixed, default: null }, // the terms after (null: the policy was removed)
+  restoreOf: { type: String, default: null }, // the change this one undid
+  actorId: { type: String, default: null },
+  actorEmail: { type: String, default: null },
+  createdAt: { type: Date, default: Date.now }
+}, { collection: 'cancellation_policy_changes' });
+cancellationPolicyChangeSchema.index({ tenantId: 1, createdAt: -1 });
+
 const FareRuleDraft = mongoose.models.FareRuleDraft || mongoose.model('FareRuleDraft', fareRuleDraftSchema);
 const PricingVersion = mongoose.models.PricingVersion || mongoose.model('PricingVersion', pricingVersionSchema);
 const PricingSchedule = mongoose.models.PricingSchedule || mongoose.model('PricingSchedule', pricingScheduleSchema);
-module.exports = { FareRuleDraft, PricingVersion, PricingSchedule };
+const CancellationPolicyChange = mongoose.models.CancellationPolicyChange || mongoose.model('CancellationPolicyChange', cancellationPolicyChangeSchema);
+module.exports = { FareRuleDraft, PricingVersion, PricingSchedule, CancellationPolicyChange };

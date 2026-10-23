@@ -7,6 +7,7 @@ const { validateFareRuleInput, calculateFare, MAX_MONEY } = require('../lib/fare
 const { computeSetup } = require('../lib/businessSetup');
 const { matchRegion, hasGeofence } = require('../lib/regionMatch');
 const pricing = require('./pricingController');
+const cancellationHistory = require('./cancellationHistoryController');
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, message: 'OK', data });
 const fail = (res, status, message, errors) => res.status(status).json({ success: false, message, errors: errors || undefined, data: null });
@@ -337,12 +338,14 @@ exports.savePolicy = handle(async (req, res) => {
   if (Object.keys(errors).length) return invalid(res, errors);
 
   const now = new Date();
+  const before = cancellationHistory.snapshot(await req.data.findOne(CancellationPolicy, { categoryId: target.category.categoryId, regionKey: target.regionKey }));
   const policy = await req.data.update(
     CancellationPolicy,
     { categoryId: target.category.categoryId, regionKey: target.regionKey },
     { ...value, regionId: target.regionId, currency: target.market.currency, active: true, updatedAt: now },
     { upsert: true, setOnInsert: { policyId: newId('cp'), createdAt: now } }
   );
+  await cancellationHistory.record(req, { op: 'SAVE', before, after: policy });
   await audit(req, 'cancellation_policy.saved', 'cancellation_policy', policy.policyId, { category: target.category.name, regionId: target.regionId });
   return ok(res, shapes.publicPolicy(policy));
 });
@@ -351,6 +354,7 @@ exports.deletePolicy = handle(async (req, res) => {
   const policy = await req.data.findOne(CancellationPolicy, { policyId: req.params.id });
   if (!policy) return fail(res, 404, 'Cancellation policy not found');
   await req.data.remove(CancellationPolicy, { policyId: policy.policyId });
+  await cancellationHistory.record(req, { op: 'DELETE', before: policy, after: null });
   await audit(req, 'cancellation_policy.deleted', 'cancellation_policy', policy.policyId, null);
   return ok(res, { id: policy.policyId });
 });

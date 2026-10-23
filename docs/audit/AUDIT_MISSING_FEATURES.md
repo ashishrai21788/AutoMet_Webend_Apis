@@ -2,7 +2,7 @@
 
 ## Not implemented (in scope; suggested order)
 1. ~~Legal documents module~~ **Done in cycle 2** (see AUDIT_MASTER_REPORT.md). Still open: translations (one language per type today), the built-in fallback text still ships in the apps, and the owner must write and have the real text reviewed.
-2. ~~Configuration publish lifecycle~~ **Done in cycles 3 and 4**: settings history and rollback (business details, payouts, tolls, app versions, ride settings) and pricing drafts, publish and history (fare rules). Scheduled publish is done too. Still open: drafts for regions, categories and cancellation policies.
+2. ~~Configuration publish lifecycle~~ **Done in cycles 3 and 4**: settings history and rollback (business details, payouts, tolls, app versions, ride settings) and pricing drafts, publish and history (fare rules). Scheduled publish is done too. Cancellation policies now have change history and restore (cycle 7). Still open: drafts for regions and categories; the driver cancellation penalty and free-cancellations setting are stored but never charged.
 3. ~~Minimum app version and forced update~~ **Done in cycle 3.**
 4. ~~Tolls~~ **Done in cycle 3** (entered by the driver, capped by the business). Still open: working a toll out from the route, and a toll-free vehicle or area setting.
 5. ~~Tax effective dates and rule versions~~ **Done**: a tax change can be scheduled for a date, and each trip stores the pricing version and the tax rates it was charged.

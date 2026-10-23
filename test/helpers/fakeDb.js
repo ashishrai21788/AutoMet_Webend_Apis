@@ -209,6 +209,7 @@ function createFakeDb() {
     FareRuleDraft: fakeModel({ uniques: ['draftId', ['tenantId', 'categoryId', 'regionKey']], defaults: () => ({ op: 'SAVE', createdAt: new Date(), updatedAt: new Date() }) }),
     PricingSchedule: fakeModel({ uniques: ['scheduleId'], defaults: () => ({ status: 'SCHEDULED', createdAt: new Date() }) }),
     PricingVersion: fakeModel({ uniques: [['tenantId', 'version']], defaults: () => ({ createdAt: new Date() }) }),
+    CancellationPolicyChange: fakeModel({ uniques: ['changeId'], defaults: () => ({ createdAt: new Date() }) }),
     ConfigVersion: fakeModel({ uniques: [['tenantId', 'version']], defaults: () => ({ changed: [], createdAt: new Date() }) }),
     Coupon: fakeModel({ uniques: ['couponId', ['tenantId', 'code']], defaults: () => ({ redeemed: 0, active: true, createdAt: new Date(), updatedAt: new Date() }) }),
     CouponUse: fakeModel({ uniques: [['tenantId', 'couponId', 'userId']] }),
@@ -245,7 +246,7 @@ function createFakeDb() {
     stub('models/driverDutySessionModel.js', { DriverDutySession: db.DriverDutySession });
     stub('models/driverPayoutModel.js', { DriverPayout: db.DriverPayout });
     stub('models/legalModel.js', { LegalDocument: db.LegalDocument, LegalAcceptance: db.LegalAcceptance });
-    stub('models/pricingModels.js', { FareRuleDraft: db.FareRuleDraft, PricingVersion: db.PricingVersion, PricingSchedule: db.PricingSchedule });
+    stub('models/pricingModels.js', { FareRuleDraft: db.FareRuleDraft, PricingVersion: db.PricingVersion, PricingSchedule: db.PricingSchedule, CancellationPolicyChange: db.CancellationPolicyChange });
     stub('models/configVersionModel.js', { ConfigVersion: db.ConfigVersion });
     stub('models/couponModel.js', { Coupon: db.Coupon, CouponUse: db.CouponUse, CouponRedemption: db.CouponRedemption });
     stub('models/driverLedgerModel.js', { DriverAdjustment: db.DriverAdjustment, Incentive: db.Incentive });

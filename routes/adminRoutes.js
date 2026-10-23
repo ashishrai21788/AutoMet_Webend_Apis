@@ -27,6 +27,7 @@ const appVersionsAdmin = require('../controllers/appVersionsController');
 const tollsAdmin = require('../controllers/tollsAdminController');
 const configHistory = require('../controllers/configHistoryController');
 const pricingAdmin = require('../controllers/pricingController');
+const cancellationHistory = require('../controllers/cancellationHistoryController');
 const surgeAdmin = require('../controllers/surgeAdminController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
@@ -153,6 +154,8 @@ router.post('/business/fare-preview', ...read, biz.previewFare);
 router.get('/business/cancellation-policies', ...read, biz.listPolicies);
 router.put('/business/cancellation-policies', ...pricing, biz.savePolicy);
 router.delete('/business/cancellation-policies/:id', ...pricing, biz.deletePolicy);
+router.get('/business/cancellation-policies/history', ...read, cancellationHistory.history);
+router.post('/business/cancellation-policies/history/:id/restore', ...pricing, cancellationHistory.restore);
 
 // ---- drivers, vehicles, documents and verification ----
 // Every record is read and written through the signed-in business only (req.data / req.legacyData). Opening a
