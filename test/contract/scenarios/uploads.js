@@ -5,7 +5,7 @@
  *  - the older image upload / delete endpoints.
  * The files are tiny fakes with the right first bytes: the server decides a file's type from those bytes.
  */
-const { configuredBusiness } = require('./common');
+const { configuredBusiness, driverSignIn } = require('./common');
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40, 1)]);
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(40, 2)]);
@@ -91,10 +91,14 @@ module.exports = async function uploads(t) {
   await biz('eligibility after documents', { path: '/api/admin/business/availability' });
 
   // ---- the older image endpoints
-  await call('images: upload without a file', { method: 'POST', path: '/api/images/upload', form: { fields: {} } });
-  await call('images: upload a text file', { method: 'POST', path: '/api/images/upload', form: { file: { field: 'image', name: 'a.txt', type: 'text/plain', data: TEXT } } });
-  await call('images: upload', { method: 'POST', path: '/api/images/upload', form: { fields: { folder: 'contract-folder' }, file: { field: 'image', name: 'a.png', type: 'image/png', data: PNG } } });
-  await call('images: upload, default folder', { method: 'POST', path: '/api/images/upload', form: { file: { field: 'image', name: 'b.png', type: 'image/png', data: PNG } } });
-  await call('images: delete', { method: 'DELETE', path: `/api/images/delete/${encodeURIComponent('contract-folder/image-1')}` });
-  await call('images: delete one that is not there', { method: 'DELETE', path: '/api/images/delete/missing' });
+  // the older image endpoints need a signed-in rider or driver: without one anyone could fill or empty the image storage
+  const driverToken = await driverSignIn(t, { driverId, phone: ctx.driverPhone, tag: 'images driver' });
+  await call('images: upload with no sign-in', { method: 'POST', path: '/api/images/upload', form: { file: { field: 'image', name: 'a.png', type: 'image/png', data: PNG } }, expectStatus: 401 });
+  await call('images: delete with no sign-in', { method: 'DELETE', path: '/api/images/delete/contract-folder%2Fimage-1', expectStatus: 401 });
+  await call('images: upload without a file', { token: driverToken, method: 'POST', path: '/api/images/upload', form: { fields: {} } });
+  await call('images: upload a text file', { token: driverToken, method: 'POST', path: '/api/images/upload', form: { file: { field: 'image', name: 'a.txt', type: 'text/plain', data: TEXT } } });
+  await call('images: upload', { token: driverToken, method: 'POST', path: '/api/images/upload', form: { fields: { folder: 'contract-folder' }, file: { field: 'image', name: 'a.png', type: 'image/png', data: PNG } } });
+  await call('images: upload, default folder', { token: driverToken, method: 'POST', path: '/api/images/upload', form: { file: { field: 'image', name: 'b.png', type: 'image/png', data: PNG } } });
+  await call('images: delete', { token: driverToken, method: 'DELETE', path: `/api/images/delete/${encodeURIComponent('contract-folder/image-1')}` });
+  await call('images: delete one that is not there', { token: driverToken, method: 'DELETE', path: '/api/images/delete/missing' });
 };

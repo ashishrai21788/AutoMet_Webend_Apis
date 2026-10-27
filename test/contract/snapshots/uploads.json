@@ -3078,10 +3078,343 @@
       }
     },
     {
-      "step": "images: upload without a file",
+      "step": "images driver: login",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/login",
+        "body": {
+          "device_id": "driver-device-1",
+          "fcm_id": "driver-fcm-1",
+          "phoneNumber": "+919811111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id64>",
+              "aadhaarNumber": null,
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "bankName": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deletedAt": null,
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "REJECTED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id64>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": true,
+              "isLoggedin": false,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onboarding": {
+                "eligible": false,
+                "managed_by_business": true,
+                "reasons": [
+                  {
+                    "code": "DRIVER_NOT_VERIFIED",
+                    "message": "The driver is not verified"
+                  },
+                  {
+                    "code": "VEHICLE_NOT_VERIFIED",
+                    "message": "The assigned vehicle is not verified"
+                  }
+                ],
+                "status": "REJECTED"
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "REJECTED",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "OTP sent to your registered phone number. Please verify to complete login."
+            }
+          },
+          "message": "OTP sent to your registered phone number",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "images driver: verify OTP",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/verify",
+        "body": {
+          "device_id": "driver-device-1",
+          "driverId": "<driverId>",
+          "fcm_id": "driver-fcm-1",
+          "otp": "<images driverOtp>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "driver": {
+              "__v": 0,
+              "_id": "<id64>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "bankName": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deletedAt": null,
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "REJECTED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id64>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": true,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onboarding": {
+                "eligible": false,
+                "managed_by_business": true,
+                "reasons": [
+                  {
+                    "code": "DRIVER_NOT_VERIFIED",
+                    "message": "The driver is not verified"
+                  },
+                  {
+                    "code": "VEHICLE_NOT_VERIFIED",
+                    "message": "The assigned vehicle is not verified"
+                  }
+                ],
+                "status": "REJECTED"
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "REJECTED",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "lastActive": "<date>",
+              "tokenExpiresIn": "7d"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "images: upload with no sign-in",
       "request": {
         "method": "POST",
         "path": "/api/images/upload"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "images: delete with no sign-in",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/images/delete/contract-folder%2Fimage-1"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "images: upload without a file",
+      "request": {
+        "method": "POST",
+        "path": "/api/images/upload",
+        "auth": "bearer"
       },
       "response": {
         "status": 400,
@@ -3099,7 +3432,8 @@
       "step": "images: upload a text file",
       "request": {
         "method": "POST",
-        "path": "/api/images/upload"
+        "path": "/api/images/upload",
+        "auth": "bearer"
       },
       "response": {
         "status": 400,
@@ -3115,7 +3449,8 @@
       "step": "images: upload",
       "request": {
         "method": "POST",
-        "path": "/api/images/upload"
+        "path": "/api/images/upload",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -3140,7 +3475,8 @@
       "step": "images: upload, default folder",
       "request": {
         "method": "POST",
-        "path": "/api/images/upload"
+        "path": "/api/images/upload",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -3165,7 +3501,8 @@
       "step": "images: delete",
       "request": {
         "method": "DELETE",
-        "path": "/api/images/delete/contract-folder%2Fimage-1"
+        "path": "/api/images/delete/contract-folder%2Fimage-1",
+        "auth": "bearer"
       },
       "response": {
         "status": 200,
@@ -3185,7 +3522,8 @@
       "step": "images: delete one that is not there",
       "request": {
         "method": "DELETE",
-        "path": "/api/images/delete/missing"
+        "path": "/api/images/delete/missing",
+        "auth": "bearer"
       },
       "response": {
         "status": 500,
