@@ -13,7 +13,7 @@ Backend `AutoMet_Webend_Apis`, admin `AutoMet_Admin`, rider app `AutoMet_user`, 
 | Tenant isolation, live over HTTP | PASS | 79 of 79: two businesses, 25 by-id attacks, header spoofing, wrong-app tokens, chat |
 | Admin dashboard | PASS | type check + build, lint clean, 24 of 24 tests, 0 dependency vulnerabilities |
 | Rider and driver apps, unit tests | PASS | all modules, 41 (rider) and 33 (driver) tests; 21 in each are the chat rules |
-| Rider and driver apps, two real phones | PASS for chat | sign-in, active ride, chat both directions with live refresh, read marks, day headings, left/right bubbles, typing, chat-off and ride-ended banners, unread badge on both apps, notification tap into the chat (rider app only) |
+| Rider and driver apps, two real phones | PASS for chat, app kill and a stalled connection | sign-in, active ride, chat both directions with live refresh, read marks, day headings, left/right bubbles, typing, chat-off and ride-ended banners, unread badge on both apps, notification tap into the chat (both apps); both apps killed mid-ride and reopened, and the server frozen during a send, then resumed (message arrived once) |
 | Dependencies (backend, production) | 28 findings to 8, none critical or high | `npm audit fix` (no breaking changes); the 8 left are moderate and need a major upgrade |
 
 ## Fixed in this cycle because it would have hurt on launch day
@@ -22,7 +22,10 @@ Backend `AutoMet_Webend_Apis`, admin `AutoMet_Admin`, rider app `AutoMet_user`, 
 2. **Four critical and twelve high dependency vulnerabilities** (websocket-driver, protobufjs, proxy-addr, fast-xml-parser, ws, body-parser, mongoose and others), all fixed without breaking changes.
 3. **Chat push notifications were silent.** The apps never created the Android channels the push named, so every message landed in a quiet fallback channel on Android 8 and later. A high-importance chat channel now exists, the push names it, a tap opens the right chat, and a newer message replaces an older one.
 4. **Typing in the chat lost text** (scrolling moved keyboard focus off the input), and the timestamp reader would have crashed on Android 7. Both fixed and covered by tests.
-5. `local.properties` (a machine path) was tracked in both app repositories; it is now untracked and ignored.
+5. **A database outage signed everyone out.** While the database could not be reached the server answered 401 (and leaked the raw error); the apps sign the person out on a 401. It is now a generic 503 the apps retry; token problems keep their 401s. Found by freezing the server during a phone test.
+6. **Image upload and delete were open to anyone;** now they need a signed-in rider or driver.
+7. **The finance role could read every driver's phone number** through the live map; it now needs the permission to see drivers.
+8. `local.properties` (a machine path) was tracked in both app repositories; it is now untracked and ignored.
 
 ## What only the owner can do before real riders arrive
 
@@ -39,9 +42,9 @@ These are not code and could not be done or tested from here.
 
 ## Known gaps (not blockers for a controlled launch)
 
-- The rider app's Android lint has never completed on this machine (5.9 GB RAM); the driver app's has.
+- The rider app's full Android lint has never completed on this machine (5.9 GB RAM; retried this cycle and stopped after 20 minutes); the driver app's has. The rider release build's fatal-issue lint check passes.
 - Android instrumented tests and an automated multi-device concurrency suite do not exist; device checks were manual.
-- The unread badge and notification tap were checked on the rider phone and driver phone through the in-app paths; the driver-side notification tap was not run.
+- The notification tap was run through its intent on both phones; a push actually arriving from Google's servers was not.
 - `npm run test:postgres` and `test:parity` use Unix-style variable syntax and fail on Windows cmd; run them from Git Bash.
 - 8 moderate dependency advisories remain; each needs a major-version upgrade.
 - Tolls and tax-rule versions are not stored; there is no online payment.
