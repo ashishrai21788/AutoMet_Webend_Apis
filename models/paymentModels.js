@@ -74,6 +74,9 @@ const paymentSchema = new mongoose.Schema({
   refund: { type: mongoose.Schema.Types.Mixed, default: null },
   /** cash only: { collectedMinor, confirmedAt, confirmedBy, dispute: { by, reason, at }, resolution: { by, action, reason, at } } */
   cash: { type: mongoose.Schema.Types.Mixed, default: null },
+  /** the one payment that pays this ride (claimed atomically through a unique index); a later success for the same ride is a duplicate capture */
+  primary: { type: Boolean, default: false },
+  duplicateCapture: { type: Boolean, default: false },
   /** bumped on every change: an update names the version it read, so two writers cannot silently overwrite each other */
   version: { type: Number, default: 0 },
   succeededAt: { type: Date, default: null },
@@ -82,6 +85,8 @@ const paymentSchema = new mongoose.Schema({
 }, { collection: 'payments' });
 paymentSchema.index({ tenantId: 1, idempotencyKey: 1 }, { unique: true });
 paymentSchema.index({ tenantId: 1, tripId: 1, purpose: 1 }, { unique: true, partialFilterExpression: { live: true } });
+// a different key shape from the live-payment index above: the Postgres engine treats two indexes with the same key shape as one
+paymentSchema.index({ tenantId: 1, purpose: 1, tripId: 1, primary: 1 }, { unique: true, partialFilterExpression: { primary: true } });
 paymentSchema.index({ provider: 1, providerOrderId: 1 });
 paymentSchema.index({ tenantId: 1, driverId: 1, createdAt: -1 });
 

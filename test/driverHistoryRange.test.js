@@ -43,8 +43,9 @@ const seed = async () => {
 /** What the range must show, worked out from the rows themselves with the long-standing exact rule. */
 const expectedIds = (range) => {
   const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 5.5 * 3600 * 1000);
-  const start0 = start > now ? new Date(start.getTime() - DAY) : start;
+  // the start of the business's own day (India time, UTC+5.5): the UTC date is a day behind it for the first five and a half hours of the day
+  const OFFSET = 5.5 * 3600 * 1000;
+  const start0 = new Date(Math.floor((now.getTime() + OFFSET) / DAY) * DAY - OFFSET);
   const b = DT.rangeBounds(range, now, start0);
   return db.TripDetails.rows
     .filter((t) => t.driver_id === 'D1' && DT.HISTORY_STATUSES.includes(t.status) && DT.inWindow(t, b.from, b.to))

@@ -155,6 +155,9 @@ exports.webhook = async (req, res) => {
   }
 };
 
+/** Scheduled upkeep for every business (see lib/payments/jobs.js). Protected by the scheduler secret in the route. */
+exports.runJobs = guard(async (req, res) => ok(res, { businesses: await require('../lib/payments/jobs').runAll() }));
+
 // ---------------------------------------------------------------- dashboard
 
 const who = (req) => ({ id: req.admin.adminId, email: req.admin.email });
