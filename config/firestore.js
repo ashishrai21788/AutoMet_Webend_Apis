@@ -159,6 +159,45 @@ const isFcmReady = () => {
  * @param {{ dataOnly?: boolean }} [options] - If dataOnly=true, omit top-level `notification` so Android always invokes onMessageReceived (high-priority data message). title/body/channel_id are copied into `data` for client display.
  * @returns {{ success: true, messageId: string } | { success: false, error: string }}
  */
+const buildFcmMessage = (fcmToken, payload, options = {}) => {
+  const dataOnly = options.dataOnly === true;
+  const channelId = (payload.channelId && typeof payload.channelId === 'string') ? payload.channelId.trim() : 'default';
+  const title = payload.title || 'Notification';
+  const body = payload.body || '';
+
+  const message = {
+    token: fcmToken.trim(),
+    android: {
+      priority: 'high'
+    },
+    data: {}
+  };
+
+  if (payload.data && typeof payload.data === 'object') {
+    for (const [k, v] of Object.entries(payload.data)) {
+      message.data[String(k)] = typeof v === 'string' ? v : JSON.stringify(v);
+    }
+  }
+
+  if (dataOnly) {
+    if (message.data.title == null || message.data.title === '') message.data.title = title;
+    if (message.data.body == null || message.data.body === '') message.data.body = body;
+    if (message.data.channel_id == null || message.data.channel_id === '') message.data.channel_id = channelId;
+  } else {
+    message.notification = { title, body };
+    message.android.notification = {
+      channelId,
+      sound: 'default',
+      priority: 'high',
+      defaultVibrateTimings: true
+    };
+    // The tap action opens a screen of the app directly; the tag makes a newer notification replace an older one with the same tag.
+    if (typeof payload.clickAction === 'string' && payload.clickAction.trim()) message.android.notification.clickAction = payload.clickAction.trim();
+    if (typeof payload.tag === 'string' && payload.tag.trim()) message.android.notification.tag = payload.tag.trim();
+  }
+  return message;
+};
+
 const sendFCMNotification = async (fcmToken, payload, options = {}) => {
   try {
     const adm = getAdmin();
@@ -168,39 +207,7 @@ const sendFCMNotification = async (fcmToken, payload, options = {}) => {
     if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
       return { success: false, error: 'FCM token is required' };
     }
-    const dataOnly = options.dataOnly === true;
-    const channelId = (payload.channelId && typeof payload.channelId === 'string') ? payload.channelId.trim() : 'default';
-    const title = payload.title || 'Notification';
-    const body = payload.body || '';
-
-    const message = {
-      token: fcmToken.trim(),
-      android: {
-        priority: 'high'
-      },
-      data: {}
-    };
-
-    if (payload.data && typeof payload.data === 'object') {
-      for (const [k, v] of Object.entries(payload.data)) {
-        message.data[String(k)] = typeof v === 'string' ? v : JSON.stringify(v);
-      }
-    }
-
-    if (dataOnly) {
-      if (message.data.title == null || message.data.title === '') message.data.title = title;
-      if (message.data.body == null || message.data.body === '') message.data.body = body;
-      if (message.data.channel_id == null || message.data.channel_id === '') message.data.channel_id = channelId;
-    } else {
-      message.notification = { title, body };
-      message.android.notification = {
-        channelId,
-        sound: 'default',
-        priority: 'high',
-        defaultVibrateTimings: true
-      };
-    }
-
+    const message = buildFcmMessage(fcmToken, payload, options);
     const messageId = await adm.messaging().send(message);
     return { success: true, messageId };
   } catch (error) {
@@ -216,6 +223,7 @@ module.exports = {
   getAdmin,
   isFcmReady,
   sendFCMNotification,
+  buildFcmMessage,
   parseServiceAccount,
   getFcmStatus
 };

@@ -57,8 +57,10 @@ const conversation = async (tripId) => (await ChatMessage.find({ tripId }).limit
 
 async function nameOf(role, id) {
   try {
-    const doc = await createModel(role === 'rider' ? 'users' : 'drivers').findOne(role === 'rider' ? { userId: id } : { driverId: id }).select('firstName name').lean();
-    return (doc && (doc.firstName || doc.name)) || (role === 'rider' ? 'Your rider' : 'Your driver');
+    const doc = await createModel(role === 'rider' ? 'users' : 'drivers').findOne(role === 'rider' ? { userId: id } : { driverId: id }).select('firstName lastName name').lean();
+    // the full name, the same as the chat header shows when the screen is opened from inside the app
+    const full = doc && [doc.firstName, doc.lastName].filter((p) => typeof p === 'string' && /[\p{L}\p{N}]/u.test(p)).map((p) => p.trim()).join(' ');
+    return full || (doc && doc.name) || (role === 'rider' ? 'Your rider' : 'Your driver');
   } catch (e) { return role === 'rider' ? 'Your rider' : 'Your driver'; }
 }
 
@@ -70,8 +72,8 @@ async function notify({ trip, who, row }) {
   try {
     const title = await nameOf(who.role, who.me);
     await (toRider ? push.sendPushToUser : push.sendPushToDriver)(who.other, {
-      title, body: row.text.slice(0, 120), channelId: toRider ? 'user_notifications' : 'driver_notifications',
-      data: { type: 'chat_message', trip_id: trip.trip_id, message_id: row.messageId }
+      title, body: row.text.slice(0, 120), channelId: 'chat_messages', clickAction: 'OPEN_RIDE_CHAT', tag: `chat_${trip.trip_id}`,
+      data: { type: 'chat_message', trip_id: trip.trip_id, message_id: row.messageId, sender_name: title }
     });
   } catch (e) { console.warn('[chat] push failed:', e.message); }
 }

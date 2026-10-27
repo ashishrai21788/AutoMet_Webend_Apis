@@ -60,6 +60,10 @@ test('a rider writes; it is stored for the business, the driver is told live and
   assert.equal(sent.push[0].data.trip_id, 'T1');
   assert.equal(sent.push[0].body, 'Please wait at gate 2');
   assert.match(sent.push[0].title, /Asha/);
+  // a tap opens this ride's chat; the dedicated channel makes it a heads-up with sound; the tag lets a newer message replace an older one
+  assert.deepEqual([sent.push[0].channelId, sent.push[0].clickAction, sent.push[0].tag], ['chat_messages', 'OPEN_RIDE_CHAT', 'chat_T1']);
+  assert.equal(sent.push[0].data.sender_name, 'Asha Rider', 'the full name, as the chat header shows it');
+  assert.equal(sent.push[0].title, 'Asha Rider');
 });
 
 test('the driver answers; each side reads the conversation in order with its own messages marked mine, and unread counts follow', async () => {
