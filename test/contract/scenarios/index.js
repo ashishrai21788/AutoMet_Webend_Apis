@@ -8,5 +8,6 @@ module.exports = {
   uploads: require('./uploads'),
   setupDrafts: require('./setupDrafts'),
   sos: require('./sos'),
+  payments: require('./payments'),
   legacy: require('./legacy')
 };

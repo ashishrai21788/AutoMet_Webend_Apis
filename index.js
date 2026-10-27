@@ -7,6 +7,7 @@ const mongoose = require('./lib/db/mongoose');
 
 // Load .env from project root (where this file lives) so it works regardless of cwd
 dotenv.config({ path: path.join(__dirname, '.env') });
+require('./lib/payments/config').assertSafeStartup(); // a production server with the mock payment gateway switched on refuses to start
 
 const connectDB = require('./config/db');
 const { validateCloudinaryConfig, testCloudinaryConnection } = require('./config/cloudinary');
@@ -288,6 +289,7 @@ app.use('/api/v1/driver/earnings', require('./routes/driverEarningsRoutes')); //
 app.use('/api/v1/driver/account', require('./routes/driverAccountRoutes')); // The driver's own data rights: a copy of their data, and deleting the account
 app.use('/api/v1/driver/summary', require('./routes/driverSummaryRoutes')); // The driver's own numbers: today's trips and earnings, rating, vehicle, area, alerts
 app.use('/api/v1/public', require('./routes/publicRoutes')); // Public business config for the rider/driver apps (X-App-Id), no sign-in
+app.use('/api/v1/payments', require('./routes/paymentRoutes')); // Payments: online (UPI) and cash collection, commission, provider webhooks
 app.use('/api/v1/trips', require('./routes/tripRoutes')); // Trip create-request (30s wait), driver-response, check-timeouts
 
 // JSON Syntax Error Handler - must come before general error handler

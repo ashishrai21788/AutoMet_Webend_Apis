@@ -228,6 +228,18 @@ router.get('/business/alerts', ...read, ops.alerts);
 router.get('/business/sos', requireAdmin('support.manage'), withBusiness, sosAdmin.list);
 router.post('/business/sos/:id/acknowledge', requireAdmin('support.manage'), withBusiness, sosAdmin.acknowledge);
 router.post('/business/sos/:id/resolve', requireAdmin('support.manage'), withBusiness, sosAdmin.resolve);
+
+// ---- payments: online and cash collections, refunds, commission owed by drivers, reconciliation (see controllers/paymentsController.js)
+const paymentsAdmin = require('../controllers/paymentsController');
+router.get('/business/payments', requireAdmin('payments.view'), withBusiness, paymentsAdmin.adminList);
+router.get('/business/payments/:id', requireAdmin('payments.view'), withBusiness, paymentsAdmin.adminGet);
+router.post('/business/payments/:id/refund', requireAdmin('payments.manage'), withBusiness, paymentsAdmin.adminRefund);
+router.post('/business/payments/:id/cash/resolve', requireAdmin('payments.manage'), withBusiness, paymentsAdmin.adminResolveCash);
+router.get('/business/commission', requireAdmin('payments.view'), withBusiness, paymentsAdmin.adminCommission);
+router.post('/business/commission/drivers/:driverId/recover', requireAdmin('payments.manage'), withBusiness, paymentsAdmin.adminRecover);
+router.get('/business/reconciliation', requireAdmin('payments.view'), withBusiness, paymentsAdmin.adminReconcileList);
+router.post('/business/reconciliation/run', requireAdmin('payments.manage'), withBusiness, paymentsAdmin.adminReconcileRun);
+router.post('/business/reconciliation/:id/resolve', requireAdmin('payments.manage'), withBusiness, paymentsAdmin.adminReconcileResolve);
 router.get('/business/reports/summary', requireAdmin('trips.view'), withBusiness, reports.summary);
 router.get('/business/export/trips.csv', requireAdmin('trips.view'), withBusiness, reports.tripsCsv);
 router.get('/business/export/riders.csv', requireAdmin('riders.view'), withBusiness, reports.ridersCsv);

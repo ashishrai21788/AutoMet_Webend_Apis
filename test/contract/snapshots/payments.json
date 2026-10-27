@@ -1,0 +1,1918 @@
+{
+  "scenario": "payments",
+  "steps": [
+    {
+      "step": "setup: platform owner signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: list businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "admin@contract.test",
+          "name": "Client Admin",
+          "role": "client_admin",
+          "tenantId": "<defaultAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "admin@contract.test",
+            "id": "<a_2>",
+            "mustChangePassword": true,
+            "name": "Client Admin",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "admin@contract.test",
+          "password": "<tempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": true,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<tempPassword>",
+          "newPassword": "Client-Admin-Pass-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": false,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: market",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: region",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "name": "Pune"
+            }
+          ],
+          "radiusKm": 30,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "city": "Pune",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_3>",
+                "radiusKm": 30,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: vehicle category",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Sedan",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_4>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "mapIconUrl": "",
+            "name": "Sedan",
+            "passengerCapacity": 4,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: fare rule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 40,
+          "bookingFee": 5,
+          "categoryId": "<vc_4>",
+          "minimumFare": 70,
+          "perKm": 12,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 40,
+            "bookingFee": 5,
+            "categoryId": "<vc_4>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_5>",
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "1 Main Road",
+            "state": "Maharashtra"
+          },
+          "dateOfBirth": "1990-04-02",
+          "eligibleCategoryId": "<vc_4>",
+          "email": "dee@contract.test",
+          "fullName": "Dee Driver",
+          "operatingRegionId": "<rg_3>",
+          "phone": "+919811111111"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "White",
+          "luggageCapacity": 2,
+          "make": "Maruti",
+          "model": "Dzire",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH12AB1234",
+          "status": "ACTIVE",
+          "year": 2021
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_6>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: assign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_7>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: the driver is now eligible",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": {
+              "colour": null,
+              "model": "Maruti Dzire",
+              "registrationNumber": "MH12AB1234",
+              "type": "Sedan"
+            },
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments: register a rider",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/register",
+        "body": {
+          "name": "Pia Payer",
+          "phone": "+919822222222"
+        }
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "Verify using the OTP sent to your phone."
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id8>",
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deletedAt": null,
+              "deviceId": null,
+              "email": null,
+              "fcmToken": null,
+              "firstName": "Pia",
+              "fullName": "Pia Payer",
+              "id": "<id8>",
+              "isLoggedin": false,
+              "isPhoneVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Payer",
+              "phone": "+919822222222",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<defaultAppId>",
+              "updatedAt": "<date>",
+              "userId": "<payerId>"
+            }
+          },
+          "message": "User registered successfully. OTP sent for verification.",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments: verify the rider",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/verify-otp",
+        "body": {
+          "device_id": "payer-device",
+          "fcm_id": "payer-fcm",
+          "otp": "<payerOtp>",
+          "userId": "<payerId>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "tokenExpiresIn": "7d"
+            },
+            "user": {
+              "__v": 0,
+              "_id": "<id8>",
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "createdAt": "<date>",
+              "deletedAt": null,
+              "deviceId": "payer-device",
+              "email": null,
+              "fcmToken": "payer-fcm",
+              "firstName": "Pia",
+              "fullName": "Pia Payer",
+              "id": "<id8>",
+              "isLoggedin": true,
+              "isPhoneVerified": true,
+              "lastActive": "<date>",
+              "lastName": "Payer",
+              "phone": "+919822222222",
+              "profilePhoto": null,
+              "role": "user",
+              "suspendedAt": null,
+              "suspendedReason": null,
+              "tenantId": "<defaultAppId>",
+              "updatedAt": "<date>",
+              "userId": "<payerId>"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments driver: login",
+      "request": {
+        "method": "POST",
+        "path": "/api/drivers/login",
+        "body": {
+          "device_id": "driver-device-1",
+          "fcm_id": "driver-fcm-1",
+          "phoneNumber": "+919811111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": null,
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "bankName": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deletedAt": null,
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": true,
+              "isLoggedin": false,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "APPROVED",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "otp": {
+              "expiresAt": "<date>",
+              "message": "OTP sent to your registered phone number. Please verify to complete login."
+            }
+          },
+          "message": "OTP sent to your registered phone number",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments driver: verify OTP",
+      "request": {
+        "method": "POST",
+        "path": "/api/otp/verify",
+        "body": {
+          "device_id": "driver-device-1",
+          "driverId": "<driverId>",
+          "fcm_id": "driver-fcm-1",
+          "otp": "<payments driverOtp>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accessToken": "<jwt>",
+            "driver": {
+              "__v": 0,
+              "_id": "<id9>",
+              "aadhaarNumber": null,
+              "accessToken": "<jwt>",
+              "accountStatus": "ACTIVE",
+              "address": {
+                "city": "Pune",
+                "country": "IN",
+                "line": "1 Main Road",
+                "state": "Maharashtra"
+              },
+              "bankAccount": {
+                "accountHolderName": null,
+                "accountNumber": null,
+                "bankName": null,
+                "ifscCode": null
+              },
+              "cancelledRides": 0,
+              "chassisNumber": null,
+              "createdAt": "<date>",
+              "createdByAdmin": "<a_2>",
+              "currentLocation": {
+                "coordinates": [
+                  0,
+                  0
+                ],
+                "type": "Point"
+              },
+              "dateOfBirth": "<date>",
+              "deletedAt": null,
+              "deviceId": "driver-device-1",
+              "driverId": "<driverId>",
+              "driverVerificationStatus": "APPROVED",
+              "drivingLicenseImages": [],
+              "drivingLicenseIssueDate": null,
+              "drivingLicenseIssuingAuthority": null,
+              "eligibleCategoryId": "<vc_4>",
+              "email": "dee@contract.test",
+              "engineNumber": null,
+              "expiry_date": null,
+              "fcmToken": "driver-fcm-1",
+              "firstName": "Dee",
+              "fuleType": "",
+              "fullName": "Dee Driver",
+              "id": "<id9>",
+              "idProofImages": [],
+              "id_proof_type": null,
+              "isDocumentsUploaded": true,
+              "isLoggedin": true,
+              "isOnline": false,
+              "isPhoneVerified": false,
+              "isProfileComplete": false,
+              "isVehicleAdded": true,
+              "isVerified": false,
+              "lastActive": "<date>",
+              "lastName": "Driver",
+              "licenseExpiry": null,
+              "licenseNumber": null,
+              "license_type": null,
+              "locationAccuracyM": null,
+              "locationHeading": null,
+              "locationRegionId": null,
+              "locationSpeedKph": null,
+              "locationUpdatedAt": null,
+              "membership": {
+                "cancelReason": null,
+                "cancelledAt": null,
+                "endDate": "<date>",
+                "isCancelled": false,
+                "paymentStatus": "Pending",
+                "plan": "Free",
+                "startDate": "<date>",
+                "transactionId": null
+              },
+              "onboarding": {
+                "eligible": true,
+                "managed_by_business": true,
+                "reasons": [],
+                "status": "APPROVED"
+              },
+              "onlineAs": 0,
+              "operatingRegionId": "<rg_3>",
+              "phone": "+919811111111",
+              "profilePhoto": "https://cdn.example.com/drivers/default.jpg",
+              "rating": 0,
+              "role": "driver",
+              "seatingCapacity": "",
+              "tenantId": "<defaultAppId>",
+              "totalRides": 0,
+              "updatedAt": "<date>",
+              "vehicleColor": null,
+              "vehicleInsurance": {
+                "insuranceAmount": null,
+                "insuranceCompany": null,
+                "insuranceExpiryDate": null,
+                "isInsuranceValid": false,
+                "policyNumber": null
+              },
+              "vehicleInsuranceImages": [],
+              "vehicleManufacturingYear": null,
+              "vehicleModel": "Maruti Dzire",
+              "vehicleNumber": "MH12AB1234",
+              "vehicleRegistrationImages": [],
+              "vehicleType": "Sedan",
+              "verificationExpiresAt": null,
+              "verification_status": "APPROVED",
+              "walletBalance": 0,
+              "wentOfflineAt": null,
+              "wentOfflineReason": null
+            },
+            "loginTime": "<date>",
+            "sessionInfo": {
+              "isLoggedin": true,
+              "lastActive": "<date>",
+              "tokenExpiresIn": "7d"
+            }
+          },
+          "message": "OTP verified successfully",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments: methods needs a session",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/payments/methods"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: create needs a session",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/create",
+        "body": {}
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: read a ride's payment needs a session",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/payments/trip/T_x"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: confirm cash needs a session",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/cash/confirm",
+        "body": {}
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: dispute cash needs a session",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/cash/dispute",
+        "body": {}
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: commission needs a session",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/payments/commission"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: pay commission needs a session",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/commission/pay",
+        "body": {}
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: simulate needs a session",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/mock/simulate",
+        "body": {}
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: refresh needs a session",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/pay_x/refresh",
+        "body": {}
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: a driver cannot open a rider payment",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/create",
+        "body": {
+          "trip_id": "T_x"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Role mismatch"
+          },
+          "message": "This endpoint requires role: user",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: a rider cannot confirm cash",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/cash/confirm",
+        "body": {
+          "trip_id": "T_x"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Role mismatch"
+          },
+          "message": "This endpoint requires role: driver",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: a rider has no commission",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/payments/commission",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Role mismatch"
+          },
+          "message": "This endpoint requires role: driver",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: a rider cannot pay commission",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/commission/pay",
+        "body": {
+          "amount_minor": 100
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Role mismatch"
+          },
+          "message": "This endpoint requires role: driver",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: a driver cannot refresh a rider payment",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/pay_x/refresh",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Role mismatch"
+          },
+          "message": "This endpoint requires role: user",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: methods (cash only by default)",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/payments/methods",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "methods": [
+              "CASH"
+            ],
+            "mock": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments: create without a ride",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/create",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "BAD_REQUEST",
+          "message": "trip_id is required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: online payment is not enabled",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/create",
+        "body": {
+          "trip_id": "T_x"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "METHOD_NOT_ENABLED",
+          "message": "online payment is not enabled for this business",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: an unknown ride",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/payments/trip/T_missing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "Ride not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: confirm cash needs a ride",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/cash/confirm",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "BAD_REQUEST",
+          "message": "trip_id is required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: confirm cash with a bad amount",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/cash/confirm",
+        "body": {
+          "collected_minor": "lots",
+          "trip_id": "T_x"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "BAD_AMOUNT",
+          "message": "collected_minor must be whole minor units",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: confirm cash for an unknown ride",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/cash/confirm",
+        "body": {
+          "trip_id": "T_missing"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "ride not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: dispute for an unknown ride",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/cash/dispute",
+        "body": {
+          "reason": "x y z",
+          "trip_id": "T_missing"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "ride not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: the driver's commission is nil",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/payments/commission",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accrued_minor": 0,
+            "collected_minor": 0,
+            "currency": "INR",
+            "outstanding_minor": 0,
+            "payable_minor": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments: pay commission needs a whole amount",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/commission/pay",
+        "body": {
+          "amount_minor": 10.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "BAD_AMOUNT",
+          "message": "amount_minor must be whole minor units",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: pay commission when online payment is off",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/commission/pay",
+        "body": {
+          "amount_minor": 100
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "METHOD_NOT_ENABLED",
+          "message": "online payment is not enabled for this business",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: refresh an unknown payment",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/pay_missing/refresh",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "Payment not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments: the simulator does not exist when the mock gateway is off",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/mock/simulate",
+        "body": {
+          "payment_id": "pay_x",
+          "scenario": "SUCCESS"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "Not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments webhook: the mock gateway is off",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/webhook/mock",
+        "body": {
+          "id": "e1"
+        }
+      },
+      "response": {
+        "status": 503,
+        "contentType": "application/json",
+        "body": {
+          "outcome": "MOCK_DISABLED",
+          "received": false
+        }
+      }
+    },
+    {
+      "step": "payments webhook: an unknown provider",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/webhook/nope",
+        "body": {
+          "id": "e1"
+        }
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "outcome": "UNKNOWN_PROVIDER",
+          "received": false
+        }
+      }
+    },
+    {
+      "step": "payments webhook: a real provider that is not configured",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/payments/webhook/razorpay",
+        "body": {
+          "id": "e1"
+        }
+      },
+      "response": {
+        "status": 503,
+        "contentType": "application/json",
+        "body": {
+          "outcome": "PROVIDER_NOT_CONFIGURED",
+          "received": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: no session",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/payments"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: list (empty)",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/payments",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [],
+            "total": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: an unknown payment",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/payments/pay_missing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "Payment not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: refund an unknown payment",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/payments/pay_missing/refund",
+        "body": {
+          "amount_minor": 100,
+          "idempotency_key": "k1",
+          "reason": "test"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "payment not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: refund with a bad amount",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/payments/pay_missing/refund",
+        "body": {
+          "amount_minor": 1.5,
+          "idempotency_key": "k1",
+          "reason": "test"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "BAD_AMOUNT",
+          "message": "amount_minor must be whole, positive minor units",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: resolve cash for an unknown payment",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/payments/pay_missing/cash/resolve",
+        "body": {
+          "action": "CONFIRM",
+          "reason": "test"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "payment not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: commission report (empty)",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/commission",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "currency": "INR",
+            "drivers": [],
+            "totals": {
+              "accrued_minor": 0,
+              "collected_minor": 0,
+              "outstanding_minor": 0,
+              "payable_minor": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: recover commission (nothing to recover)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/commission/drivers/<driverId>/recover",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "duplicate": false,
+            "recovered_minor": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: reconciliation run (nothing to find)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/reconciliation/run",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "checked": {
+              "events": 0,
+              "ledgerTransactions": 0,
+              "payments": 0,
+              "refunds": 0,
+              "trips": 0
+            },
+            "discrepancies": [],
+            "newCount": 0,
+            "skippedProviderChecks": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: reconciliation findings",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/reconciliation?status=open",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: resolve an unknown finding",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/reconciliation/dis_missing/resolve",
+        "body": {
+          "note": "test"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "error": "NOT_FOUND",
+          "message": "finding not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: create a support user",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "support-pay@contract.test",
+          "name": "Support",
+          "role": "support"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "support-pay@contract.test",
+            "id": "<a_10>",
+            "mustChangePassword": true,
+            "name": "Support",
+            "role": "support",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: support signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "support-pay@contract.test",
+          "password": "<supportTempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "support-pay@contract.test",
+              "id": "<a_10>",
+              "mustChangePassword": true,
+              "name": "Support",
+              "role": "support",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: support chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<supportTempPassword>",
+          "newPassword": "Support-Pass-12345"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "support-pay@contract.test",
+              "id": "<a_10>",
+              "mustChangePassword": false,
+              "name": "Support",
+              "role": "support",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payments admin: support cannot list payments",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/payments",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: support cannot refund",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/payments/pay_missing/refund",
+        "body": {
+          "amount_minor": 100,
+          "idempotency_key": "k1",
+          "reason": "test"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: support cannot see commission",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/commission",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payments admin: a rider token is not a staff session",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/payments",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Invalid token",
+          "success": false
+        }
+      }
+    }
+  ]
+}

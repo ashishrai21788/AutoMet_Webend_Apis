@@ -1738,7 +1738,10 @@
                 "total": 294.8
               },
               "fare_source": "BUSINESS_RULES",
+              "paid_at": null,
+              "payment_id": null,
               "payment_mode": "CASH",
+              "payment_status": "UNPAID",
               "pickup": {
                 "address": "Shivajinagar, Pune",
                 "lat": 18.5314,
@@ -1869,7 +1872,10 @@
                 "total": 294.8
               },
               "fare_source": "BUSINESS_RULES",
+              "paid_at": null,
+              "payment_id": null,
               "payment_mode": "CASH",
+              "payment_status": "UNPAID",
               "pickup": {
                 "address": "Shivajinagar, Pune",
                 "lat": 18.5314,
@@ -2023,7 +2029,10 @@
               "total": 294.8
             },
             "fare_source": "BUSINESS_RULES",
+            "paid_at": null,
+            "payment_id": null,
             "payment_mode": "CASH",
+            "payment_status": "UNPAID",
             "pickup": {
               "address": "Shivajinagar, Pune",
               "lat": 18.5314,
@@ -2505,7 +2514,10 @@
               "total": 294.8
             },
             "fare_source": "BUSINESS_RULES",
+            "paid_at": null,
+            "payment_id": null,
             "payment_mode": "CASH",
+            "payment_status": "UNPAID",
             "pickup": {
               "address": "Shivajinagar, Pune",
               "lat": 18.5314,
@@ -2755,7 +2767,10 @@
               "total": 294.8
             },
             "fare_source": "BUSINESS_RULES",
+            "paid_at": null,
+            "payment_id": null,
             "payment_mode": "CASH",
+            "payment_status": "UNPAID",
             "pickup": {
               "address": "Shivajinagar, Pune",
               "lat": 18.5314,
@@ -2926,7 +2941,10 @@
               "total": 294.8
             },
             "fare_source": "BUSINESS_RULES",
+            "paid_at": null,
+            "payment_id": null,
             "payment_mode": "CASH",
+            "payment_status": "UNPAID",
             "pickup": {
               "address": "Shivajinagar, Pune",
               "lat": 18.5314,
@@ -3078,7 +3096,10 @@
               "total": 294.8
             },
             "fare_source": "BUSINESS_RULES",
+            "paid_at": null,
+            "payment_id": null,
             "payment_mode": "CASH",
+            "payment_status": "UNPAID",
             "pickup": {
               "address": "Shivajinagar, Pune",
               "lat": 18.5314,
@@ -3261,7 +3282,10 @@
               },
               "fare_source": "BUSINESS_RULES",
               "needs_receipt": true,
+              "paid_at": null,
+              "payment_id": null,
               "payment_mode": "CASH",
+              "payment_status": "UNPAID",
               "pickup": {
                 "address": "Shivajinagar, Pune",
                 "lat": 18.5314,
@@ -3549,7 +3573,10 @@
               "total": 294.8
             },
             "fare_source": "BUSINESS_RULES",
+            "paid_at": null,
+            "payment_id": null,
             "payment_mode": "CASH",
+            "payment_status": "UNPAID",
             "pickup": {
               "address": "Shivajinagar, Pune",
               "lat": 18.5314,
@@ -4039,7 +4066,10 @@
               "total": 294.8
             },
             "fare_source": "BUSINESS_RULES",
+            "paid_at": null,
+            "payment_id": null,
             "payment_mode": "CASH",
+            "payment_status": "UNPAID",
             "pickup": {
               "address": "Shivajinagar, Pune",
               "lat": 18.5314,

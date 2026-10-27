@@ -105,6 +105,13 @@ async function startRealPostgres(url) {
   };
 }
 
+let tearingDown = false;
+process.on('uncaughtException', (e) => {
+  if (tearingDown && /_IsTransactionBlock|pglite-socket/.test(String((e && e.stack) || e))) return;
+  console.error(e);
+  process.exit(1);
+});
+
 async function startPostgres() {
   if (process.env.CONTRACT_DATABASE_URL) return startRealPostgres(process.env.CONTRACT_DATABASE_URL);
   const { PGlite } = require('@electric-sql/pglite');
@@ -120,7 +127,18 @@ async function startPostgres() {
     db,
     // the database lives in this process, so the harness reads and writes it directly (no second connection)
     query: (text, params) => db.query(text, params),
-    stop: async () => { await server.stop(); await db.close(); }
+    // Shut down in an order that cannot trip pglite-socket: let the killed server's connections drain, stop the socket, then close the
+    // database. A connection still closing when the database goes away makes pglite-socket throw from a timer (seen on Linux CI only);
+    // that one known teardown error is ignored, everything else still fails the run.
+    stop: async () => {
+      tearingDown = true;
+      await new Promise((r) => setTimeout(r, 500));
+      try { await server.stop(); } catch (e) { /* already stopped */ }
+      await new Promise((r) => setTimeout(r, 200));
+      try { await db.close(); } catch (e) { /* already closed */ }
+      await new Promise((r) => setTimeout(r, 200));
+      tearingDown = false;
+    }
   };
 }
 

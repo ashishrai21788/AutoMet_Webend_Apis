@@ -137,4 +137,27 @@ refundSchema.index({ tenantId: 1, idempotencyKey: 1 }, { unique: true });
 refundSchema.index({ tenantId: 1, paymentId: 1 });
 const PaymentRefund = mongoose.models.PaymentRefund || mongoose.model('PaymentRefund', refundSchema);
 
-module.exports = { LedgerTxn, Payment, PaymentEvent, PaymentRefund };
+/**
+ * Something reconciliation found that does not add up (see lib/payments/reconcile.js). It is never fixed automatically: it stays OPEN until
+ * a person records what was done, and a resolved one that is found again is reopened. `key` makes the same finding one record.
+ */
+const discrepancySchema = new mongoose.Schema({
+  tenantId: { type: String, required: true, index: true },
+  discrepancyId: { type: String, required: true, unique: true },
+  key: { type: String, required: true },
+  type: { type: String, required: true },
+  ref: { type: String, default: null },
+  detail: { type: String, default: '' },
+  status: { type: String, enum: ['OPEN', 'RESOLVED'], default: 'OPEN' },
+  firstSeenAt: { type: Date, default: Date.now },
+  lastSeenAt: { type: Date, default: Date.now },
+  reopenedCount: { type: Number, default: 0 },
+  resolvedBy: { type: String, default: null },
+  resolvedAt: { type: Date, default: null },
+  resolutionNote: { type: String, default: null }
+}, { collection: 'payment_discrepancies' });
+discrepancySchema.index({ tenantId: 1, key: 1 }, { unique: true });
+discrepancySchema.index({ tenantId: 1, status: 1, firstSeenAt: -1 });
+const PaymentDiscrepancy = mongoose.models.PaymentDiscrepancy || mongoose.model('PaymentDiscrepancy', discrepancySchema);
+
+module.exports = { LedgerTxn, Payment, PaymentEvent, PaymentRefund, PaymentDiscrepancy };

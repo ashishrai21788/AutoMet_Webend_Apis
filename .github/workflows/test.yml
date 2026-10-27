@@ -72,6 +72,7 @@ jobs:
             echo "::error title=Contract replay exit code::$code"
             grep -v "^matches" contract.log | head -n 25 | while IFS= read -r line; do echo "::error title=Contract replay output::${line:0:400}"; done
           fi
+          echo "::notice title=Contract replay::$(grep -c '^matches' contract.log) scenarios matched, $(grep -c 'DIFFERS' contract.log) differences"
           exit $code
 
   tenant-isolation:
