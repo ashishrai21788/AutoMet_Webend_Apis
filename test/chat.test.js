@@ -66,6 +66,16 @@ test('a rider writes; it is stored for the business, the driver is told live and
   assert.equal(sent.push[0].title, 'Asha Rider');
 });
 
+test('the unread count counts every unread message, however few are asked for (the badge on the ride screen asks for one)', async () => {
+  await reset();
+  for (const text of ['one', 'two', 'three']) { await say(rider(), text); await new Promise((r) => setTimeout(r, 2)); }
+  const asked = (await call(chat.list, { ...driver(), query: { trip_id: 'T1', limit: '1' } })).body.data;
+  assert.equal(asked.messages.length, 1);
+  assert.equal(asked.unread, 3);
+  await call(chat.markRead, { ...driver(), body: { trip_id: 'T1' } });
+  assert.equal((await call(chat.list, { ...driver(), query: { trip_id: 'T1', limit: '1' } })).body.data.unread, 0);
+});
+
 test('the driver answers; each side reads the conversation in order with its own messages marked mine, and unread counts follow', async () => {
   await reset();
   await say(rider(), 'Hello');
