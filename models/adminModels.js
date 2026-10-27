@@ -37,6 +37,8 @@ const tenantSchema = new mongoose.Schema({
   pricingWorkflow: { type: String, enum: ['direct', 'draft'], default: 'direct' },
   // ride chat between a rider and their driver: on unless the business switches it off
   chatEnabled: { type: Boolean, default: true },
+  /** 'direct': a saved region or category is live at once; 'draft': it waits as a draft until the drafts are published together */
+  setupWorkflow: { type: String, enum: ['direct', 'draft'], default: 'direct' },
   /** Whether drivers may enter a toll when ending a trip, and the most they may enter for one trip (minor units). See lib/tolls.js. */
   tollSettings: {
     type: new mongoose.Schema({ enabled: { type: Boolean, default: false }, maxTollMinor: { type: Number, default: 0, min: 0 } }, { _id: false }),

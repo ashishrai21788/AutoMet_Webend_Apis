@@ -1,0 +1,1559 @@
+{
+  "scenario": "setupDrafts",
+  "steps": [
+    {
+      "step": "setup: platform owner signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: list businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "admin@contract.test",
+          "name": "Client Admin",
+          "role": "client_admin",
+          "tenantId": "<defaultAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "admin@contract.test",
+            "id": "<a_2>",
+            "mustChangePassword": true,
+            "name": "Client Admin",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "admin@contract.test",
+          "password": "<tempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": true,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<tempPassword>",
+          "newPassword": "Client-Admin-Pass-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": false,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: market",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: region",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "name": "Pune"
+            }
+          ],
+          "radiusKm": 30,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "city": "Pune",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_3>",
+                "radiusKm": 30,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: vehicle category",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Sedan",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_4>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "mapIconUrl": "",
+            "name": "Sedan",
+            "passengerCapacity": 4,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: fare rule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 40,
+          "bookingFee": 5,
+          "categoryId": "<vc_4>",
+          "minimumFare": 70,
+          "perKm": 12,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 40,
+            "bookingFee": 5,
+            "categoryId": "<vc_4>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_5>",
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "1 Main Road",
+            "state": "Maharashtra"
+          },
+          "dateOfBirth": "1990-04-02",
+          "eligibleCategoryId": "<vc_4>",
+          "email": "dee@contract.test",
+          "fullName": "Dee Driver",
+          "operatingRegionId": "<rg_3>",
+          "phone": "+919811111111"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "White",
+          "luggageCapacity": 2,
+          "make": "Maruti",
+          "model": "Dzire",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH12AB1234",
+          "status": "ACTIVE",
+          "year": 2021
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_6>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: assign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_7>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: the driver is now eligible",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": {
+              "colour": null,
+              "model": "Maruti Dzire",
+              "registrationNumber": "MH12AB1234",
+              "type": "Sedan"
+            },
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: no session",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/setup/draft"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drafts: the mode starts as direct",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/setup/draft",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "changes": [],
+            "drafts": [],
+            "mode": "direct",
+            "stale": [],
+            "summary": {
+              "added": 0,
+              "changed": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: a bad mode is refused",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/setup/workflow",
+        "body": {
+          "mode": "sometimes"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "mode": "Choose direct or draft"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drafts: publish with nothing waiting",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/setup/publish",
+        "body": {},
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "There are no drafts to publish",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drafts: switch to review first",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/setup/workflow",
+        "body": {
+          "mode": "draft"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "mode": "draft"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: a new region waits as a draft",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "name": "Nagpur"
+            }
+          ],
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 202,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "draft": true,
+            "drafts": [
+              {
+                "entity": "region",
+                "id": "<sd_8>",
+                "op": "CREATE"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: the same region again is refused",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "name": "Nagpur"
+            }
+          ],
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "cities": "Already added"
+          },
+          "message": "Those regions already exist or are already waiting as drafts",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drafts: a new category waits as a draft",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Mini",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 202,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "draft": true,
+            "drafts": [
+              {
+                "entity": "category",
+                "id": "<sd_9>",
+                "op": "CREATE"
+              }
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: a bad category is refused like a live save",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "x",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "name": "Name is required (2 to 40 characters)"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drafts: an edit to a live category waits too",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/admin/business/categories/<vc_4>",
+        "body": {
+          "description": "Comfortable sedans"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 202,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "draft": true,
+            "drafts": [
+              {
+                "entity": "category",
+                "id": "<sd_10>",
+                "op": "UPDATE"
+              }
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: live regions are unchanged",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/regions",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "center": {
+                "lat": 18.5204,
+                "lng": 73.8567
+              },
+              "city": "Pune",
+              "country": "IN",
+              "createdAt": "<date>",
+              "id": "<rg_3>",
+              "radiusKm": 30,
+              "state": "Maharashtra",
+              "updatedAt": "<date>",
+              "zoneName": "All areas"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: live categories are unchanged",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/categories",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "createdAt": "<date>",
+              "description": "",
+              "icon": "car",
+              "id": "<vc_4>",
+              "imageUrl": "",
+              "luggageCapacity": null,
+              "mapIconUrl": "",
+              "name": "Sedan",
+              "passengerCapacity": 4,
+              "regionIds": [
+                "<rg_3>"
+              ],
+              "rideType": "economy",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: what is waiting and what publishing would change",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/setup/draft",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "changes": [
+              {
+                "entity": "region",
+                "fields": [
+                  {
+                    "field": "state",
+                    "from": null,
+                    "to": "Maharashtra"
+                  },
+                  {
+                    "field": "city",
+                    "from": null,
+                    "to": "Nagpur"
+                  },
+                  {
+                    "field": "zoneName",
+                    "from": null,
+                    "to": "All areas"
+                  },
+                  {
+                    "field": "center",
+                    "from": null,
+                    "to": null
+                  },
+                  {
+                    "field": "radiusKm",
+                    "from": null,
+                    "to": null
+                  }
+                ],
+                "id": "<sd_8>",
+                "kind": "ADDED",
+                "label": "Nagpur (All areas)"
+              },
+              {
+                "entity": "category",
+                "fields": [
+                  {
+                    "field": "name",
+                    "from": null,
+                    "to": "Mini"
+                  },
+                  {
+                    "field": "description",
+                    "from": null,
+                    "to": ""
+                  },
+                  {
+                    "field": "icon",
+                    "from": null,
+                    "to": "car"
+                  },
+                  {
+                    "field": "imageUrl",
+                    "from": null,
+                    "to": ""
+                  },
+                  {
+                    "field": "mapIconUrl",
+                    "from": null,
+                    "to": ""
+                  },
+                  {
+                    "field": "passengerCapacity",
+                    "from": null,
+                    "to": 4
+                  },
+                  {
+                    "field": "luggageCapacity",
+                    "from": null,
+                    "to": null
+                  },
+                  {
+                    "field": "rideType",
+                    "from": null,
+                    "to": "economy"
+                  },
+                  {
+                    "field": "regionIds",
+                    "from": null,
+                    "to": [
+                      "<rg_3>"
+                    ]
+                  },
+                  {
+                    "field": "active",
+                    "from": null,
+                    "to": true
+                  }
+                ],
+                "id": "<sd_9>",
+                "kind": "ADDED",
+                "label": "Mini"
+              },
+              {
+                "entity": "category",
+                "fields": [
+                  {
+                    "field": "description",
+                    "from": "",
+                    "to": "Comfortable sedans"
+                  }
+                ],
+                "id": "<sd_10>",
+                "kind": "CHANGED",
+                "label": "Sedan"
+              }
+            ],
+            "drafts": [
+              {
+                "createdAt": "<date>",
+                "createdBy": "<a_2>",
+                "entity": "region",
+                "fields": {
+                  "center": null,
+                  "city": "Nagpur",
+                  "country": "IN",
+                  "key": "maharashtra|nagpur|all areas",
+                  "radiusKm": null,
+                  "state": "Maharashtra",
+                  "zoneName": "All areas"
+                },
+                "id": "<sd_8>",
+                "label": "Nagpur (All areas)",
+                "op": "CREATE",
+                "stale": false,
+                "targetId": null
+              },
+              {
+                "createdAt": "<date>",
+                "createdBy": "<a_2>",
+                "entity": "category",
+                "fields": {
+                  "active": true,
+                  "description": "",
+                  "icon": "car",
+                  "imageUrl": "",
+                  "luggageCapacity": null,
+                  "mapIconUrl": "",
+                  "name": "Mini",
+                  "nameKey": "mini",
+                  "passengerCapacity": 4,
+                  "regionIds": [
+                    "<rg_3>"
+                  ],
+                  "rideType": "economy"
+                },
+                "id": "<sd_9>",
+                "label": "Mini",
+                "op": "CREATE",
+                "stale": false,
+                "targetId": null
+              },
+              {
+                "createdAt": "<date>",
+                "createdBy": "<a_2>",
+                "entity": "category",
+                "fields": {
+                  "description": "Comfortable sedans"
+                },
+                "id": "<sd_10>",
+                "label": "Sedan",
+                "op": "UPDATE",
+                "stale": false,
+                "targetId": "<vc_4>"
+              }
+            ],
+            "mode": "draft",
+            "stale": [],
+            "summary": {
+              "added": 2,
+              "changed": 1
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: cannot switch back while drafts wait",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/setup/workflow",
+        "body": {
+          "mode": "direct"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 409,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "mode": "Drafts are waiting"
+          },
+          "message": "Publish or discard the waiting drafts before applying changes immediately",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drafts: discarding an unknown draft",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/admin/business/setup/draft/sd_missing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "That draft does not exist",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "drafts: publish all together",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/setup/publish",
+        "body": {
+          "note": "Add Nagpur and the Mini category"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "published": {
+              "added": 2,
+              "changed": 1
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: live regions after publishing",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/regions",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "center": {
+                "lat": 18.5204,
+                "lng": 73.8567
+              },
+              "city": "Pune",
+              "country": "IN",
+              "createdAt": "<date>",
+              "id": "<rg_3>",
+              "radiusKm": 30,
+              "state": "Maharashtra",
+              "updatedAt": "<date>",
+              "zoneName": "All areas"
+            },
+            {
+              "active": true,
+              "center": null,
+              "city": "Nagpur",
+              "country": "IN",
+              "createdAt": "<date>",
+              "id": "<rg_11>",
+              "radiusKm": null,
+              "state": "Maharashtra",
+              "updatedAt": "<date>",
+              "zoneName": "All areas"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: live categories after publishing",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/categories",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "active": true,
+              "createdAt": "<date>",
+              "description": "Comfortable sedans",
+              "icon": "car",
+              "id": "<vc_4>",
+              "imageUrl": "",
+              "luggageCapacity": null,
+              "mapIconUrl": "",
+              "name": "Sedan",
+              "passengerCapacity": 4,
+              "regionIds": [
+                "<rg_3>"
+              ],
+              "rideType": "economy",
+              "updatedAt": "<date>"
+            },
+            {
+              "active": true,
+              "createdAt": "<date>",
+              "description": "",
+              "icon": "car",
+              "id": "<vc_12>",
+              "imageUrl": "",
+              "luggageCapacity": null,
+              "mapIconUrl": "",
+              "name": "Mini",
+              "passengerCapacity": 4,
+              "regionIds": [
+                "<rg_3>"
+              ],
+              "rideType": "economy",
+              "updatedAt": "<date>"
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: nothing waits any more",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/setup/draft",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "changes": [],
+            "drafts": [],
+            "mode": "draft",
+            "stale": [],
+            "summary": {
+              "added": 0,
+              "changed": 0
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: the audit log records the publish",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/audit",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "facets": {
+              "actions": [
+                "auth.login",
+                "auth.password_changed",
+                "business.market_set",
+                "category.created",
+                "category.updated",
+                "driver.created",
+                "driver.vehicle_assigned",
+                "fare_rule.saved",
+                "region.created",
+                "setup.published",
+                "setup.workflow_changed",
+                "user.created",
+                "vehicle.created",
+                "vehicle.driver_assigned"
+              ],
+              "actors": [
+                "admin@contract.test",
+                "owner@contract.test"
+              ],
+              "targetTypes": [
+                "admin_user",
+                "business",
+                "category",
+                "driver",
+                "fare_rule",
+                "region",
+                "vehicle"
+              ]
+            },
+            "items": [
+              {
+                "action": "setup.published",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "added": "2",
+                  "changed": "1",
+                  "note": "Add Nagpur and the Mini category"
+                },
+                "id": "<id13>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "category.updated",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "fields": "[\"description\"]"
+                },
+                "id": "<id14>",
+                "targetId": "<vc_4>",
+                "targetType": "category",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "category.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "name": "Mini"
+                },
+                "id": "<id15>",
+                "targetId": "<vc_12>",
+                "targetType": "category",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "region.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "count": "1",
+                  "state": "Maharashtra"
+                },
+                "id": "<id16>",
+                "targetId": "<rg_11>",
+                "targetType": "region",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "setup.workflow_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "mode": "draft"
+                },
+                "id": "<id17>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.driver_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Driver Dee Driver",
+                  "kind": "ASSIGNMENT",
+                  "to": "<driverId>"
+                },
+                "id": "<id18>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.vehicle_assigned",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Vehicle MH12AB1234",
+                  "kind": "ASSIGNMENT",
+                  "to": "<veh_6>"
+                },
+                "id": "<id19>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "vehicle.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Added from the dashboard",
+                  "kind": "ACCOUNT_STATUS",
+                  "to": "ACTIVE"
+                },
+                "id": "<id20>",
+                "targetId": "<veh_6>",
+                "targetType": "vehicle",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "driver.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "detail": "Added from the dashboard",
+                  "kind": "ACCOUNT_STATUS",
+                  "to": "ACTIVE"
+                },
+                "id": "<id21>",
+                "targetId": "<driverId>",
+                "targetType": "driver",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "fare_rule.saved",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "category": "Sedan",
+                  "regionId": "<rg_3>"
+                },
+                "id": "<id22>",
+                "targetId": "<fr_5>",
+                "targetType": "fare_rule",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "category.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "name": "Sedan"
+                },
+                "id": "<id23>",
+                "targetId": "<vc_4>",
+                "targetType": "category",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "region.created",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "count": "1",
+                  "state": "Maharashtra"
+                },
+                "id": "<id24>",
+                "targetId": "<rg_3>",
+                "targetType": "region",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "business.market_set",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": {
+                  "country": "IN",
+                  "currency": "INR",
+                  "timezone": "Asia/Kolkata"
+                },
+                "id": "<id25>",
+                "targetId": "<defaultAppId>",
+                "targetType": "business",
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "auth.password_changed",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": null,
+                "id": "<id26>",
+                "targetId": null,
+                "targetType": null,
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "auth.login",
+                "actorEmail": "admin@contract.test",
+                "at": "<date>",
+                "details": null,
+                "id": "<id27>",
+                "targetId": null,
+                "targetType": null,
+                "tenantId": "<defaultAppId>"
+              },
+              {
+                "action": "user.created",
+                "actorEmail": "owner@contract.test",
+                "at": "<date>",
+                "details": {
+                  "email": "admin@contract.test",
+                  "role": "client_admin"
+                },
+                "id": "<id28>",
+                "targetId": "<a_2>",
+                "targetType": "admin_user",
+                "tenantId": "<defaultAppId>"
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 16
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: switch back to direct",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/setup/workflow",
+        "body": {
+          "mode": "direct"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "mode": "direct"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "drafts: direct again: a region is live at once",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "name": "Nashik"
+            }
+          ],
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": null,
+                "city": "Nashik",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_29>",
+                "radiusKm": null,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    }
+  ]
+}

@@ -6,5 +6,6 @@ module.exports = {
   platform: require('./platform'),
   business: require('./business'),
   uploads: require('./uploads'),
+  setupDrafts: require('./setupDrafts'),
   legacy: require('./legacy')
 };

@@ -543,6 +543,7 @@
             },
             "plan": "trial",
             "pricingWorkflow": "direct",
+            "setupWorkflow": "direct",
             "slug": "zed-cabs",
             "status": "active",
             "subscription": null,

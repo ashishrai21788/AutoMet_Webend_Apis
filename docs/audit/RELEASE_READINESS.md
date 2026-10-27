@@ -48,6 +48,7 @@ These are not code and could not be done or tested from here.
 - `npm run test:postgres` and `test:parity` use Unix-style variable syntax and fail on Windows cmd; run them from Git Bash.
 - 8 moderate dependency advisories remain; each needs a major-version upgrade.
 - Tolls and tax-rule versions are not stored; there is no online payment.
+- Region and category drafts (added in this cycle) apply the drafts in one pass after checking them; they are not scheduled for a future time the way pricing drafts can be, and a failure part way leaves exactly the drafts not yet applied.
 
 ## Decision
 

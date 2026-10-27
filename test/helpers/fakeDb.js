@@ -207,6 +207,7 @@ function createFakeDb() {
     DriverAdjustment: fakeModel({ uniques: ['adjustmentId', { fields: ['tenantId', 'driverId', 'refId'], only: { kind: 'INCENTIVE' } }, { fields: ['tenantId', 'driverId', 'refId'], only: { kind: 'PENALTY_WAIVER' } }], defaults: () => ({ at: new Date(), createdAt: new Date(), createdBy: 'system' }) }),
     Incentive: fakeModel({ uniques: ['incentiveId'], defaults: () => ({ active: true, bonusMinor: 0, createdAt: new Date(), updatedAt: new Date() }) }),
     FareRuleDraft: fakeModel({ uniques: ['draftId', ['tenantId', 'categoryId', 'regionKey']], defaults: () => ({ op: 'SAVE', createdAt: new Date(), updatedAt: new Date() }) }),
+    SetupDraft: fakeModel({ uniques: ['draftId'], defaults: () => ({ createdAt: new Date(), updatedAt: new Date() }) }),
     PricingSchedule: fakeModel({ uniques: ['scheduleId'], defaults: () => ({ status: 'SCHEDULED', createdAt: new Date() }) }),
     PricingVersion: fakeModel({ uniques: [['tenantId', 'version']], defaults: () => ({ createdAt: new Date() }) }),
     CancellationPolicyChange: fakeModel({ uniques: ['changeId'], defaults: () => ({ createdAt: new Date() }) }),
@@ -249,6 +250,7 @@ function createFakeDb() {
     stub('models/driverPayoutModel.js', { DriverPayout: db.DriverPayout });
     stub('models/legalModel.js', { LegalDocument: db.LegalDocument, LegalAcceptance: db.LegalAcceptance });
     stub('models/pricingModels.js', { FareRuleDraft: db.FareRuleDraft, PricingVersion: db.PricingVersion, PricingSchedule: db.PricingSchedule, CancellationPolicyChange: db.CancellationPolicyChange });
+    stub('models/setupDraftModel.js', { SetupDraft: db.SetupDraft });
     stub('models/configVersionModel.js', { ConfigVersion: db.ConfigVersion });
     stub('models/couponModel.js', { Coupon: db.Coupon, CouponUse: db.CouponUse, CouponRedemption: db.CouponRedemption });
     stub('models/driverLedgerModel.js', { DriverAdjustment: db.DriverAdjustment, Incentive: db.Incentive });

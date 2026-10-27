@@ -31,6 +31,7 @@ const cancellationHistory = require('../controllers/cancellationHistoryControlle
 const driverPenaltyAdmin = require('../controllers/driverPenaltyAdminController');
 const surgeAdmin = require('../controllers/surgeAdminController');
 const chatAdmin = require('../controllers/chatController');
+const setupDrafts = require('../controllers/setupDraftController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
 const router = express.Router();
@@ -135,6 +136,12 @@ router.patch('/business/regions/:id', ...manage, biz.updateRegion);
 router.get('/business/categories', ...read, biz.listCategories);
 router.post('/business/categories', ...manage, biz.createCategory);
 router.patch('/business/categories/:id', ...manage, biz.updateCategory);
+// region and category drafts: with the workflow on "draft" the routes above save a draft; these review, publish and discard them
+router.get('/business/setup/draft', ...read, setupDrafts.getDraft);
+router.delete('/business/setup/draft/:id', ...manage, setupDrafts.discard);
+router.delete('/business/setup/draft', ...manage, setupDrafts.discard);
+router.post('/business/setup/publish', ...manage, setupDrafts.publish);
+router.put('/business/setup/workflow', ...manage, setupDrafts.setWorkflow);
 
 router.get('/business/fare-rules', ...read, biz.listFareRules);
 router.put('/business/fare-rules', ...pricing, biz.saveFareRule);

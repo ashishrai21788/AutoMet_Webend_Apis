@@ -8,6 +8,7 @@ const { computeSetup } = require('../lib/businessSetup');
 const { matchRegion, hasGeofence } = require('../lib/regionMatch');
 const pricing = require('./pricingController');
 const cancellationHistory = require('./cancellationHistoryController');
+const setupDrafts = require('./setupDraftController');
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, message: 'OK', data });
 const fail = (res, status, message, errors) => res.status(status).json({ success: false, message, errors: errors || undefined, data: null });
@@ -117,6 +118,7 @@ exports.createRegions = handle(async (req, res) => {
   if (!market) return fail(res, 409, 'Choose the operating country first', { country: 'Set the country before adding regions' });
   const { value, errors } = v.validateRegionBatch(req.body);
   if (Object.keys(errors).length) return invalid(res, errors);
+  if (setupDrafts.isDraftMode(req)) return setupDrafts.captureRegionBatch(req, res, value, market);
 
   const created = [];
   const skipped = [];
@@ -144,6 +146,7 @@ exports.updateRegion = handle(async (req, res) => {
   if (Object.keys(errors).length) return invalid(res, errors);
   const region = await req.data.findOne(ServiceRegion, { regionId: req.params.id });
   if (!region) return fail(res, 404, 'Region not found');
+  if (setupDrafts.isDraftMode(req)) return setupDrafts.captureRegionUpdate(req, res, value, region);
 
   const set = { ...value, updatedAt: new Date() };
   if (value.zoneName !== undefined) {
@@ -197,6 +200,7 @@ exports.listCategories = handle(async (req, res) => {
 exports.createCategory = handle(async (req, res) => {
   const { value, errors } = v.validateCategory(req.body);
   if (Object.keys(errors).length) return invalid(res, errors);
+  if (setupDrafts.isDraftMode(req)) return setupDrafts.captureCategoryCreate(req, res, value);
   const problem = await regionIdsProblem(req, value.regionIds);
   if (problem) return invalid(res, { regionIds: problem });
 
@@ -219,6 +223,7 @@ exports.updateCategory = handle(async (req, res) => {
   if (Object.keys(errors).length) return invalid(res, errors);
   const category = await req.data.findOne(VehicleCategory, { categoryId: req.params.id });
   if (!category) return fail(res, 404, 'Category not found');
+  if (setupDrafts.isDraftMode(req)) return setupDrafts.captureCategoryUpdate(req, res, value, category);
 
   if (value.regionIds) {
     const problem = await regionIdsProblem(req, value.regionIds, category.regionIds || []);
