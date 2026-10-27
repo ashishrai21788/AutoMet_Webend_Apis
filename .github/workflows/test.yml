@@ -80,6 +80,19 @@ jobs:
       - run: npm ci
       - run: npm run live:tenants
 
+  inventory:
+    name: API inventory is current
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/apiInventory.js --check
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest

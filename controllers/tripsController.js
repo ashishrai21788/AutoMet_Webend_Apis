@@ -389,7 +389,7 @@ exports.createRequest = async (req, res) => {
       }
       driverId = found.driver.driverId;
     }
-    const driver = await DriverModel.findOne({ driverId }).lean();
+    let driver = await DriverModel.findOne({ driverId }).lean();
     if (!driver) {
       return res.status(404).json({ success: false, message: 'Driver not found', data: { driver_id: driverId } });
     }
@@ -452,7 +452,24 @@ exports.createRequest = async (req, res) => {
     }
 
     // A driver is offered one ride at a time: refuse while they are on another trip or another rider's request is pending.
-    const driverConflict = await findDriverConflict(TripDetails, driverId, { includePending: true });
+    // A booking the server dispatched is not the rider's choice of driver, so it moves on to the next free driver rather than failing.
+    const tried = [driverId];
+    const moveToNextDriver = async () => {
+      const wantedType = body.vehicle_type != null ? String(body.vehicle_type).trim() : '';
+      const next = await findAutoDriver(user, { lat: pickupLat, lng: pickupLng }, { exclude: tried, vehicleType: wantedType || undefined, categoryId: requestedCategoryId || undefined });
+      if (!next) return false;
+      tried.push(next.driver.driverId);
+      driverId = next.driver.driverId;
+      driver = await DriverModel.findOne({ driverId }).lean();
+      return true;
+    };
+    let driverConflict = await findDriverConflict(TripDetails, driverId, { includePending: true });
+    while (driverConflict && autoDispatch && tried.length <= dispatchConfig().maxAttempts + 2 && await moveToNextDriver()) {
+      driverConflict = await findDriverConflict(TripDetails, driverId, { includePending: true });
+    }
+    if (driverConflict && autoDispatch) {
+      return res.status(404).json({ success: false, message: 'No drivers are available near you right now. Please try again in a moment.', error: 'NO_DRIVERS_AVAILABLE', data: { code: 'NO_DRIVERS_AVAILABLE' } });
+    }
     if (driverConflict) {
       return res.status(409).json({
         success: false,
@@ -490,7 +507,7 @@ exports.createRequest = async (req, res) => {
       });
     }
 
-    const { fcmToken: driverFcmToken } = getDriverFcmInfo(driver);
+    let driverFcmToken = getDriverFcmInfo(driver).fcmToken;
     const tripId = await getNextTripId();
     const timeoutAt = new Date(now.getTime() + (autoDispatch ? dispatchConfig().offerSeconds * 1000 : DRIVER_RESPONSE_TIMEOUT_MS));
 
@@ -521,7 +538,7 @@ exports.createRequest = async (req, res) => {
       dispatch_mode: autoDispatch ? 'AUTO' : 'MANUAL',
       dispatch_attempted: [driverId],
       dispatch_attempts: 1,
-      requested_at: now,
+      requested_at: new Date(),
       timeout_at: timeoutAt,
       push_sent: false
     });
@@ -549,14 +566,32 @@ exports.createRequest = async (req, res) => {
       // The "driver is busy" check above and the insert are not atomic either: riders asking at the same instant can all pass it
       // and the driver would hold several offers. A ride the driver already committed to always wins, otherwise the earliest
       // pending request does; the others are withdrawn before the driver is told about them.
-      const claims = await TripDetails.find({ driver_id: driverId, status: { $in: ['REQUESTED', ...COMMITTED_STATUSES] } }).lean();
       const stamp = (t) => new Date(t.requested_at).getTime();
       const wins = (a, b) => (a.status !== 'REQUESTED') !== (b.status !== 'REQUESTED')
         ? a.status !== 'REQUESTED'
         : (stamp(a) !== stamp(b) ? stamp(a) < stamp(b) : String(a.trip_id) < String(b.trip_id));
-      const beaten = (claims || []).some((t) => t.trip_id !== trip.trip_id && !(t.status === 'REQUESTED' && new Date(t.timeout_at) <= now) && wins(t, trip));
+      const lostTo = async (id) => {
+        const rows = await TripDetails.find({ driver_id: id, status: { $in: ['REQUESTED', ...COMMITTED_STATUSES] } }).lean();
+        return (rows || []).some((t) => t.trip_id !== trip.trip_id && !(t.status === 'REQUESTED' && new Date(t.timeout_at) <= now) && wins(t, trip));
+      };
+      // The request time is the tiebreak and is stamped just before the insert, but two inserts can still land out of order. So a request
+      // that looks safe waits a moment and looks again before the driver is told: a lower-keyed request inserted meanwhile is then seen.
+      const settleMs = Math.max(0, Number(process.env.DISPATCH_SETTLE_MS != null ? process.env.DISPATCH_SETTLE_MS : 120));
+      let beaten = false;
+      for (;;) {
+        beaten = await lostTo(driverId);
+        if (!beaten && settleMs) { await new Promise((r) => setTimeout(r, settleMs)); beaten = await lostTo(driverId); }
+        if (!beaten || !autoDispatch || tried.length > dispatchConfig().maxAttempts + 2) break;
+        const was = driverId;
+        if (!(await moveToNextDriver())) break;
+        await TripDetails.updateOne({ trip_id: trip.trip_id, status: 'REQUESTED', driver_id: was }, { $set: { driver_id: driverId, dispatch_attempted: [...tried], updated_at: new Date() } });
+        driverFcmToken = getDriverFcmInfo(driver).fcmToken;
+      }
       if (beaten) {
         await TripDetails.updateOne({ trip_id: trip.trip_id, status: 'REQUESTED' }, { $set: { status: 'CANCELLED_BY_USER', cancelled_at: new Date(), cancellation_reason: 'Driver took another request', updated_at: new Date() } });
+        if (autoDispatch) {
+          return res.status(404).json({ success: false, message: 'No drivers are available near you right now. Please try again in a moment.', error: 'NO_DRIVERS_AVAILABLE', data: { code: 'NO_DRIVERS_AVAILABLE' } });
+        }
         return res.status(409).json({
           success: false,
           message: 'This driver is busy with another ride. Please choose another driver.',

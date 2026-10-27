@@ -76,3 +76,4 @@ ssl/
 test/live/lab.json
 
 test/concurrency/results/
+test/load/results/

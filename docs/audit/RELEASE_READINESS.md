@@ -1,4 +1,4 @@
-# Release readiness (cycle 14, 27 Oct 2026)
+# Release readiness (cycle 15, 27 Oct 2026)
 
 Backend `AutoMet_Webend_Apis`, admin `AutoMet_Admin`, rider app `AutoMet_user`, driver app `AutoMet_driver`.
 
@@ -6,14 +6,16 @@ Backend `AutoMet_Webend_Apis`, admin `AutoMet_Admin`, rider app `AutoMet_user`, 
 
 | Area | Result | Evidence |
 |---|---|---|
-| Backend, in-memory engine | PASS | 654 passed, 0 failed, 4 skipped (`npm test`) |
-| Backend, real Postgres models | PASS | 658 of 658 (`TEST_DB=postgres npm test`, run with nothing else heavy on the machine) |
+| Backend, in-memory engine | PASS | 696 passed, 0 failed, 4 skipped of 700 (`npm test`) |
+| Backend, real Postgres models | PASS | 698 passed, 0 failed, 2 skipped of 700 (`TEST_DB=postgres npm test`, run with nothing else heavy on the machine) |
 | API contract snapshots, both engines | PASS | 7 scenarios, every step matches |
 | Mongo / Postgres model parity | PASS | 22 of 22 on each |
 | Tenant isolation, live over HTTP | PASS | 79 of 79: two businesses, 25 by-id attacks, header spoofing, wrong-app tokens, chat |
 | Admin dashboard | PASS | type check + build, lint clean, 24 of 24 tests, 0 dependency vulnerabilities |
 | Rider and driver apps, unit tests | PASS | all modules, 41 (rider) and 33 (driver) tests; 21 in each are the chat rules |
 | Rider and driver apps, two real phones | PASS for chat, app kill and a stalled connection | sign-in, active ride, chat both directions with live refresh, read marks, day headings, left/right bubbles, typing, chat-off and ride-ended banners, unread badge on both apps, notification tap into the chat (both apps); both apps killed mid-ride and reopened, and the server frozen during a send, then resumed (message arrived once) |
+| SOS (rider and driver) on two real phones | PASS | Emergency opens only the dialler with 112 filled in, the call state stayed idle, the business received one alert per press with trip, people, vehicle and location, and staff acknowledged and resolved it |
+| Concurrency harness, both engines | PASS after a fix | 7 scenarios of real parallel requests with database-checked rules; it found a driver holding up to 4 offers at once, now fixed (40 of 40 trials clean on Mongo, 30 of 30 on Postgres). Postgres here is single-connection, so that pass is weaker |
 | Dependencies (backend, production) | 28 findings to 8, none critical or high | `npm audit fix` (no breaking changes); the 8 left are moderate and need a major upgrade |
 
 ## Fixed in this cycle because it would have hurt on launch day
@@ -25,7 +27,8 @@ Backend `AutoMet_Webend_Apis`, admin `AutoMet_Admin`, rider app `AutoMet_user`, 
 5. **A database outage signed everyone out.** While the database could not be reached the server answered 401 (and leaked the raw error); the apps sign the person out on a 401. It is now a generic 503 the apps retry; token problems keep their 401s. Found by freezing the server during a phone test.
 6. **Image upload and delete were open to anyone;** now they need a signed-in rider or driver.
 7. **The finance role could read every driver's phone number** through the live map; it now needs the permission to see drivers.
-8. `local.properties` (a machine path) was tracked in both app repositories; it is now untracked and ignored.
+8. **One driver could be offered several rides at once** when riders booked at the same instant. Found by the new concurrency harness; the earliest request now keeps the driver and a dispatched booking moves on to the next free driver.
+9. `local.properties` (a machine path) was tracked in both app repositories; it is now untracked and ignored.
 
 ## What only the owner can do before real riders arrive
 
@@ -43,7 +46,8 @@ These are not code and could not be done or tested from here.
 ## Known gaps (not blockers for a controlled launch)
 
 - The rider app's full Android lint has never completed on this machine (5.9 GB RAM; retried this cycle and stopped after 20 minutes); the driver app's has. The rider release build's fatal-issue lint check passes.
-- Android instrumented tests and an automated multi-device concurrency suite do not exist; device checks were manual.
+- Android instrumented (end-to-end) tests do not exist; device checks were manual. A backend concurrency harness and a load baseline now exist (`npm run concurrency`, `npm run load`); the load numbers come from one machine and are a regression baseline, not capacity.
+- The CI workflows are pushed but their runs on GitHub have not been seen yet.
 - The notification tap was run through its intent on both phones; a push actually arriving from Google's servers was not.
 - `npm run test:postgres` and `test:parity` use Unix-style variable syntax and fail on Windows cmd; run them from Git Bash.
 - 8 moderate dependency advisories remain; each needs a major-version upgrade.
