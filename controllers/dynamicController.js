@@ -1206,6 +1206,14 @@ exports.verifyToken = async (req, res, next) => {
       });
     }
 
+    // the same rule as lib/authMiddleware: naming another business's app with this account's token is refused
+    if (req.headers['x-app-id'] && req.appTenant) {
+      const accountBusiness = await require('../lib/appTenant').effectiveTenantId(req.driver || req.user);
+      if (accountBusiness && accountBusiness !== req.appTenant.tenantId) {
+        return res.status(403).json({ success: false, message: 'This account belongs to another app.', error: 'WRONG_APP', data: { code: 'WRONG_APP' } });
+      }
+    }
+
     req.token = token;
     req.decoded = decoded;
     next();
