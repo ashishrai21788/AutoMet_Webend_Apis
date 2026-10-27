@@ -14,6 +14,7 @@ Backend `AutoMet_Webend_Apis`, admin `AutoMet_Admin`, rider app `AutoMet_user`, 
 | Admin dashboard | PASS | type check + build, lint clean, 24 of 24 tests, 0 dependency vulnerabilities |
 | Rider and driver apps, unit tests | PASS | all modules, 41 (rider) and 33 (driver) tests; 21 in each are the chat rules |
 | Rider and driver apps, two real phones | PASS for chat, app kill and a stalled connection | sign-in, active ride, chat both directions with live refresh, read marks, day headings, left/right bubbles, typing, chat-off and ride-ended banners, unread badge on both apps, notification tap into the chat (both apps); both apps killed mid-ride and reopened, and the server frozen during a send, then resumed (message arrived once) |
+| Payments, server side (cash, UPI via a mock gateway, commission, refunds, reconciliation) | PASS in tests; **not enabled for real money** | 187 new tests on both engines plus a 65-step real-HTTP scenario; no real gateway exists yet and there is no app or dashboard screen for it. See docs/payments |
 | SOS (rider and driver) on two real phones | PASS | Emergency opens only the dialler with 112 filled in, the call state stayed idle, the business received one alert per press with trip, people, vehicle and location, and staff acknowledged and resolved it |
 | Concurrency harness, both engines | PASS after a fix | 7 scenarios of real parallel requests with database-checked rules; it found a driver holding up to 4 offers at once, now fixed (40 of 40 trials clean on Mongo, 30 of 30 on Postgres). Postgres here is single-connection, so that pass is weaker |
 | Dependencies (backend, production) | 28 findings to 8, none critical or high | `npm audit fix` (no breaking changes); the 8 left are moderate and need a major upgrade |
@@ -51,7 +52,7 @@ These are not code and could not be done or tested from here.
 - The notification tap was run through its intent on both phones; a push actually arriving from Google's servers was not.
 - `npm run test:postgres` and `test:parity` use Unix-style variable syntax and fail on Windows cmd; run them from Git Bash.
 - 8 moderate dependency advisories remain; each needs a major-version upgrade.
-- Tolls and tax-rule versions are not stored; there is no online payment.
+- Tolls and tax-rule versions are not stored. Online payment exists on the server only through the mock gateway: no real provider is built, there are no rider/driver app screens, no dashboard page, and tax is not calculated. Leave every business on cash until those exist.
 - Region and category drafts (added in this cycle) apply the drafts in one pass after checking them; they are not scheduled for a future time the way pricing drafts can be, and a failure part way leaves exactly the drafts not yet applied.
 
 ## Decision
