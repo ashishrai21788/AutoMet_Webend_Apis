@@ -28,6 +28,8 @@ const tenantSchema = new mongoose.Schema({
     type: new mongoose.Schema({ commissionPercent: { type: Number, default: 0, min: 0, max: 100 }, minWithdrawalMinor: { type: Number, default: 0, min: 0 }, cashWithdrawable: { type: Boolean, default: false }, processingNote: { type: String, default: '', trim: true, maxlength: 140 } }, { _id: false }),
     default: () => ({})
   },
+  /** How this business takes payment: { enabledMethods: ['CASH','UPI'], provider, merchantId, commissionRecovery, fundsFlow }. Read through lib/payments/config.js, which supplies the safe defaults (cash only). */
+  payments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   /** Surge pricing switch for the whole business: paused stops every surge at once (which rules may surge is set on each fare rule). See lib/surge.js. */
   surgeSettings: {
     type: new mongoose.Schema({ paused: { type: Boolean, default: false } }, { _id: false }),

@@ -44,6 +44,10 @@ const tripDetailsSchema = new mongoose.Schema({
   estimated_duration_min: { type: Number, default: null },
   fare_basis: { type: String, default: null, enum: ['ESTIMATE', 'ACTUAL', null] },
   payment_mode: { type: String, default: 'CASH', trim: true },
+  /** UNPAID until the fare is settled: a verified online payment, or the driver confirming the cash. Only the server sets it (lib/payments/service.js). */
+  payment_status: { type: String, default: 'UNPAID', trim: true },
+  payment_id: { type: String, default: null },
+  paid_at: { type: Date, default: null },
   // Where the fare came from: the business's own fare rules, or the legacy built-in tariff (see lib/tripPricing.js).
   fare_source: { type: String, default: null, enum: ['BUSINESS_RULES', 'LEGACY_TARIFF', null] },
   fare_breakdown: { type: mongoose.Schema.Types.Mixed, default: null },
