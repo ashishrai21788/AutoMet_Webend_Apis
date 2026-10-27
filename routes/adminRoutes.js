@@ -30,6 +30,7 @@ const pricingAdmin = require('../controllers/pricingController');
 const cancellationHistory = require('../controllers/cancellationHistoryController');
 const driverPenaltyAdmin = require('../controllers/driverPenaltyAdminController');
 const surgeAdmin = require('../controllers/surgeAdminController');
+const chatAdmin = require('../controllers/chatController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
 const router = express.Router();
@@ -144,6 +145,8 @@ router.delete('/business/pricing/draft/:key', ...pricing, pricingAdmin.discard);
 router.post('/business/pricing/publish', ...pricing, pricingAdmin.publish);
 router.put('/business/pricing/workflow', ...pricing, pricingAdmin.setWorkflow);
 router.get('/business/surge', ...read, surgeAdmin.get);
+router.get('/business/chat-settings', ...read, chatAdmin.getSettings);
+router.put('/business/chat-settings', ...manage, chatAdmin.setSettings);
 router.put('/business/surge-settings', ...pricing, surgeAdmin.update);
 router.get('/business/pricing/schedules', ...read, pricingAdmin.listSchedules);
 router.post('/business/pricing/schedules/:id/cancel', ...pricing, pricingAdmin.cancelSchedule);
@@ -224,6 +227,7 @@ router.get('/business/riders/:id', requireAdmin('riders.view'), withBusiness, op
 router.post('/business/riders/:id/status', requireAdmin('riders.manage'), withBusiness, ops.setRiderStatus);
 router.get('/business/trips', requireAdmin('trips.view'), withBusiness, ops.trips);
 router.get('/business/trips/:id', requireAdmin('trips.view'), withBusiness, ops.trip);
+router.get('/business/trips/:id/chat', requireAdmin('trips.view'), withBusiness, chatAdmin.adminTripChat);
 router.post('/business/trips/:id/cancel', requireAdmin('trips.manage'), withBusiness, ops.cancelTrip);
 router.post('/business/trips/:id/waive-driver-penalty', requireAdmin('payments.manage'), withBusiness, driverPenaltyAdmin.waive);
 

@@ -527,6 +527,7 @@
             },
             "billingDetails": null,
             "brandColor": "#f5a300",
+            "chatEnabled": true,
             "city": "Mumbai",
             "createdAt": "<date>",
             "isDefault": false,

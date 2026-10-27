@@ -5,6 +5,7 @@ const tripsController = require('../controllers/tripsController');
 const { requireAuth, requireRideScopeQuery, requireSchedulerSecret } = require('../lib/authMiddleware');
 const { deprecateLegacyRideApi } = require('../lib/deprecationHeaders');
 const shareController = require('../controllers/shareController');
+const chatController = require('../controllers/chatController');
 
 // Create ride request (user → driver) — legacy; prefer /trips/create-request
 router.post(
@@ -15,6 +16,11 @@ router.post(
 );
 
 router.post('/check-timeouts', requireSchedulerSecret, tripsController.checkTimeouts);
+
+// Ride chat between a ride's rider and driver (declared early: these paths must not be read as a trip id)
+router.post('/chat/send', requireAuth({ roles: ['user', 'driver'] }), chatController.send);
+router.get('/chat', requireAuth({ roles: ['user', 'driver'] }), chatController.list);
+router.post('/chat/read', requireAuth({ roles: ['user', 'driver'] }), chatController.markRead);
 
 router.post(
   '/cancel',

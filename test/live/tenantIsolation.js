@@ -193,7 +193,51 @@ const short = (j) => JSON.stringify(j).slice(0, 160);
     const aRegion = await http('GET', '/api/admin/business/regions', { token: A.token, app: A.app });
     check('A\'s region and category were not renamed', !ids(aRegion).includes('Hacked'));
 
-    // ---------- 7. a platform owner can still see both (the one place that is meant to cross) ----------
+    // ---------- 7. ride chat: a live conversation in each business, and nothing crosses ----------
+    const liveTrip = async (T, c) => {
+      const t = must(await http('POST', '/api/v1/trips/create-request', { app: T.app, token: T.riderToken, body: { request_id: `${T.X}-chat`, user_id: T.userId, driver_id: T.driverId, pickup_address: `${c.city} A`, pickup_latitude: c.lat, pickup_longitude: c.lng, drop_address: `${c.city} B`, drop_latitude: c.lat + 0.02, drop_longitude: c.lng + 0.02, category_id: T.categoryId } }), `${T.X} chat booking`).j.data;
+      must(await http('POST', '/api/v1/trips/driver-response', { app: T.app, token: T.driverToken, body: { trip_id: t.trip_id, driver_id: T.driverId, response: 'ACCEPTED' } }), `${T.X} chat accept`);
+      return t.trip_id;
+    };
+    const chatA = await liveTrip(A, { city: 'Pune', lat: 18.5204, lng: 73.8567 });
+    const chatB = await liveTrip(B, { city: 'Noida', lat: 28.5746, lng: 77.4858 });
+    const say = (T, trip, text, clientId) => http('POST', '/api/v1/rides/chat/send', { app: T.app, token: T.riderToken, body: { trip_id: trip, text, client_id: clientId } });
+    const sayD = (T, trip, text) => http('POST', '/api/v1/rides/chat/send', { app: T.app, token: T.driverToken, body: { trip_id: trip, text } });
+    const r1 = await say(A, chatA, 'ALPHA rider: please wait at gate 2', 'c-1');
+    check('A\'s rider writes to A\'s driver on an accepted ride', r1.s === 201, `HTTP ${r1.s} ${short(r1.j)}`);
+    check('a retry with the same client id is answered, not stored twice', (await say(A, chatA, 'ALPHA rider: please wait at gate 2', 'c-1')).s === 200);
+    check('A\'s driver answers', (await sayD(A, chatA, 'ALPHA driver: coming')).s === 201);
+    const aList = await http('GET', `/api/v1/rides/chat?trip_id=${chatA}`, { app: A.app, token: A.riderToken });
+    check('A\'s rider reads two messages in order, one unread', aList.s === 200 && aList.j.data.messages.length === 2 && aList.j.data.messages[0].mine === true && aList.j.data.unread === 1, short(aList.j));
+    check('A\'s rider marks the driver\'s message read', (await http('POST', '/api/v1/rides/chat/read', { app: A.app, token: A.riderToken, body: { trip_id: chatA } })).j.data.read === 1);
+    await say(B, chatB, 'BRAVO rider: hello'); await sayD(B, chatB, 'BRAVO driver: hello');
+
+    const refusedChat = async (label, r) => check(label, r.s === 403 || r.s === 404, `HTTP ${r.s}`);
+    await refusedChat('B\'s rider cannot write into A\'s ride', await say(B, chatA, 'intrusion'));
+    await refusedChat('B\'s driver cannot write into A\'s ride', await sayD(B, chatA, 'intrusion'));
+    await refusedChat('B\'s rider cannot read A\'s ride', await http('GET', `/api/v1/rides/chat?trip_id=${chatA}`, { app: B.app, token: B.riderToken }));
+    await refusedChat('B\'s driver cannot read A\'s ride', await http('GET', `/api/v1/rides/chat?trip_id=${chatA}`, { app: B.app, token: B.driverToken }));
+    await refusedChat('B\'s rider cannot mark A\'s ride read', await http('POST', '/api/v1/rides/chat/read', { app: B.app, token: B.riderToken, body: { trip_id: chatA } }));
+    await refusedChat('A\'s own rider token named on B\'s app is refused', await http('GET', `/api/v1/rides/chat?trip_id=${chatA}`, { app: B.app, token: A.riderToken }));
+    check('what B\'s people see of their own ride has none of A\'s words', !ids(await http('GET', `/api/v1/rides/chat?trip_id=${chatB}`, { app: B.app, token: B.riderToken })).includes('ALPHA'));
+    const staffA = await http('GET', `/api/admin/business/trips/${chatA}/chat`, { token: A.token, app: A.app });
+    check('A\'s staff read A\'s conversation', staffA.s === 200 && ids(staffA).includes('ALPHA rider') && ids(staffA).includes('ALPHA driver'), short(staffA.j));
+    const staffB = await http('GET', `/api/admin/business/trips/${chatA}/chat`, { token: B.token, app: B.app });
+    check('B\'s staff get nothing of A\'s conversation', refused(staffB) && !ids(staffB).includes('ALPHA'), `HTTP ${staffB.s}`);
+    check('A\'s own staff view of a trip does not include B\'s chat', !ids(await http('GET', `/api/admin/business/trips/${chatB}/chat`, { token: A.token, app: A.app })).includes('BRAVO'));
+    // the switch is per business
+    check('A turns chat off', (await http('PUT', '/api/admin/business/chat-settings', { token: A.token, app: A.app, body: { enabled: false } })).j.data.enabled === false);
+    check('with chat off in A nobody can write in A', (await say(A, chatA, 'is anyone there')).s === 403);
+    check('with chat off in A, B\'s chat still works', (await say(B, chatB, 'BRAVO still talking')).s === 201);
+    check('A\'s history can still be read with chat off', (await http('GET', `/api/v1/rides/chat?trip_id=${chatA}`, { app: A.app, token: A.riderToken })).j.data.messages.length === 2);
+    check('B\'s admin cannot switch A\'s chat', refused(await http('PUT', '/api/admin/business/chat-settings', { token: B.token, app: A.app, body: { enabled: true } })));
+    // a driver ending the ride closes the chat
+    await http('POST', '/api/admin/business/chat-settings', { token: A.token, app: A.app });
+    must(await http('PUT', '/api/admin/business/chat-settings', { token: A.token, app: A.app, body: { enabled: true } }), 'A turns chat on');
+    must(await http('POST', '/api/v1/rides/driver-cancel', { app: B.app, token: B.driverToken, body: { trip_id: chatB, driver_id: B.driverId, reason: 'Vehicle problem' } }), 'B driver cancels');
+    check('after the ride ends nobody can write, but the conversation can be read', (await say(B, chatB, 'too late')).s === 409 && (await http('GET', `/api/v1/rides/chat?trip_id=${chatB}`, { app: B.app, token: B.riderToken })).s === 200);
+
+    // ---------- 8. a platform owner can still see both (the one place that is meant to cross) ----------
     const all = await http('GET', '/api/admin/tenants', { token: owner });
     check('the platform owner sees both businesses', all.s === 200 && ids(all).includes(A.app) && ids(all).includes(B.app));
   } catch (e) {

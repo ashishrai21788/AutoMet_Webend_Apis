@@ -218,6 +218,7 @@ function createFakeDb() {
     LegalAcceptance: fakeModel({ uniques: [['tenantId', 'role', 'accountId', 'type', 'version']], defaults: () => ({ at: new Date() }) }),
     DriverPayout: fakeModel({ uniques: ['payoutId', { fields: ['tenantId', 'driverId'], only: { open: true } }], defaults: () => ({ open: true, status: 'REQUESTED', requestedAt: new Date(), createdAt: new Date(), updatedAt: new Date() }) }),
     RiderPresence: fakeModel({ uniques: ['userId'] }),
+    ChatMessage: fakeModel({ uniques: ['messageId'], defaults: () => ({ createdAt: new Date(), readAt: null }) }),
     RiderInvoice: fakeModel({ uniques: ['invoiceId', 'tripId', ['tenantId', 'invoiceNumber']] }),
     PlatformPlan: fakeModel({ uniques: ['planId', 'name'], defaults: () => ({ active: true, setupFee: 0, trialDays: null }) }),
     PlatformSettings: fakeModel({ uniques: ['key'] }),
@@ -243,6 +244,7 @@ function createFakeDb() {
     stub('models/tripDetailsModel.js', { TripDetails: db.TripDetails });
     stub('models/supportModels.js', { DriverIssue: db.DriverIssue });
     stub('models/riderPresenceModel.js', { RiderPresence: db.RiderPresence });
+    stub('models/chatMessageModel.js', { ChatMessage: db.ChatMessage });
     stub('models/driverDutySessionModel.js', { DriverDutySession: db.DriverDutySession });
     stub('models/driverPayoutModel.js', { DriverPayout: db.DriverPayout });
     stub('models/legalModel.js', { LegalDocument: db.LegalDocument, LegalAcceptance: db.LegalAcceptance });

@@ -29,6 +29,7 @@ function createPgDb() {
   const { DriverPayout } = require('../../models/driverPayoutModel');
   const { RiderInvoice } = require('../../models/riderInvoiceModel');
   const { RiderPresence } = require('../../models/riderPresenceModel');
+  const { ChatMessage } = require('../../models/chatMessageModel');
 
   const db = {
     Tenant: admin.Tenant, AdminUser: admin.AdminUser, AdminAudit: admin.AdminAudit,
@@ -42,7 +43,7 @@ function createPgDb() {
     FareRuleDraft: pricing.FareRuleDraft, PricingVersion: pricing.PricingVersion, PricingSchedule: pricing.PricingSchedule, CancellationPolicyChange: pricing.CancellationPolicyChange,
     Coupon: coupons.Coupon, CouponUse: coupons.CouponUse, CouponRedemption: coupons.CouponRedemption,
     DriverAdjustment: ledger.DriverAdjustment, Incentive: ledger.Incentive, LegalDocument: legalModels.LegalDocument, LegalAcceptance: legalModels.LegalAcceptance,
-    ConfigVersion, DriverDutySession, DriverPayout, RiderInvoice, RiderPresence,
+    ConfigVersion, DriverDutySession, DriverPayout, RiderInvoice, RiderPresence, ChatMessage,
     PlatformInvoice: billing.PlatformInvoice, PlatformCounter: billing.PlatformCounter, PlatformPlan: billing.PlatformPlan, PlatformSettings: billing.PlatformSettings
   };
   const models = Object.values(db);

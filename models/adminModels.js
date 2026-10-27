@@ -35,6 +35,8 @@ const tenantSchema = new mongoose.Schema({
   },
   /** How fare rule changes reach riders: direct (a save is live at once) or draft (saves wait to be published together). See controllers/pricingController.js. */
   pricingWorkflow: { type: String, enum: ['direct', 'draft'], default: 'direct' },
+  // ride chat between a rider and their driver: on unless the business switches it off
+  chatEnabled: { type: Boolean, default: true },
   /** Whether drivers may enter a toll when ending a trip, and the most they may enter for one trip (minor units). See lib/tolls.js. */
   tollSettings: {
     type: new mongoose.Schema({ enabled: { type: Boolean, default: false }, maxTollMinor: { type: Number, default: 0, min: 0 } }, { _id: false }),
