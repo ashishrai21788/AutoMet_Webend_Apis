@@ -15,6 +15,10 @@ db.install();
 const { requireAuth } = require('../lib/authMiddleware');
 const { clearAppTenantCache } = require('../lib/appTenant');
 
+// The failure is simulated by patching the in-memory fake; the rule under test (an error with no status is a 503) does not depend on the
+// database engine, so these two run on the in-memory engine only.
+const onFake = process.env.TEST_DB === 'postgres' ? { skip: 'simulated on the in-memory engine only' } : {};
+
 const tok = (payload, opts = { expiresIn: '1h' }) => jwt.sign(payload, process.env.JWT_SECRET, opts);
 
 const run = async (token, role = 'any') => {
@@ -44,7 +48,7 @@ test('real token problems stay 401: no token, a bad signature, an expired token,
   assert.equal((await run(good)).passed, true, 'and the real one passes');
 });
 
-test('a database failure while checking the token is a 503, not a 401', async () => {
+test('a database failure while checking the token is a 503, not a 401', onFake, async () => {
   const good = await seed();
   const original = db.User.findOne;
   db.User.findOne = () => { throw new Error('read ECONNRESET'); };
@@ -56,7 +60,7 @@ test('a database failure while checking the token is a 503, not a 401', async ()
   } finally { db.User.findOne = original; }
 });
 
-test('the internal error is not sent to the app', async () => {
+test('the internal error is not sent to the app', onFake, async () => {
   const good = await seed();
   const original = db.User.findOne;
   db.User.findOne = () => { throw new Error('connect ECONNREFUSED 10.0.0.5:5432 password authentication failed'); };
