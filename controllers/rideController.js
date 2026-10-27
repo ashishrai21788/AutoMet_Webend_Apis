@@ -1215,6 +1215,10 @@ exports.updateTripStatus = async (req, res) => {
           await TripDetails.updateOne({ trip_id: tripId }, { $set: { driver_earning: snap } });
           // a bonus the driver has just earned by this trip is credited now (safe to repeat: it can only be credited once)
           await require('../lib/incentives').settle({ tenantId: tenant && tenant.tenantId, driverId: done.driver_id, currency: snap.currency });
+          // the cash fare now waits for the driver to confirm it (a failure here never fails the completion; the driver's confirmation creates it too)
+          if (tenant && tenant.tenantId && String(done.payment_mode || 'CASH').toUpperCase() === 'CASH') {
+            await require('../lib/payments/cash').ensureCashPayment({ tenantId: tenant.tenantId, trip: await TripDetails.findOne({ trip_id: tripId }).lean() });
+          }
         } catch (e) { console.warn('[earnings] not fixed at completion for', tripId, e.message); }
       }
       // the rider's invoice is issued as the trip completes; a failure here never fails the completion (it is issued on first read instead)
