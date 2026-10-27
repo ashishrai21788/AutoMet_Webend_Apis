@@ -49,3 +49,15 @@ These are not code and could not be done or tested from here.
 ## Decision
 
 **Ready for a controlled launch once items 1 to 4 above are done.** The software is tested and the known launch-day defects are fixed. Items 1 to 3 are the ones that can fail silently in production, so they should be checked first, with one real ride between two real phones.
+
+## Production environment checklist
+
+`render-environment-variables.example.csv` lists every variable a launch needs. Beyond the database, `JWT_SECRET`, Cloudinary and `NODE_ENV=production` (which makes sign-in checks strict by default):
+
+- `FIREBASE_SERVICE_ACCOUNT_KEY`: without it no push is sent. After setting it, open `GET /health` and confirm `fcmStatus` is `OK`.
+- `SCHEDULER_SECRET`: without it the scheduled ride-timeout endpoints stay disabled.
+- `PUBLIC_BASE_URL`, `ADMIN_DASHBOARD_URL`, `CORS_ALLOWED_ORIGINS`: the address shared links and password-reset emails are built on, and the only website allowed to call the API from a browser.
+- `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`: creates the first platform owner once; remove both after the first sign-in.
+- Do **not** set `TEST_LOGIN_OTP` or `TEST_LOGIN_NUMBERS` unless you want a fixed sign-in code for those numbers.
+- The rate limiter keeps its counters in the server's memory: correct on one instance, per instance if the service is scaled out.
+- Release apps are signed from a git-ignored `keystore.properties` (storeFile, storePassword, keyAlias, keyPassword) next to `settings.gradle.kts`; without it the release APK is left unsigned. Build one for a business with `scripts/build-business-apk.sh <appId> "<name>" release`.
