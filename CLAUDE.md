@@ -13,7 +13,7 @@ AutoMet is a ride-hailing backend API (Node.js/Express 5) serving both a **drive
 - `npm run monitor` — start via `monitor.js` (process monitoring wrapper)
 - `npm run health` — curl the local health endpoint
 
-There are no tests configured (`npm test` exits with error).
+Tests: `npm test` runs the in-memory suite (about 650 tests); `TEST_DB=postgres npm test` runs it on real Postgres models; `npm run contract` and `npm run live:tenants` are the contract and isolation checks. Run them from Git Bash on Windows.
 
 ## Architecture
 

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { generateOtp, testLoginConfig, last10 } = require('../lib/testLogin');
+const { generateOtp, testLoginConfig, testCodeFor, last10 } = require('../lib/testLogin');
 
 const env = { TEST_LOGIN_OTP: '246810', TEST_LOGIN_NUMBERS: '9876543210, +91 91234 56789' };
 
@@ -49,4 +49,27 @@ test('testCodeFor returns the code for allow-listed numbers only', () => {
   assert.equal(testCodeFor('9876543210', {}), '123456');
   assert.equal(testCodeFor('9000000000', {}), undefined);
   assert.equal(testCodeFor('9876543210', { TEST_LOGIN_DISABLED: '1' }), undefined);
+});
+
+// ---- production must never accept a published code by default
+test('in production the built-in test accounts are off: nothing configured means no fixed code at all', () => {
+  const prod = { NODE_ENV: 'production' };
+  assert.equal(testLoginConfig(prod), null);
+  assert.notEqual(generateOtp('9876500001', prod), '123456');
+  assert.equal(testCodeFor('9876543210', prod), undefined);
+  // a half-set configuration is still nothing
+  assert.equal(testLoginConfig({ ...prod, TEST_LOGIN_OTP: '246810' }), null);
+  assert.equal(testLoginConfig({ ...prod, TEST_LOGIN_NUMBERS: '9876543210' }), null);
+});
+
+test('in production a fixed code still works when both variables are set on purpose, and only for those numbers', () => {
+  const prod = { NODE_ENV: 'production', TEST_LOGIN_OTP: '246810', TEST_LOGIN_NUMBERS: '9000000042' };
+  assert.equal(generateOtp('9000000042', prod), '246810');
+  assert.notEqual(generateOtp('9876500001', prod), '123456', 'the built-in accounts stay off');
+  assert.equal(testLoginConfig({ ...prod, TEST_LOGIN_DISABLED: '1' }), null, 'and the switch still turns it all off');
+});
+
+test('outside production (development, tests, the lab) the built-in accounts keep working', () => {
+  assert.equal(generateOtp('9876500001', { NODE_ENV: 'development' }), '123456');
+  assert.equal(generateOtp('9876500001', {}), '123456');
 });
