@@ -16,6 +16,7 @@
     "test:parity": "node --test test/pgmodel.test.js && PARITY_ENGINE=mongo node --test test/pgmodel.test.js",
     "db:setup": "node scripts/pgSetup.js",
     "contract": "node test/contract/run.js",
+    "concurrency": "node test/concurrency/run.js",
     "live:tenants": "node test/live/tenantIsolation.js",
     "lab": "node test/live/lab.js",
     "contract:postgres": "DB_ENGINE=postgres node test/contract/run.js",

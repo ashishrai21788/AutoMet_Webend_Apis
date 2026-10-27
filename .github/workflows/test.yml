@@ -1,0 +1,113 @@
+name: Backend tests
+
+# Every push and pull request runs the whole backend suite on BOTH database engines (the in-memory stand-ins and real PostgreSQL models),
+# the API contract snapshots on both engines, the live two-business tenant isolation check, and a dependency audit.
+# Nothing here touches a real database, a real Firebase project or any secret: the server runs against temporary in-process databases.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.engine }} engine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [memory, postgres]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cache the temporary MongoDB binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}
+      - run: npm ci
+      - name: Run the suite
+        run: |
+          if [ "${{ matrix.engine }}" = "postgres" ]; then export TEST_DB=postgres; fi
+          npm test
+
+  contract:
+    name: Contract snapshots (${{ matrix.engine }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [mongo, postgres]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cache the temporary MongoDB binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}
+      - run: npm ci
+      - name: Replay every scenario against the stored snapshots
+        run: |
+          if [ "${{ matrix.engine }}" = "postgres" ]; then export DB_ENGINE=postgres; fi
+          node test/contract/run.js
+
+  tenant-isolation:
+    name: Tenant isolation (live, two businesses)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run live:tenants
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Fail on a high or critical advisory in a production dependency
+        run: npm audit --omit=dev --audit-level=high
+
+  concurrency:
+    name: Concurrency harness (real parallel requests, both engines)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cache the temporary MongoDB binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}
+      - run: npm ci
+      - run: CONC_TRIALS=15 npm run concurrency

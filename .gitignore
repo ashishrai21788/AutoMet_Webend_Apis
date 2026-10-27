@@ -74,3 +74,5 @@ automet-89e4b-firebase-adminsdk-fbsvc-973c0f0fdd.json
 ssl/
 *.pem
 test/live/lab.json
+
+test/concurrency/results/

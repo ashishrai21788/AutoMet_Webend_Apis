@@ -201,6 +201,15 @@ async function start({ engine = 'mongo', env: extra = {}, prepare = null, waitOw
       }
       return (await database()).collection(collection).findOne(filter, { sort });
     },
+    /** Every document matching the filter (read-only), for checks that count rows: a harness invariant must be read from the data, not from an API reply. */
+    all: async (collection, filter = {}) => {
+      if (pg) {
+        const keys = Object.keys(filter);
+        const r = await pg.query(`SELECT * FROM ${qi(collection)}${keys.length ? ` WHERE ${keys.map((k, i) => `${qi(k)} = ${i + 1}`).join(' AND ')}` : ''}`, keys.map((k) => filter[k]));
+        return r.rows;
+      }
+      return (await database()).collection(collection).find(filter).toArray();
+    },
     /** Puts a document straight into a collection, for data the API itself never creates without an outside event. */
     seed: async (collection, doc) => {
       if (pg) {

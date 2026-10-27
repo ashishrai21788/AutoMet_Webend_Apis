@@ -11,7 +11,7 @@ const { priceTrip, priceTripWithCoupon, withSurge, loadPricingConfig } = require
 const coupons = require('../lib/coupons');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
-const { findDriverConflict } = require('../lib/driverBusy');
+const { findDriverConflict, COMMITTED_STATUSES } = require('../lib/driverBusy');
 const { dispatchConfig, rankCandidates, canReoffer, etaMinutes } = require('../lib/dispatch');
 const { matchRegion, hasGeofence } = require('../lib/regionMatch');
 
@@ -541,6 +541,27 @@ exports.createRequest = async (req, res) => {
           success: false,
           message: 'You already have a ride in progress.',
           data: { trip_id: earlier.trip_id, request_id: earlier.request_id, status: earlier.status }
+        });
+      }
+    }
+
+    {
+      // The "driver is busy" check above and the insert are not atomic either: riders asking at the same instant can all pass it
+      // and the driver would hold several offers. A ride the driver already committed to always wins, otherwise the earliest
+      // pending request does; the others are withdrawn before the driver is told about them.
+      const claims = await TripDetails.find({ driver_id: driverId, status: { $in: ['REQUESTED', ...COMMITTED_STATUSES] } }).lean();
+      const stamp = (t) => new Date(t.requested_at).getTime();
+      const wins = (a, b) => (a.status !== 'REQUESTED') !== (b.status !== 'REQUESTED')
+        ? a.status !== 'REQUESTED'
+        : (stamp(a) !== stamp(b) ? stamp(a) < stamp(b) : String(a.trip_id) < String(b.trip_id));
+      const beaten = (claims || []).some((t) => t.trip_id !== trip.trip_id && !(t.status === 'REQUESTED' && new Date(t.timeout_at) <= now) && wins(t, trip));
+      if (beaten) {
+        await TripDetails.updateOne({ trip_id: trip.trip_id, status: 'REQUESTED' }, { $set: { status: 'CANCELLED_BY_USER', cancelled_at: new Date(), cancellation_reason: 'Driver took another request', updated_at: new Date() } });
+        return res.status(409).json({
+          success: false,
+          message: 'This driver is busy with another ride. Please choose another driver.',
+          error: 'DRIVER_BUSY',
+          data: { code: 'DRIVER_BUSY', driver_id: driverId }
         });
       }
     }
