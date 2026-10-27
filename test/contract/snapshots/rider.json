@@ -28,6 +28,7 @@
             "business": {
               "appName": "AutoMet",
               "brandColor": "#f5a300",
+              "emergencyNumber": "112",
               "logoUrl": "",
               "name": "AutoMet",
               "supportEmail": "",

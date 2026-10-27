@@ -6,6 +6,8 @@ const { requireAuth, requireRideScopeQuery, requireSchedulerSecret } = require('
 const { deprecateLegacyRideApi } = require('../lib/deprecationHeaders');
 const shareController = require('../controllers/shareController');
 const chatController = require('../controllers/chatController');
+const sosController = require('../controllers/sosController');
+const { createLimiter } = require('../lib/rateLimit');
 
 // Create ride request (user → driver) — legacy; prefer /trips/create-request
 router.post(
@@ -21,6 +23,10 @@ router.post('/check-timeouts', requireSchedulerSecret, tripsController.checkTime
 router.post('/chat/send', requireAuth({ roles: ['user', 'driver'] }), chatController.send);
 router.get('/chat', requireAuth({ roles: ['user', 'driver'] }), chatController.list);
 router.post('/chat/read', requireAuth({ roles: ['user', 'driver'] }), chatController.markRead);
+
+// Emergency (SOS) from a rider or driver on a ride. The apps open the phone's dialler themselves; this only tells the business.
+// The limit is generous on purpose: an emergency is never to be refused for pressing too often (a repeat press just updates the open alert).
+router.post('/sos', requireAuth({ roles: ['user', 'driver'] }), createLimiter({ name: 'sos-actor', windowMs: 60 * 1000, max: 60, key: (r) => `sos:${r.authActorId || r.ip}` }), sosController.raise);
 
 router.post(
   '/cancel',

@@ -63,7 +63,7 @@ test('an app that names its business gets that business, with branding, market, 
   const { data } = await res.json();
   assert.equal(data.appId, 'app_alpha');
   assert.equal(data.resolvedBy, 'header');
-  assert.deepEqual(data.business, { name: 'Alpha Rides', appName: 'Alpha Go', brandColor: '#112233', logoUrl: 'https://cdn.example/alpha.png', supportEmail: 'help@alpha.test', supportPhone: '+911234567890' });
+  assert.deepEqual(data.business, { name: 'Alpha Rides', appName: 'Alpha Go', brandColor: '#112233', logoUrl: 'https://cdn.example/alpha.png', supportEmail: 'help@alpha.test', supportPhone: '+911234567890', emergencyNumber: '112' });
   assert.deepEqual(data.market, { country: 'IN', currency: 'INR', timezone: 'Asia/Kolkata' });
   assert.deepEqual(data.regions.map((r) => r.regionId), ['rg_blr'], 'inactive regions are not listed');
   assert.deepEqual(data.regions[0].center, { lat: 12.97, lng: 77.59 });

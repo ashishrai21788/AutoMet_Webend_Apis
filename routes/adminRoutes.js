@@ -32,6 +32,7 @@ const driverPenaltyAdmin = require('../controllers/driverPenaltyAdminController'
 const surgeAdmin = require('../controllers/surgeAdminController');
 const chatAdmin = require('../controllers/chatController');
 const setupDrafts = require('../controllers/setupDraftController');
+const sosAdmin = require('../controllers/sosController');
 const withBusiness = createBusinessContext({ loadTenant: (tenantId) => Tenant.findOne({ tenantId }) });
 
 const router = express.Router();
@@ -223,6 +224,10 @@ router.get('/business/payout-settings', requireAdmin('payments.view'), withBusin
 router.put('/business/payout-settings', requireAdmin('payments.manage'), withBusiness, payouts.updateSettings);
 
 router.get('/business/alerts', ...read, ops.alerts);
+// emergencies raised by riders and drivers during rides: they carry phone numbers and locations, so they need the support permission
+router.get('/business/sos', requireAdmin('support.manage'), withBusiness, sosAdmin.list);
+router.post('/business/sos/:id/acknowledge', requireAdmin('support.manage'), withBusiness, sosAdmin.acknowledge);
+router.post('/business/sos/:id/resolve', requireAdmin('support.manage'), withBusiness, sosAdmin.resolve);
 router.get('/business/reports/summary', requireAdmin('trips.view'), withBusiness, reports.summary);
 router.get('/business/export/trips.csv', requireAdmin('trips.view'), withBusiness, reports.tripsCsv);
 router.get('/business/export/riders.csv', requireAdmin('riders.view'), withBusiness, reports.ridersCsv);

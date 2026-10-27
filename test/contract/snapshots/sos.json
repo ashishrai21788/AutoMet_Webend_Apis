@@ -1,0 +1,802 @@
+{
+  "scenario": "sos",
+  "steps": [
+    {
+      "step": "setup: platform owner signs in",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "owner@contract.test",
+          "password": "Contract-Owner-Pass-1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "owner@contract.test",
+              "id": "<a_1>",
+              "mustChangePassword": true,
+              "name": "Platform Owner",
+              "role": "super_admin",
+              "tenantId": null,
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: list businesses",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/tenants",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": [
+            {
+              "appId": "<defaultAppId>",
+              "appName": "AutoMet",
+              "brandColor": "#f5a300",
+              "city": "",
+              "createdAt": "<day>",
+              "id": "<defaultAppId>",
+              "isDefault": true,
+              "logoUrl": "",
+              "market": null,
+              "name": "AutoMet",
+              "packageName": "in.automet.user",
+              "plan": "enterprise",
+              "setup": {
+                "complete": false,
+                "nextStep": "Country and service regions",
+                "percent": 0
+              },
+              "slug": "automet",
+              "status": "active",
+              "supportEmail": "",
+              "supportPhone": ""
+            }
+          ],
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the business admin",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "admin@contract.test",
+          "name": "Client Admin",
+          "role": "client_admin",
+          "tenantId": "<defaultAppId>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "admin@contract.test",
+            "id": "<a_2>",
+            "mustChangePassword": true,
+            "name": "Client Admin",
+            "role": "client_admin",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "admin@contract.test",
+          "password": "<tempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": true,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: business admin chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<tempPassword>",
+          "newPassword": "Client-Admin-Pass-1"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "admin@contract.test",
+              "id": "<a_2>",
+              "mustChangePassword": false,
+              "name": "Client Admin",
+              "role": "client_admin",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: market",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/market",
+        "body": {
+          "country": "IN",
+          "currency": "INR",
+          "timezone": "Asia/Kolkata"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "appId": "<defaultAppId>",
+            "appName": "AutoMet",
+            "brandColor": "#f5a300",
+            "city": "",
+            "createdAt": "<day>",
+            "id": "<defaultAppId>",
+            "isDefault": true,
+            "logoUrl": "",
+            "market": {
+              "country": "IN",
+              "currency": "INR",
+              "timezone": "Asia/Kolkata"
+            },
+            "name": "AutoMet",
+            "packageName": "in.automet.user",
+            "plan": "enterprise",
+            "slug": "automet",
+            "status": "active",
+            "supportEmail": "",
+            "supportPhone": ""
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: region",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/regions",
+        "body": {
+          "cities": [
+            {
+              "lat": 18.5204,
+              "lng": 73.8567,
+              "name": "Pune"
+            }
+          ],
+          "radiusKm": 30,
+          "state": "Maharashtra",
+          "zoneName": "All areas"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "created": [
+              {
+                "active": true,
+                "center": {
+                  "lat": 18.5204,
+                  "lng": 73.8567
+                },
+                "city": "Pune",
+                "country": "IN",
+                "createdAt": "<date>",
+                "id": "<rg_3>",
+                "radiusKm": 30,
+                "state": "Maharashtra",
+                "updatedAt": "<date>",
+                "zoneName": "All areas"
+              }
+            ],
+            "skipped": []
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: vehicle category",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/categories",
+        "body": {
+          "name": "Sedan",
+          "passengerCapacity": 4,
+          "regionIds": [
+            "<rg_3>"
+          ],
+          "rideType": "economy"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "createdAt": "<date>",
+            "description": "",
+            "icon": "car",
+            "id": "<vc_4>",
+            "imageUrl": "",
+            "luggageCapacity": null,
+            "mapIconUrl": "",
+            "name": "Sedan",
+            "passengerCapacity": 4,
+            "regionIds": [
+              "<rg_3>"
+            ],
+            "rideType": "economy",
+            "updatedAt": "<date>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: fare rule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/fare-rules",
+        "body": {
+          "baseFare": 40,
+          "bookingFee": 5,
+          "categoryId": "<vc_4>",
+          "minimumFare": 70,
+          "perKm": 12,
+          "perMinute": 1,
+          "regionId": "<rg_3>",
+          "waitingFreeMinutes": 3,
+          "waitingPerMinute": 1.5
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "additionalCharges": [],
+            "baseFare": 40,
+            "bookingFee": 5,
+            "categoryId": "<vc_4>",
+            "createdAt": "<date>",
+            "currency": "INR",
+            "id": "<fr_5>",
+            "minimumFare": 70,
+            "perKm": 12,
+            "perMinute": 1,
+            "regionId": "<rg_3>",
+            "surge": {
+              "enabled": false,
+              "maxMultiplier": 1
+            },
+            "taxes": [],
+            "updatedAt": "<date>",
+            "waitingFreeMinutes": 3,
+            "waitingPerMinute": 1.5
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the driver",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers",
+        "body": {
+          "address": {
+            "city": "Pune",
+            "country": "IN",
+            "line": "1 Main Road",
+            "state": "Maharashtra"
+          },
+          "dateOfBirth": "1990-04-02",
+          "eligibleCategoryId": "<vc_4>",
+          "email": "dee@contract.test",
+          "fullName": "Dee Driver",
+          "operatingRegionId": "<rg_3>",
+          "phone": "+919811111111"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<driverId>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: create the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/vehicles",
+        "body": {
+          "categoryId": "<vc_4>",
+          "colour": "White",
+          "luggageCapacity": 2,
+          "make": "Maruti",
+          "model": "Dzire",
+          "operatingRegionId": "<rg_3>",
+          "passengerCapacity": 4,
+          "registrationNumber": "MH12AB1234",
+          "status": "ACTIVE",
+          "year": 2021
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "id": "<veh_6>"
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: assign the vehicle",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/drivers/<driverId>/assign-vehicle",
+        "body": {
+          "vehicleId": "<veh_6>"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "assignmentId": "<as_7>",
+            "unchanged": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "setup: the driver is now eligible",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/drivers/<driverId>",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "accountStatus": "ACTIVE",
+            "activity": {
+              "createdByAdmin": true,
+              "lastActiveAt": "<date>",
+              "phoneVerified": false,
+              "registeredAt": "<date>",
+              "signedInOnApp": false
+            },
+            "address": {
+              "city": "Pune",
+              "country": "IN",
+              "line": "1 Main Road",
+              "state": "Maharashtra"
+            },
+            "appReportedVehicle": {
+              "colour": null,
+              "model": "Maruti Dzire",
+              "registrationNumber": "MH12AB1234",
+              "type": "Sedan"
+            },
+            "assignedAt": "<date>",
+            "canViewDocuments": true,
+            "createdAt": "<date>",
+            "currentTripId": null,
+            "dateOfBirth": "1990-04-02",
+            "eligibility": {
+              "eligible": true,
+              "reasons": []
+            },
+            "eligibleCategoryId": "<vc_4>",
+            "eligibleCategoryName": "Sedan",
+            "email": "dee@contract.test",
+            "fullName": "Dee Driver",
+            "id": "<driverId>",
+            "lastLocationAt": null,
+            "lastSeenAt": "<date>",
+            "locationAgeSeconds": "<volatile>",
+            "name": "Dee Driver",
+            "online": false,
+            "operatingRegionId": "<rg_3>",
+            "phone": "+919811111111",
+            "photoUrl": null,
+            "position": null,
+            "presence": "OFFLINE",
+            "vehicle": {
+              "categoryId": "<vc_4>",
+              "id": "<veh_6>",
+              "make": "Maruti",
+              "model": "Dzire",
+              "registrationNumber": "MH12AB1234",
+              "status": "ACTIVE"
+            },
+            "verification": {
+              "expired": [],
+              "missing": [
+                "DRIVING_LICENCE",
+                "IDENTITY"
+              ],
+              "pending": [],
+              "rejected": []
+            },
+            "verificationStatus": "INCOMPLETE",
+            "wentOfflineReason": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "sos: no session",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/sos"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "sos: nothing open yet",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/sos",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [],
+            "open": 0,
+            "unacknowledged": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "sos: resolved list is empty too",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/sos?status=resolved",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [],
+            "open": 0,
+            "unacknowledged": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "sos: an unknown status falls back to open",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/sos?status=whatever",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "items": [],
+            "open": 0,
+            "unacknowledged": 0
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "sos: acknowledge an unknown emergency",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/sos/sos_missing/acknowledge",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Emergency not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "sos: resolve an unknown emergency",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/sos/sos_missing/resolve",
+        "body": {
+          "note": "x"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 404,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Emergency not found",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "sos: a note that is too long",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/sos/sos_missing/resolve",
+        "body": {
+          "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "note": "Write 300 characters at most"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "sos: create a finance user",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/users",
+        "body": {
+          "email": "finance@contract.test",
+          "name": "Finance",
+          "role": "finance"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 201,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "active": true,
+            "email": "finance@contract.test",
+            "id": "<a_8>",
+            "mustChangePassword": true,
+            "name": "Finance",
+            "role": "finance",
+            "temporaryPassword": "<volatile>",
+            "tenantId": "<defaultAppId>",
+            "twoFactorEnabled": false,
+            "twoFactorSetupRequired": false
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "sos: finance signs in (temporary password)",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login",
+        "body": {
+          "email": "finance@contract.test",
+          "password": "<financeTempPassword>"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "finance@contract.test",
+              "id": "<a_8>",
+              "mustChangePassword": true,
+              "name": "Finance",
+              "role": "finance",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "sos: finance chooses a password",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/change-password",
+        "body": {
+          "currentPassword": "<financeTempPassword>",
+          "newPassword": "Finance-Pass-12345"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "token": "<jwt>",
+            "user": {
+              "active": true,
+              "email": "finance@contract.test",
+              "id": "<a_8>",
+              "mustChangePassword": false,
+              "name": "Finance",
+              "role": "finance",
+              "tenantId": "<defaultAppId>",
+              "twoFactorEnabled": false,
+              "twoFactorSetupRequired": false
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "sos: finance cannot list emergencies",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/sos",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "sos: finance cannot acknowledge one",
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/business/sos/sos_missing/acknowledge",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Your role does not include this action",
+          "success": false
+        }
+      }
+    }
+  ]
+}

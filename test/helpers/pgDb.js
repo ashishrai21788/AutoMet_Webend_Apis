@@ -22,6 +22,7 @@ function createPgDb() {
   const billing = require('../../models/platformBilling');
   const pricing = require('../../models/pricingModels');
   const setupDraftModel = require('../../models/setupDraftModel');
+  const sosModel = require('../../models/sosModel');
   const coupons = require('../../models/couponModel');
   const ledger = require('../../models/driverLedgerModel');
   const legalModels = require('../../models/legalModel');
@@ -41,7 +42,7 @@ function createPgDb() {
     DriverVehicleAssignment: fleet.DriverVehicleAssignment, EntityHistory: fleet.EntityHistory,
     TripDetails, TripEvent, DriverIssue,
     // models added by later cycles, so the same tests also run on the real Postgres engine
-    SetupDraft: setupDraftModel.SetupDraft, FareRuleDraft: pricing.FareRuleDraft, PricingVersion: pricing.PricingVersion, PricingSchedule: pricing.PricingSchedule, CancellationPolicyChange: pricing.CancellationPolicyChange,
+    SosAlert: sosModel.SosAlert, SetupDraft: setupDraftModel.SetupDraft, FareRuleDraft: pricing.FareRuleDraft, PricingVersion: pricing.PricingVersion, PricingSchedule: pricing.PricingSchedule, CancellationPolicyChange: pricing.CancellationPolicyChange,
     Coupon: coupons.Coupon, CouponUse: coupons.CouponUse, CouponRedemption: coupons.CouponRedemption,
     DriverAdjustment: ledger.DriverAdjustment, Incentive: ledger.Incentive, LegalDocument: legalModels.LegalDocument, LegalAcceptance: legalModels.LegalAcceptance,
     ConfigVersion, DriverDutySession, DriverPayout, RiderInvoice, RiderPresence, ChatMessage,
