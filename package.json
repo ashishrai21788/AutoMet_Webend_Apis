@@ -17,6 +17,7 @@
     "db:setup": "node scripts/pgSetup.js",
     "contract": "node test/contract/run.js",
     "live:tenants": "node test/live/tenantIsolation.js",
+    "lab": "node test/live/lab.js",
     "contract:postgres": "DB_ENGINE=postgres node test/contract/run.js",
     "test:postgres": "TEST_DB=postgres npm test"
   },
