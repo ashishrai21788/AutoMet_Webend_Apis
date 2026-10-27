@@ -1241,12 +1241,11 @@ exports.verifyToken = async (req, res, next) => {
       });
     }
 
-    res.status(500).json({
+    // not a token problem (for example the database is unreachable): a 503 the app can retry, never a 401 that signs the person out
+    res.status(503).json({
       success: false,
-      message: 'Token verification failed',
-      data: {
-        error: error.message
-      }
+      message: 'The service is temporarily unavailable. Please try again in a moment.',
+      data: { error: 'SERVICE_UNAVAILABLE' }
     });
   }
 };
