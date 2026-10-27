@@ -65,6 +65,7 @@ jobs:
       - name: Replay every scenario against the stored snapshots
         run: |
           if [ "${{ matrix.engine }}" = "postgres" ]; then export DB_ENGINE=postgres; fi
+          set +e
           node test/contract/run.js 2>&1 | tee contract.log; code=${PIPESTATUS[0]}
           if [ "$code" != "0" ]; then echo "::error title=Contract replay failed::$(grep -vE "^matches" contract.log | head -c 1500 | tr '\n' '|')"; fi
           exit $code
