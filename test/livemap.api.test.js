@@ -35,6 +35,7 @@ test.before(async () => {
   const mk = (adminId, email, role, tenantId, pw) => db.AdminUser.create({ adminId, name: adminId, email, role, tenantId, passwordHash: bcrypt.hashSync(pw, 4) });
   await mk('u_a', 'admin@a.test', 'client_admin', 'app_a', 'password-a-admin');
   await mk('u_a_sup', 'support@a.test', 'support', 'app_a', 'password-a-supp');
+  await mk('u_a_fin', 'finance@a.test', 'finance', 'app_a', 'password-a-fin');
   await mk('u_b', 'admin@b.test', 'client_admin', 'app_b', 'password-b-admin');
 
   await db.ServiceRegion.create({ tenantId: 'app_a', regionId: 'rg_a', country: 'IN', state: 'MH', city: 'Pune', zoneName: 'All areas', key: 'pune', active: true, center: { lat: 18.52, lng: 73.85 }, radiusKm: 25 });
@@ -73,6 +74,7 @@ test.before(async () => {
   const login = async (email, password) => (await (await fetch(base + '/api/admin/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })).json()).data.token;
   ctx.admin = await login('admin@a.test', 'password-a-admin');
   ctx.support = await login('support@a.test', 'password-a-supp');
+  ctx.finance = await login('finance@a.test', 'password-a-fin');
   ctx.b = await login('admin@b.test', 'password-b-admin');
 });
 test.after(() => { server.close(); mock.timers.reset(); });
@@ -128,6 +130,8 @@ test('live map: another business sees only its own drivers, and access is checke
   assert.equal(b.regions.length, 0);
   assert.equal((await get('/business/live-map', { token: ctx.b, appId: 'app_a' })).status, 403);
   assert.equal((await get('/business/live-map', { token: ctx.support })).status, 200, 'support can see the map');
+  // the map carries each driver's name, phone and plate: a role that may not see drivers may not see the map
+  assert.equal((await get('/business/live-map', { token: ctx.finance })).status, 403, 'finance cannot see drivers, so not the map either');
   assert.equal((await fetch(base + '/api/admin/business/live-map')).status, 401);
 });
 

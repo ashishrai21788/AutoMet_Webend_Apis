@@ -221,7 +221,8 @@ router.get('/business/export/trips.csv', requireAdmin('trips.view'), withBusines
 router.get('/business/export/riders.csv', requireAdmin('riders.view'), withBusiness, reports.ridersCsv);
 router.get('/business/export/drivers.csv', requireAdmin('drivers.view'), withBusiness, reports.driversCsv);
 router.get('/business/stats', ...read, ops.stats);
-router.get('/business/live-map', requireAdmin('dashboard.view'), withBusiness, ops.liveMap);
+// the map lists each driver with name, phone and plate, so it needs the permission to see drivers (finance has none)
+router.get('/business/live-map', requireAdmin('drivers.view'), withBusiness, ops.liveMap);
 router.get('/business/riders', requireAdmin('riders.view'), withBusiness, ops.riders);
 router.get('/business/riders/:id', requireAdmin('riders.view'), withBusiness, ops.rider);
 router.post('/business/riders/:id/status', requireAdmin('riders.manage'), withBusiness, ops.setRiderStatus);
