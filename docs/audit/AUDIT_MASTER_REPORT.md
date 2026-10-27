@@ -247,3 +247,19 @@ The 81 tests that failed on the Postgres engine in cycle 11 were chased down. **
 - Totals: backend 650 tests (646 pass, 0 fail, 4 skipped), contract 7 of 7 on both engines, dashboard 24 tests and lint clean.
 
 **Not done yet:** chat has not been run on the two real phones (the phones were not reachable over wireless debugging when tested); no unread badge on the chat buttons yet (a push or an in-app note alerts the user); tapping a chat notification opens the app, not directly the chat; Android unit tests for the chat client.
+
+## Cycle 14: chat on two real phones, and the launch-day security pass
+
+**Chat, tested on a OnePlus (rider) and a Redmi (driver) against the real backend on a throw-away Postgres.** Both directions with live refresh, read marks, day headings, grouped runs, typing, the "switched off" and "ride ended" banners, the unread badge on every chat button, and a notification tap that opens the chat from a closed app. Things the phones found that no test had: the typed text and hint were white on grey, an empty chat was blank, the header showed a first name only, the apps never created the Android notification channels the push named (every chat push was silent on Android 8+), scrolling moved keyboard focus off the input so typed text was lost, and the timestamp reader used `java.time`, which Android 7 lacks. All fixed; the chat rules, the badge text and the network layer now have unit tests in both apps.
+
+**Security pass.**
+- A fixed sign-in code (`123456`) for three built-in numbers worked on any server, production included. In production it is now off unless both variables are set on purpose (3 tests).
+- `POST /api/images/upload` and `DELETE /api/images/delete/:id` answered anyone: an anonymous upload stored an image and an anonymous delete removed one. Both now need a signed-in rider or driver; the contract scenario proves it on both engines.
+- The live map returned every driver's name, phone and plate to the finance role, which cannot open the drivers list. It now needs `drivers.view` (test added; the dashboard menu follows).
+- Method: every one of the 285 route definitions was called with no sign-in on an isolated server (5 answered; 4 are meant to be public); the generic `/api/:collection` CRUD was probed and is limited to a short allow-list; secrets were scanned for in all four repositories; one user per role was created and every dashboard GET route called as each.
+- Dependencies: 28 findings (4 critical, 12 high) to 8 moderate with no breaking changes; the dashboard has none.
+- The apps are pinned to light mode: both use a DayNight theme over screens drawn for a light background, and dark mode could not be tested on a device.
+
+**Dashboard walkthrough.** All 23 business pages as the business admin and all 8 platform pages as the owner loaded with no script error, no failed request and no error text. The business sign-in refuses the platform owner, and a temporary password blocks every page until it is changed.
+
+**Not done.** Dropped-network and killed-app behaviour were not run on a device (the OnePlus was no longer connected and the Redmi was at 7% battery and unplugged); real push delivery needs the production Firebase key; the rider app's lint has never completed on this machine; region and category drafts and the branded build script are not built.

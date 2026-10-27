@@ -16,7 +16,7 @@
 - The rider coupon row and tip row were seen and exercised on a device (cycle 2b). The admin pages were opened in a browser against the lab backend (cycle 2b).
 
 ## Deferred by instruction (not built in this phase)
-- ~~Chat~~ Built in cycle 13: server-owned ride chat with live and push delivery, a per-business switch and a staff view. Still open: a real-phone run, an unread badge, and tapping a notification opening the chat directly.
+- ~~Chat~~ Built in cycle 13 and run on two real phones in cycle 14: server-owned ride chat with live and push delivery, left/right bubbles, a per-business switch, a staff view, an unread badge on every chat button and a notification tap that opens the chat. Still open: real push delivery through the production Firebase key (only the payload and the in-app path were exercised), and typing indicators.
 - **Online payments.** Not integrated. When added the system needs a payment state machine (created, authorised, captured, failed, refunded), provider webhooks with signature checks and idempotency, refunds and reversals that also reverse coupon uses and driver earnings, reconciliation against the provider's settlement report, and an online and cash split in the driver balance (already modelled: online earnings are owed to the driver, cash earnings are not).
 
 ## Blocked
