@@ -22,7 +22,12 @@ const { start } = require('../contract/harness');
     return j;
   };
   const owner = (await api('POST', '/api/admin/auth/login', { email: 'owner@contract.test', password: 'Contract-Owner-Pass-1' })).data.token;
-  const appId = (await api('GET', '/api/admin/tenants', null, owner)).data[0].appId;
+  let appId = (await api('GET', '/api/admin/tenants', null, owner)).data[0].appId;
+  // The apps are built for one app id; LAB_APP_ID keeps that id across lab restarts so they need no rebuild (a fresh database, nothing refers to it yet).
+  if (process.env.LAB_APP_ID && process.env.LAB_APP_ID !== appId) {
+    await s.patch('tenants', { tenantId: appId }, { tenantId: process.env.LAB_APP_ID });
+    appId = process.env.LAB_APP_ID;
+  }
   const ca = await api('POST', '/api/admin/users', { name: 'Lab Admin', email: 'admin@lab.test', role: 'client_admin', tenantId: appId }, owner);
   const first = await api('POST', '/api/admin/auth/login', { email: 'admin@lab.test', password: ca.data.temporaryPassword });
   const admin = (await api('POST', '/api/admin/auth/change-password', { currentPassword: ca.data.temporaryPassword, newPassword: 'Lab-Admin-Pass-1' }, first.data.token)).data.token;
