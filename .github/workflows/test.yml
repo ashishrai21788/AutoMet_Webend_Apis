@@ -66,8 +66,12 @@ jobs:
         run: |
           if [ "${{ matrix.engine }}" = "postgres" ]; then export DB_ENGINE=postgres; fi
           set +e
-          node test/contract/run.js 2>&1 | tee contract.log; code=${PIPESTATUS[0]}
-          if [ "$code" != "0" ]; then echo "::error title=Contract replay failed::$(grep -vE "^matches" contract.log | head -c 1500 | tr '\n' '|')"; fi
+          node test/contract/run.js > contract.log 2>&1
+          code=$?
+          if [ "$code" != "0" ]; then
+            echo "::error title=Contract replay exit code::$code"
+            grep -v "^matches" contract.log | head -n 25 | while IFS= read -r line; do echo "::error title=Contract replay output::${line:0:400}"; done
+          fi
           exit $code
 
   tenant-isolation:

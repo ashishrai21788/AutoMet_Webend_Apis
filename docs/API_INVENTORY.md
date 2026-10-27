@@ -57,7 +57,7 @@
 | GET | `/api/admin/business/cancellation-policies` | adminMiddleware | contract/scenarios/business.js, lab/lab.js, live/lab.js (+1) |
 | PUT | `/api/admin/business/cancellation-policies` | adminMiddleware | contract/scenarios/business.js, lab/lab.js, live/lab.js (+1) |
 | DELETE | `/api/admin/business/cancellation-policies/:id` | adminMiddleware | contract/scenarios/business.js |
-| GET | `/api/admin/business/cancellation-policies/history` | adminMiddleware | cancellationHistory.test.js, chat.test.js, configHistory.test.js (+14) |
+| GET | `/api/admin/business/cancellation-policies/history` | adminMiddleware | cancellationHistory.test.js, chat.test.js, configHistory.test.js (+16) |
 | POST | `/api/admin/business/cancellation-policies/history/:id/restore` | adminMiddleware | cancellationHistory.test.js, live/tenantIsolation.js, rideLifecycle.test.js (+1) |
 | GET | `/api/admin/business/categories` | adminMiddleware | concurrency/world.js, contract/scenarios/business.js, contract/scenarios/common.js (+4) |
 | POST | `/api/admin/business/categories` | adminMiddleware | concurrency/world.js, contract/scenarios/business.js, contract/scenarios/common.js (+4) |
@@ -91,7 +91,7 @@
 | PUT | `/api/admin/business/fare-rules` | adminMiddleware | concurrency/world.js, contract/scenarios/business.js, contract/scenarios/common.js (+3) |
 | DELETE | `/api/admin/business/fare-rules/:id` | adminMiddleware | contract/scenarios/business.js |
 | GET | `/api/admin/business/incentives` | adminMiddleware | **UNREFERENCED** |
-| POST | `/api/admin/business/incentives` | adminMiddleware | admin.api.test.js, adminactions.api.test.js, appVersions.test.js (+74) |
+| POST | `/api/admin/business/incentives` | adminMiddleware | admin.api.test.js, adminactions.api.test.js, appVersions.test.js (+77) |
 | PUT | `/api/admin/business/incentives/:id` | adminMiddleware | appVersions.test.js, business.test.js, cancellationHistory.test.js (+22) |
 | GET | `/api/admin/business/legal` | adminMiddleware | live/tenantIsolation.js |
 | POST | `/api/admin/business/legal/:type` | adminMiddleware | legal.test.js |
@@ -111,7 +111,7 @@
 | GET | `/api/admin/business/payouts/:id` | adminMiddleware | **UNREFERENCED** |
 | POST | `/api/admin/business/payouts/:id/fail` | adminMiddleware | **UNREFERENCED** |
 | POST | `/api/admin/business/payouts/:id/pay` | adminMiddleware | **UNREFERENCED** |
-| POST | `/api/admin/business/payouts/:id/start` | adminMiddleware | concurrency/world.js, contract/harness.js, contract/preload.js (+21) |
+| POST | `/api/admin/business/payouts/:id/start` | adminMiddleware | concurrency/world.js, contract/harness.js, contract/preload.js (+22) |
 | DELETE | `/api/admin/business/pricing/draft` | adminMiddleware | pricingDrafts.test.js, setupDrafts.test.js |
 | GET | `/api/admin/business/pricing/draft` | adminMiddleware | pricingDrafts.test.js, setupDrafts.test.js |
 | DELETE | `/api/admin/business/pricing/draft/:key` | adminMiddleware | pricingDrafts.test.js, setupDrafts.test.js |
@@ -143,7 +143,7 @@
 | PUT | `/api/admin/business/setup/workflow` | adminMiddleware | pricingDrafts.test.js, setupDrafts.test.js |
 | GET | `/api/admin/business/sos` | adminMiddleware | contract/scenarios/sos.js |
 | POST | `/api/admin/business/sos/:id/acknowledge` | adminMiddleware | contract/scenarios/sos.js, sos.test.js |
-| POST | `/api/admin/business/sos/:id/resolve` | adminMiddleware | admin.api.test.js, admin.test.js, adminactions.api.test.js (+34) |
+| POST | `/api/admin/business/sos/:id/resolve` | adminMiddleware | admin.api.test.js, admin.test.js, adminactions.api.test.js (+35) |
 | GET | `/api/admin/business/stats` | adminMiddleware | contract/scenarios/business.js |
 | GET | `/api/admin/business/support/issues` | adminMiddleware | contract/scenarios/business.js |
 | GET | `/api/admin/business/support/issues/:id` | adminMiddleware | contract/scenarios/business.js |
