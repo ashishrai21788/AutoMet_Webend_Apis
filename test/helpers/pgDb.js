@@ -43,7 +43,7 @@ function createPgDb() {
     DriverVehicleAssignment: fleet.DriverVehicleAssignment, EntityHistory: fleet.EntityHistory,
     TripDetails, TripEvent, DriverIssue,
     // models added by later cycles, so the same tests also run on the real Postgres engine
-    LedgerTxn: paymentModels.LedgerTxn, Payment: paymentModels.Payment, PaymentEvent: paymentModels.PaymentEvent, SosAlert: sosModel.SosAlert, SetupDraft: setupDraftModel.SetupDraft, FareRuleDraft: pricing.FareRuleDraft, PricingVersion: pricing.PricingVersion, PricingSchedule: pricing.PricingSchedule, CancellationPolicyChange: pricing.CancellationPolicyChange,
+    LedgerTxn: paymentModels.LedgerTxn, Payment: paymentModels.Payment, PaymentEvent: paymentModels.PaymentEvent, PaymentRefund: paymentModels.PaymentRefund, SosAlert: sosModel.SosAlert, SetupDraft: setupDraftModel.SetupDraft, FareRuleDraft: pricing.FareRuleDraft, PricingVersion: pricing.PricingVersion, PricingSchedule: pricing.PricingSchedule, CancellationPolicyChange: pricing.CancellationPolicyChange,
     Coupon: coupons.Coupon, CouponUse: coupons.CouponUse, CouponRedemption: coupons.CouponRedemption,
     DriverAdjustment: ledger.DriverAdjustment, Incentive: ledger.Incentive, LegalDocument: legalModels.LegalDocument, LegalAcceptance: legalModels.LegalAcceptance,
     ConfigVersion, DriverDutySession, DriverPayout, RiderInvoice, RiderPresence, ChatMessage,

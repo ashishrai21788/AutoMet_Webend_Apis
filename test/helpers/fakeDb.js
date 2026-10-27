@@ -209,6 +209,7 @@ function createFakeDb() {
     FareRuleDraft: fakeModel({ uniques: ['draftId', ['tenantId', 'categoryId', 'regionKey']], defaults: () => ({ op: 'SAVE', createdAt: new Date(), updatedAt: new Date() }) }),
     LedgerTxn: fakeModel({ uniques: ['txnId', ['tenantId', 'eventKey']], defaults: () => ({ createdAt: new Date(), memo: '', createdBy: 'system' }) }),
     Payment: fakeModel({ uniques: ['paymentId', ['tenantId', 'idempotencyKey'], { fields: ['tenantId', 'tripId', 'purpose'], only: { live: true } }], defaults: () => ({ purpose: 'FARE', status: 'CREATED', refundStatus: 'NONE', refundedMinor: 0, cashState: null, live: true, history: [], flags: [], version: 0, createdAt: new Date(), updatedAt: new Date() }) }),
+    PaymentRefund: fakeModel({ uniques: ['refundId', ['tenantId', 'idempotencyKey']], defaults: () => ({ status: 'REQUESTED', commissionMinor: 0, netMinor: 0, duplicateCapture: false, version: 0, createdAt: new Date(), updatedAt: new Date() }) }),
     PaymentEvent: fakeModel({ uniques: [['provider', 'eventId']], defaults: () => ({ receivedAt: new Date() }) }),
     SosAlert: fakeModel({ uniques: ['sosId'], defaults: () => ({ status: 'OPEN', presses: 1, locations: [], createdAt: new Date() }) }),
     SetupDraft: fakeModel({ uniques: ['draftId'], defaults: () => ({ createdAt: new Date(), updatedAt: new Date() }) }),
@@ -255,7 +256,7 @@ function createFakeDb() {
     stub('models/legalModel.js', { LegalDocument: db.LegalDocument, LegalAcceptance: db.LegalAcceptance });
     stub('models/pricingModels.js', { FareRuleDraft: db.FareRuleDraft, PricingVersion: db.PricingVersion, PricingSchedule: db.PricingSchedule, CancellationPolicyChange: db.CancellationPolicyChange });
     stub('models/sosModel.js', { SosAlert: db.SosAlert });
-    stub('models/paymentModels.js', { LedgerTxn: db.LedgerTxn, Payment: db.Payment, PaymentEvent: db.PaymentEvent });
+    stub('models/paymentModels.js', { LedgerTxn: db.LedgerTxn, Payment: db.Payment, PaymentEvent: db.PaymentEvent, PaymentRefund: db.PaymentRefund });
     stub('models/setupDraftModel.js', { SetupDraft: db.SetupDraft });
     stub('models/configVersionModel.js', { ConfigVersion: db.ConfigVersion });
     stub('models/couponModel.js', { Coupon: db.Coupon, CouponUse: db.CouponUse, CouponRedemption: db.CouponRedemption });

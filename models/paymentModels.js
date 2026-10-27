@@ -70,6 +70,8 @@ const paymentSchema = new mongoose.Schema({
   /** what happened to it, in order: [{ at, status, by, note }] */
   history: { type: mongoose.Schema.Types.Mixed, default: [] },
   flags: { type: mongoose.Schema.Types.Mixed, default: [] },
+  /** refund bookkeeping: { reservedMinor, processedMinor, commissionMinor, netMinor } (reserved includes refunds still pending) */
+  refund: { type: mongoose.Schema.Types.Mixed, default: null },
   /** cash only: { collectedMinor, confirmedAt, confirmedBy, dispute: { by, reason, at }, resolution: { by, action, reason, at } } */
   cash: { type: mongoose.Schema.Types.Mixed, default: null },
   /** bumped on every change: an update names the version it read, so two writers cannot silently overwrite each other */
@@ -102,4 +104,37 @@ paymentEventSchema.index({ tenantId: 1, paymentId: 1 });
 const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
 const PaymentEvent = mongoose.models.PaymentEvent || mongoose.model('PaymentEvent', paymentEventSchema);
 
-module.exports = { LedgerTxn, Payment, PaymentEvent };
+/**
+ * A refund of an online payment, kept as its own record (the payment's `refundStatus` summarises these). REQUESTED until the provider
+ * confirms, then PROCESSED (the ledger is posted) or FAILED (nothing is posted and the amount can be refunded again). A unique key per
+ * business makes a repeated request return the same refund. `commissionMinor` and `netMinor` are how the refund is shared between the
+ * business's commission and the driver's earnings.
+ */
+const refundSchema = new mongoose.Schema({
+  tenantId: { type: String, required: true, index: true },
+  refundId: { type: String, required: true, unique: true },
+  paymentId: { type: String, required: true },
+  tripId: { type: String, default: null },
+  driverId: { type: String, default: null },
+  amountMinor: { type: Number, required: true, min: 1 },
+  currency: { type: String, required: true },
+  commissionMinor: { type: Number, default: 0 },
+  netMinor: { type: Number, default: 0 },
+  duplicateCapture: { type: Boolean, default: false },
+  status: { type: String, enum: ['REQUESTED', 'PROCESSED', 'FAILED'], default: 'REQUESTED' },
+  reason: { type: String, default: '' },
+  requestedBy: { type: String, default: null },
+  idempotencyKey: { type: String, required: true },
+  providerRefundId: { type: String, default: null },
+  failureReason: { type: String, default: null },
+  ledgerTxnId: { type: String, default: null },
+  processedAt: { type: Date, default: null },
+  version: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { collection: 'payment_refunds' });
+refundSchema.index({ tenantId: 1, idempotencyKey: 1 }, { unique: true });
+refundSchema.index({ tenantId: 1, paymentId: 1 });
+const PaymentRefund = mongoose.models.PaymentRefund || mongoose.model('PaymentRefund', refundSchema);
+
+module.exports = { LedgerTxn, Payment, PaymentEvent, PaymentRefund };
