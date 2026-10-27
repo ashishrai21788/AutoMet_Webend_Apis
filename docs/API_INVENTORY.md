@@ -91,7 +91,7 @@
 | PUT | `/api/admin/business/fare-rules` | adminMiddleware | concurrency/world.js, contract/scenarios/business.js, contract/scenarios/common.js (+3) |
 | DELETE | `/api/admin/business/fare-rules/:id` | adminMiddleware | contract/scenarios/business.js |
 | GET | `/api/admin/business/incentives` | adminMiddleware | **UNREFERENCED** |
-| POST | `/api/admin/business/incentives` | adminMiddleware | admin.api.test.js, adminactions.api.test.js, apptenant.api.test.js (+74) |
+| POST | `/api/admin/business/incentives` | adminMiddleware | admin.api.test.js, adminactions.api.test.js, appVersions.test.js (+74) |
 | PUT | `/api/admin/business/incentives/:id` | adminMiddleware | appVersions.test.js, business.test.js, cancellationHistory.test.js (+22) |
 | GET | `/api/admin/business/legal` | adminMiddleware | live/tenantIsolation.js |
 | POST | `/api/admin/business/legal/:type` | adminMiddleware | legal.test.js |
@@ -478,8 +478,8 @@
 | GET | `/api/v1/driver/summary` | authMiddleware | availability.test.js, billing.gst.api.test.js, contract/scenarios/business.js (+9) |
 | GET | `/api/v1/driver/summary/detail` | authMiddleware | contract/scenarios/rider.js, lab/load.check.js, lab/tenant.check.js (+1) |
 | GET | `/api/v1/driver/summary/profile` | authMiddleware | contract/scenarios/driver.js, contract/scenarios/rider.js, lab/tenant.check.js (+1) |
-| GET | `/api/v1/driver/summary/trips` | authMiddleware | adminactions.api.test.js, apptenant.api.test.js, appVersions.test.js (+10) |
-| GET | `/api/v1/driver/summary/trips/:tripId` | authMiddleware | adminactions.api.test.js, apptenant.api.test.js, appVersions.test.js (+9) |
+| GET | `/api/v1/driver/summary/trips` | authMiddleware | adminactions.api.test.js, appVersions.test.js, apptenant.api.test.js (+10) |
+| GET | `/api/v1/driver/summary/trips/:tripId` | authMiddleware | adminactions.api.test.js, appVersions.test.js, apptenant.api.test.js (+9) |
 | GET | `/api/v1/driver/summary/trips/:tripId/receipt.pdf` | authMiddleware | driverSummary.test.js |
 
 ## /api/v1/legal

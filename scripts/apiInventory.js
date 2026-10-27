@@ -51,12 +51,13 @@ for (const { prefix, file } of mounts) {
   walk(router.stack, prefix, endpoints, inherited);
   for (let i = before; i < endpoints.length; i += 1) { const e = endpoints[i]; e.mount = prefix; e.handler = handlerOf[file + '|' + e.method + '|' + (e.path.slice(prefix.length) || '/')] || ''; }
 }
-endpoints.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
+const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0); // plain code-point order: localeCompare and directory order differ between machines
+endpoints.sort((a, b) => cmp(a.path, b.path) || cmp(a.method, b.method));
 
 // ---- coverage by text search of the tests
 const files = [];
 (function collect(dir) {
-  for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+  for (const f of fs.readdirSync(dir, { withFileTypes: true }).sort((x, y) => (x.name < y.name ? -1 : x.name > y.name ? 1 : 0))) {
     const p = path.join(dir, f.name);
     if (f.isDirectory()) { if (!['node_modules', 'results', 'snapshots'].includes(f.name)) collect(p); } else if (f.name.endsWith('.js')) files.push(p);
   }
