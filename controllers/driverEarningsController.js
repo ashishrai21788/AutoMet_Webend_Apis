@@ -408,6 +408,7 @@ async function withdraw(req, res) {
       tenantId: req.business.tenantId, payoutId: c.newId('po'), driverId: req.ownDriver.driverId, amountMinor, currency, status: 'REQUESTED', open: true,
       bankLabel: bank.bankName || '', accountLast4: money.last4(bank.accountNumber), requestedAt: now, createdAt: now, updatedAt: now
     });
+    await require('../lib/payments/payouts').safeSync(doc); // the ledger follows (never fails the request)
     return c.ok(res, payoutView(doc.toObject ? doc.toObject() : doc, digits));
   } catch (e) {
     if (c.DUP(e)) return c.fail(res, 409, 'You already have a withdrawal in progress.');
@@ -422,6 +423,7 @@ async function cancelWithdrawal(req, res) {
     { $set: { status: 'CANCELLED', open: false, cancelledAt: now, updatedAt: now } }, { new: true }
   );
   if (!moved) return c.fail(res, 409, 'This withdrawal can no longer be cancelled.');
+  await require('../lib/payments/payouts').safeSync(moved); // the amount goes back to the payable in the ledger
   return c.ok(res, payoutView(moved.toObject ? moved.toObject() : moved, ctx(req).digits));
 }
 

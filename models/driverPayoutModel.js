@@ -32,6 +32,10 @@ const driverPayoutSchema = new mongoose.Schema({
   failedAt: { type: Date, default: null },
   cancelledAt: { type: Date, default: null },
   handledBy: { type: String, default: null }, // the admin who processed it
+  /** set when a payment provider was asked to send it (lib/payments/payouts.js); null for a payout the business paid by hand */
+  providerPayoutId: { type: String, default: null },
+  /** the status the ledger last followed (lib/payments/payouts.js): when it differs from `status`, the ledger is behind and the repair catches it up */
+  ledgerSyncedStatus: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { collection: 'driver_payouts' });

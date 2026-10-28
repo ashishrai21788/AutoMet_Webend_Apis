@@ -97,6 +97,7 @@ async function move(req, res, { from, set, action, meta }) {
     return now1 ? c.fail(res, 409, `This payout is already ${now1.status.toLowerCase()}.`) : c.fail(res, 404, 'Payout not found');
   }
   await audit(req, action, moved.payoutId, { driverId: moved.driverId, amountMinor: moved.amountMinor, ...meta });
+  await require('../lib/payments/payouts').safeSync(moved); // the ledger follows (never fails the action)
   if (moved.status === 'PAID' || moved.status === 'FAILED') {
     try {
       const dg = digitsOf(currencyOf(req));
