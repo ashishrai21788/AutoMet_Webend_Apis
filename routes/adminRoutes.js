@@ -156,6 +156,9 @@ router.get('/business/surge', ...read, surgeAdmin.get);
 router.get('/business/chat-settings', ...read, chatAdmin.getSettings);
 router.put('/business/chat-settings', ...manage, chatAdmin.setSettings);
 router.put('/business/surge-settings', ...pricing, surgeAdmin.update);
+const weatherAdmin = require('../controllers/weatherAdminController');
+router.get('/business/weather-pricing', ...read, weatherAdmin.get);
+router.put('/business/weather-pricing', ...pricing, weatherAdmin.update);
 router.get('/business/pricing/schedules', ...read, pricingAdmin.listSchedules);
 router.post('/business/pricing/schedules/:id/cancel', ...pricing, pricingAdmin.cancelSchedule);
 router.get('/business/pricing/versions', ...read, pricingAdmin.listVersions);
@@ -231,6 +234,8 @@ router.post('/business/sos/:id/resolve', requireAdmin('support.manage'), withBus
 
 // ---- payments: online and cash collections, refunds, commission owed by drivers, reconciliation (see controllers/paymentsController.js)
 const paymentsAdmin = require('../controllers/paymentsController');
+router.get('/business/payment-settings', requireAdmin('payments.view'), withBusiness, paymentsAdmin.adminSettingsGet);
+router.put('/business/payment-settings', requireAdmin('payments.manage'), withBusiness, paymentsAdmin.adminSettingsUpdate);
 router.get('/business/payments', requireAdmin('payments.view'), withBusiness, paymentsAdmin.adminList);
 router.get('/business/payments/:id', requireAdmin('payments.view'), withBusiness, paymentsAdmin.adminGet);
 router.post('/business/payments/:id/refund', requireAdmin('payments.manage'), withBusiness, paymentsAdmin.adminRefund);

@@ -77,6 +77,24 @@ module.exports = async function payments(t) {
   await biz('payments admin: reconciliation findings', { path: `${A}/reconciliation?status=open`, expectStatus: 200 });
   await biz('payments admin: resolve an unknown finding', { method: 'POST', path: `${A}/reconciliation/dis_missing/resolve`, body: { note: 'test' }, expectStatus: 404 });
 
+  // --- the settings forms (payment methods, weather pricing) and the driver's demand map
+  const ps = await biz('payment settings: defaults are cash only', { path: `${A}/payment-settings`, expectStatus: 200 });
+  if (JSON.stringify(ps.body.data.enabledMethods) !== '["CASH"]') throw new Error('expected cash only');
+  await biz('payment settings: UPI needs a provider', { method: 'PUT', path: `${A}/payment-settings`, body: { enabledMethods: ['CASH', 'UPI'] }, expectStatus: 400 });
+  await biz('payment settings: a real provider is not available yet', { method: 'PUT', path: `${A}/payment-settings`, body: { enabledMethods: ['CASH', 'UPI'], provider: 'RAZORPAY' }, expectStatus: 400 });
+  await biz('payment settings: cash must stay', { method: 'PUT', path: `${A}/payment-settings`, body: { enabledMethods: ['UPI'], provider: 'MOCK' }, expectStatus: 400 });
+  await biz('payment settings: save cash only', { method: 'PUT', path: `${A}/payment-settings`, body: { enabledMethods: ['CASH'], commissionRecovery: 'MANUAL_ONLY', paymentWindowMinutes: 20 }, expectStatus: 200 });
+  await call('weather pricing: no session', { path: `${A}/weather-pricing`, headers: H, expectStatus: 401 });
+  const wp = await biz('weather pricing: off by default', { path: `${A}/weather-pricing`, expectStatus: 200 });
+  if (wp.body.data.enabled !== false || wp.body.data.maxMultiplier !== 1.5) throw new Error('expected off with a 1.5 cap');
+  await biz('weather pricing: wrong values are refused', { method: 'PUT', path: `${A}/weather-pricing`, body: { enabled: true, multipliers: { HEAVY_RAIN: 3, SOMETHING: 1.2 }, maxMultiplier: 9 }, expectStatus: 400 });
+  await biz('weather pricing: save', { method: 'PUT', path: `${A}/weather-pricing`, body: { enabled: true, multipliers: { LIGHT_RAIN: 1.1, HEAVY_RAIN: 1.3 }, maxMultiplier: 1.4 }, expectStatus: 200 });
+  await call('demand map: needs a session', { path: '/api/v1/driver/summary/demand-map', headers: H, expectStatus: 401 });
+  await call('demand map: a rider cannot read it', { path: '/api/v1/driver/summary/demand-map', ...R, expectStatus: 403 });
+  await call('demand map: a bad position', { path: '/api/v1/driver/summary/demand-map?lat=abc&lng=77', ...D, expectStatus: 400 });
+  const dm = await call('demand map: nothing around yet', { path: '/api/v1/driver/summary/demand-map?lat=18.5204&lng=73.8567&radius_km=5', ...D, expectStatus: 200 });
+  if (dm.body.data.cells.length !== 0 || dm.body.data.radiusKm !== 5) throw new Error('expected an empty map within 5 km');
+
   // a support agent has no business with the money
   const sup = await call('payments admin: create a support user', { method: 'POST', path: '/api/admin/users', body: { name: 'Support', email: 'support-pay@contract.test', role: 'support' }, token: admin, headers: H, expectStatus: 201 });
   alias(sup.body.data.temporaryPassword, 'supportTempPassword');

@@ -172,6 +172,26 @@ const adminView = (p) => ({
   commission_snapshot: p.commission || null, cash: p.cash || null, flags: p.flags || [], history: p.history || [], refund: p.refund || null
 });
 
+exports.adminSettingsGet = guard(async (req, res) => {
+  const { usableProviders, tenantPayments: read } = require('../lib/payments/config');
+  const t = await svc.loadTenant(req.business.tenantId);
+  const cfg = read(t);
+  return ok(res, { enabledMethods: cfg.enabledMethods, provider: cfg.provider, merchantId: cfg.merchantId, commissionRecovery: cfg.commissionRecovery, paymentWindowMinutes: cfg.paymentWindowMinutes, availableProviders: usableProviders(), fundsFlow: cfg.fundsFlow });
+});
+
+exports.adminSettingsUpdate = guard(async (req, res) => {
+  const { validateSettings } = require('../lib/payments/config');
+  const { Tenant } = require('../models/adminModels');
+  const { clearAppTenantCache } = require('../lib/appTenant');
+  const { value, errors } = validateSettings(req.body);
+  if (Object.keys(errors).length) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields', errors, data: null });
+  await req.data.update(Tenant, {}, { payments: value });
+  clearAppTenantCache();
+  await require('./configHistoryController').track(req, 'business.payment_settings_updated', { payments: value });
+  await audit(req, 'payments.settings_updated', 'business', req.business.tenantId, { enabledMethods: value.enabledMethods, provider: value.provider, commissionRecovery: value.commissionRecovery });
+  return ok(res, { ...value, availableProviders: require('../lib/payments/config').usableProviders() });
+});
+
 exports.adminList = guard(async (req, res) => {
   const tenantId = req.business.tenantId;
   const q = req.query || {};

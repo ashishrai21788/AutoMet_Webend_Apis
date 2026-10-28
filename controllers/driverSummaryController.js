@@ -425,3 +425,62 @@ const safe = (fn) => async (req, res) => {
 };
 
 module.exports = { summary: safe(summary), detail: safe(detail), trips: safe(trips), tripDetail: safe(tripDetail), profile: safe(profile), tripReceipt: safe(tripReceipt), startOfDay };
+
+/**
+ * GET /api/v1/driver/summary/demand-map?lat&lng&radius_km
+ * Where riders are asking right now around the driver (areas of about a kilometre, counts only), the rate each area's demand would earn,
+ * and the weather at the driver with what it adds to fares, if the business uses weather pricing. lat and lng default to where the
+ * driver last reported being. Only this driver's own business is read. See lib/heatmap.js for what is (and is never) shown.
+ */
+module.exports.demandMap = c.handle(async (req, res) => {
+  const now = new Date();
+  const { RiderPresence } = require('../models/riderPresenceModel');
+  const heatmap = require('../lib/heatmap');
+  const weather = require('../lib/weather');
+  const surge = require('../lib/surge');
+  const fresh = await createModel('drivers').findOne({ driverId: req.ownDriver.driverId }).lean();
+  const driver = fresh || req.ownDriver;
+  const q = req.query || {};
+  let position;
+  if (q.lat !== undefined || q.lng !== undefined) {
+    const lat = Number(q.lat); const lng = Number(q.lng);
+    if (q.lat === '' || q.lng === '' || !(lat >= -90 && lat <= 90) || !(lng >= -180 && lng <= 180)) return c.fail(res, 400, 'Send a valid lat and lng');
+    position = { lat, lng };
+  } else {
+    position = positionOf(driver);
+  }
+  if (!position) return c.fail(res, 409, 'Your location is not available yet. Go online with location on to see where demand is.');
+
+  const tenantId = await effectiveTenantId(driver);
+  const radius = Number(q.radius_km) > 0 ? Math.min(Number(q.radius_km), heatmap.MAX_RADIUS_KM) : heatmap.DEFAULT_RADIUS_KM;
+  const dLat = radius / 111.2;
+  const dLng = radius / (111.2 * Math.max(0.2, Math.cos((position.lat * Math.PI) / 180)));
+  const riders = await RiderPresence.find({
+    tenantId: tenantId || null,
+    lastSeen: { $gte: new Date(now.getTime() - require('../lib/demand').FRESH_MS) },
+    lat: { $gte: position.lat - dLat, $lte: position.lat + dLat },
+    lng: { $gte: position.lng - dLng, $lte: position.lng + dLng }
+  }).limit(2000).lean();
+  const since = new Date(now.getTime() - surge.REQUEST_WINDOW_MIN * 60 * 1000);
+  const recent = await TripDetails.find({ tenant_id: tenantId || null, requested_at: { $gte: since } }).select('pickup').limit(500).lean();
+  const requests = recent.filter((t) => t.pickup && Number.isFinite(t.pickup.lat) && Number.isFinite(t.pickup.lng)).map((t) => ({ lat: t.pickup.lat, lng: t.pickup.lng }));
+
+  // drivers of this business who are online and not on a ride: the supply the rate hint is worked out against
+  const online = await createModel('drivers').find({ isOnline: true }).limit(500).lean();
+  const mine = [];
+  for (const d of online) if ((await effectiveTenantId(d)) === (tenantId || null)) mine.push(d);
+  const busy = new Set();
+  if (mine.length) {
+    const live = await TripDetails.find({ driver_id: { $in: mine.map((d) => d.driverId) }, status: { $in: ['ACCEPTED', 'DRIVER_ON_THE_WAY', 'ARRIVED', 'ON_GOING'] } }).select('driver_id').lean();
+    live.forEach((t) => busy.add(t.driver_id));
+  }
+  const drivers = mine.filter((d) => !busy.has(d.driverId)).map((d) => positionOf(d)).filter(Boolean);
+
+  const map = heatmap.buildHeatmap({ riders, requests, drivers, position, radiusKm: radius, now });
+  let weatherNow = null;
+  try {
+    const w = await weather.weatherAt({ tenant: req.business, pickup: position, now });
+    if (w.enabled) weatherNow = { available: w.available, condition: w.condition, label: w.label, multiplier: w.multiplier, asOf: w.asOf };
+  } catch (e) { /* weather is only a hint here */ }
+  return c.ok(res, { ...map, center: { lat: position.lat, lng: position.lng }, weather: weatherNow, surgePaused: surge.settingsOf(req.business).paused });
+});

@@ -30,6 +30,8 @@ const tenantSchema = new mongoose.Schema({
   },
   /** How this business takes payment: { enabledMethods: ['CASH','UPI'], provider, merchantId, commissionRecovery, fundsFlow }. Read through lib/payments/config.js, which supplies the safe defaults (cash only). */
   payments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
+  /** Weather-based pricing: { enabled, multipliers: { HEAVY_RAIN: 1.3, ... }, maxMultiplier }. Off by default; read through lib/weather.js. */
+  weatherPricing: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   /** Surge pricing switch for the whole business: paused stops every surge at once (which rules may surge is set on each fare rule). See lib/surge.js. */
   surgeSettings: {
     type: new mongoose.Schema({ paused: { type: Boolean, default: false } }, { _id: false }),

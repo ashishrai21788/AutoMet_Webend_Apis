@@ -1742,6 +1742,418 @@
       }
     },
     {
+      "step": "payment settings: defaults are cash only",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/payment-settings",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "availableProviders": [],
+            "commissionRecovery": "DEDUCT_FROM_PAYABLE",
+            "enabledMethods": [
+              "CASH"
+            ],
+            "fundsFlow": "MERCHANT_COLLECTS",
+            "merchantId": null,
+            "paymentWindowMinutes": 15,
+            "provider": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "payment settings: UPI needs a provider",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/payment-settings",
+        "body": {
+          "enabledMethods": [
+            "CASH",
+            "UPI"
+          ]
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "provider": "Choose a provider to take UPI payments"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payment settings: a real provider is not available yet",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/payment-settings",
+        "body": {
+          "enabledMethods": [
+            "CASH",
+            "UPI"
+          ],
+          "provider": "RAZORPAY"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "provider": "RAZORPAY is not available yet: it needs a merchant account and an integration that has been tested in its sandbox"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payment settings: cash must stay",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/payment-settings",
+        "body": {
+          "enabledMethods": [
+            "UPI"
+          ],
+          "provider": "MOCK"
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "enabledMethods": "Cash must stay available",
+            "provider": "MOCK is not available yet: it needs a merchant account and an integration that has been tested in its sandbox"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "payment settings: save cash only",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/payment-settings",
+        "body": {
+          "commissionRecovery": "MANUAL_ONLY",
+          "enabledMethods": [
+            "CASH"
+          ],
+          "paymentWindowMinutes": 20
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "availableProviders": [],
+            "commissionRecovery": "MANUAL_ONLY",
+            "enabledMethods": [
+              "CASH"
+            ],
+            "merchantId": null,
+            "paymentWindowMinutes": 20,
+            "provider": null
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "weather pricing: no session",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/weather-pricing"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "weather pricing: off by default",
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/business/weather-pricing",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "conditions": [
+              {
+                "hint": "Any measurable rain up to heavy rain",
+                "key": "LIGHT_RAIN",
+                "label": "Rain"
+              },
+              {
+                "hint": "7.6 mm or more in the last hour",
+                "key": "HEAVY_RAIN",
+                "label": "Heavy rain"
+              },
+              {
+                "hint": "Thunderstorms",
+                "key": "STORM",
+                "label": "Storm"
+              },
+              {
+                "hint": "Fog or rime fog",
+                "key": "FOG",
+                "label": "Fog"
+              },
+              {
+                "hint": "Snow or snow showers",
+                "key": "SNOW",
+                "label": "Snow"
+              },
+              {
+                "hint": "42 degrees C or hotter",
+                "key": "EXTREME_HEAT",
+                "label": "Extreme heat"
+              }
+            ],
+            "enabled": false,
+            "maxMultiplier": 1.5,
+            "multipliers": {
+              "EXTREME_HEAT": 1,
+              "FOG": 1,
+              "HEAVY_RAIN": 1,
+              "LIGHT_RAIN": 1,
+              "SNOW": 1,
+              "STORM": 1
+            },
+            "notes": [
+              "Weather pricing only applies to fare rules that have surge switched on, and the rule's own maximum caps demand surge and weather together.",
+              "Riders see the weather as its own line in the estimate before they book, and are never charged more than the estimate they were shown.",
+              "If the weather cannot be read, no adjustment is made."
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "weather pricing: wrong values are refused",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/weather-pricing",
+        "body": {
+          "enabled": true,
+          "maxMultiplier": 9,
+          "multipliers": {
+            "HEAVY_RAIN": 3,
+            "SOMETHING": 1.2
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "errors": {
+            "maxMultiplier": "Enter 1 to 2, with at most two decimals",
+            "multipliers.HEAVY_RAIN": "Enter 1 to 2, with at most two decimals",
+            "multipliers.SOMETHING": "Unknown weather condition"
+          },
+          "message": "Please fix the highlighted fields",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "weather pricing: save",
+      "request": {
+        "method": "PUT",
+        "path": "/api/admin/business/weather-pricing",
+        "body": {
+          "enabled": true,
+          "maxMultiplier": 1.4,
+          "multipliers": {
+            "HEAVY_RAIN": 1.3,
+            "LIGHT_RAIN": 1.1
+          }
+        },
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "conditions": [
+              {
+                "hint": "Any measurable rain up to heavy rain",
+                "key": "LIGHT_RAIN",
+                "label": "Rain"
+              },
+              {
+                "hint": "7.6 mm or more in the last hour",
+                "key": "HEAVY_RAIN",
+                "label": "Heavy rain"
+              },
+              {
+                "hint": "Thunderstorms",
+                "key": "STORM",
+                "label": "Storm"
+              },
+              {
+                "hint": "Fog or rime fog",
+                "key": "FOG",
+                "label": "Fog"
+              },
+              {
+                "hint": "Snow or snow showers",
+                "key": "SNOW",
+                "label": "Snow"
+              },
+              {
+                "hint": "42 degrees C or hotter",
+                "key": "EXTREME_HEAT",
+                "label": "Extreme heat"
+              }
+            ],
+            "enabled": true,
+            "maxMultiplier": 1.4,
+            "multipliers": {
+              "EXTREME_HEAT": 1,
+              "FOG": 1,
+              "HEAVY_RAIN": 1.3,
+              "LIGHT_RAIN": 1.1,
+              "SNOW": 1,
+              "STORM": 1
+            },
+            "notes": [
+              "Weather pricing only applies to fare rules that have surge switched on, and the rule's own maximum caps demand surge and weather together.",
+              "Riders see the weather as its own line in the estimate before they book, and are never charged more than the estimate they were shown.",
+              "If the weather cannot be read, no adjustment is made."
+            ]
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
+      "step": "demand map: needs a session",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/driver/summary/demand-map"
+      },
+      "response": {
+        "status": 401,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Authorization header missing or invalid format"
+          },
+          "message": "Access token required",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "demand map: a rider cannot read it",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/driver/summary/demand-map",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 403,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "error": "Role mismatch"
+          },
+          "message": "This endpoint requires role: driver",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "demand map: a bad position",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/driver/summary/demand-map?lat=abc&lng=77",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 400,
+        "contentType": "application/json",
+        "body": {
+          "data": null,
+          "message": "Send a valid lat and lng",
+          "success": false
+        }
+      }
+    },
+    {
+      "step": "demand map: nothing around yet",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/driver/summary/demand-map?lat=18.5204&lng=73.8567&radius_km=5",
+        "auth": "bearer"
+      },
+      "response": {
+        "status": 200,
+        "contentType": "application/json",
+        "body": {
+          "data": {
+            "asOf": "<date>",
+            "cells": [],
+            "center": {
+              "lat": 18.5204,
+              "lng": 73.8567
+            },
+            "maxCount": 0,
+            "radiusKm": 5,
+            "surgePaused": false,
+            "weather": {
+              "asOf": null,
+              "available": false,
+              "condition": "CLEAR",
+              "label": "Clear",
+              "multiplier": 1
+            }
+          },
+          "message": "OK",
+          "success": true
+        }
+      }
+    },
+    {
       "step": "payments admin: create a support user",
       "request": {
         "method": "POST",
