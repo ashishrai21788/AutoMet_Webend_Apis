@@ -71,6 +71,18 @@ Defaults: cash only, no provider, `DEDUCT_FROM_PAYABLE`, 15 minutes. There is no
 | Recovery from online earnings (`COMMISSION_RECOVERED`) | `DRIVER_PAYABLE` | `DRIVER_COMMISSION_RECEIVABLE` |
 | Driver pays commission online (`COMMISSION_PAID_DIRECT`) | `GATEWAY_CLEARING` | `DRIVER_COMMISSION_RECEIVABLE` |
 | Refund processed (`ONLINE_REFUND`) | `COMMISSION_REVENUE` and `DRIVER_PAYABLE` in proportion | `GATEWAY_CLEARING` |
+| Driver withdrawal requested or processing (`PAYOUT_RESERVED`, key `payout:<id>:reserve`) | `DRIVER_PAYABLE` | `PAYOUT_RESERVED` |
+| Payout paid, by hand or by a provider (`PAYOUT_PAID`, key `payout:<id>:paid`) | `PAYOUT_RESERVED` | `SETTLEMENT_CLEARING` |
+| Payout failed or cancelled (`PAYOUT_RELEASED`, key `payout:<id>:release`) | `PAYOUT_RESERVED` | `DRIVER_PAYABLE` (owed to the driver again) |
+| Cash trip from before payments were recorded, backfilled (`CASH_COMMISSION_ACCRUED`) | `DRIVER_COMMISSION_RECEIVABLE` | `COMMISSION_REVENUE` |
 
 Rounding: commission = fare x rate, rounded half up to a paisa, in integer arithmetic; the driver's share is the remainder, so the two always add up to the fare.
 A refund's shares follow the same split, and the refund that completes the payment takes the exact remainder.
+
+## Payouts and the ledger (shadow mode)
+
+The manual payout flow is unchanged (driver requests, the business pays outside the app and records the bank reference or marks it failed, the driver may cancel while it is only requested) and still decides what a driver can withdraw. The ledger follows every step through `lib/payments/payouts.js`: the postings above, each by its own event key, so they are safe to repeat. A ledger problem never fails a payout action; the payout's `ledgerSyncedStatus` then differs from its `status` and the scheduled upkeep (`POST /api/v1/payments/jobs/run`) catches it up, including payouts made before the ledger followed them.
+
+A business whose payment provider can send payouts (only the mock gateway today) can have a payout sent through the adapter (`disburse`, then `settleDisbursement` for one the provider is still processing). The adapter contract adds `requestPayout({ payoutId, amountMinor, currency, account, idempotencyKey })` and `fetchPayout(providerPayoutId)`; the same idempotency key never sends two transfers, and a payout is settled once whichever way it is settled. Mock scenarios: `PAYOUT_SUCCESS`, `PAYOUT_FAILURE`, `PAYOUT_DELAYED`. These are library functions with tests, not HTTP endpoints; the real providers refuse (`PROVIDER_NOT_CONFIGURED`, `NOT_IMPLEMENTED`).
+
+Reconciliation adds `PAYABLE_MISMATCH`: the ledger is compared with the existing balance part by part (online earnings, money set aside for open payouts, money sent in paid payouts). The old balance also counts tips, incentives, adjustments, penalties, coupon top-ups, older online trips and a deduction for the commission on every cash trip, which the ledger does not carry, so those are not flagged. Nothing is adjusted automatically.
