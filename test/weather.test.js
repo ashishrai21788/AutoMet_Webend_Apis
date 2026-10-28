@@ -127,6 +127,17 @@ test('the Open-Meteo reader asks for the current conditions at the point, and tu
   await assert.rejects(bad.fetchCurrent({ lat: 1, lng: 1 }), /429/);
 });
 
+test('the fixed development weather gives the configured reading, and is not available in production', async () => {
+  const dev = weather.defaultProvider({ WEATHER_PROVIDER: 'fixed', WEATHER_FIXED_CODE: '95', WEATHER_FIXED_PRECIP: '4', NODE_ENV: 'development' });
+  assert.deepEqual(await dev.fetchCurrent({ lat: 1, lng: 1 }), { code: 95, precipitationMm: 4, tempC: 24, windKph: 0 });
+  assert.equal(weather.conditionFrom(await dev.fetchCurrent({})), 'STORM');
+  const defaults = weather.defaultProvider({ WEATHER_PROVIDER: 'fixed' });
+  assert.equal(weather.conditionFrom(await defaults.fetchCurrent({})), 'HEAVY_RAIN', 'heavy rain unless told otherwise');
+  assert.equal(weather.defaultProvider({ WEATHER_PROVIDER: 'fixed', NODE_ENV: 'production' }), null, 'a production server has no pretend weather');
+  assert.equal(weather.defaultProvider({ WEATHER_PROVIDER: 'off' }), null);
+  assert.equal(weather.defaultProvider({}).name, 'open-meteo');
+});
+
 // ---------------------------------------------------------------- in the fare
 
 test('the fare shows weather as its own line, apart from demand surge, and the two together never pass the fare rule\'s maximum', () => {
