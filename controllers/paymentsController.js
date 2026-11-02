@@ -55,13 +55,19 @@ const keyOf = (req) => String((req.body && req.body.idempotency_key) || req.get(
 const isMinor = (n) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
 
 /** What an app may see of a payment. The commission split is the driver's to see, not the rider's. */
-function publicPayment(p, role) {
+function publicPayment(p, role, checkout = null) {
   if (!p) return null;
   const out = {
     payment_id: p.paymentId, trip_id: p.purpose === 'COMMISSION' ? null : p.tripId, purpose: p.purpose, method: p.method, status: p.status, refund_status: p.refundStatus,
     amount_minor: p.amountMinor, currency: p.currency, refunded_minor: p.refundedMinor || 0, cash_state: p.cashState || null, awaiting_verification: p.method === 'UPI' && (p.status === 'PENDING' || p.status === 'CREATED'),
     expires_at: p.expiresAt || null, created_at: p.createdAt, paid_at: p.succeededAt || null
   };
+  if (checkout && checkout.upiUrl) {
+    out.upi_url = checkout.upiUrl;
+  } else if (p.method === 'UPI' && (p.status === 'PENDING' || p.status === 'CREATED')) {
+    const amountMajor = ((p.amountMinor || 0) / 100).toFixed(2);
+    out.upi_url = `upi://pay?pa=automet@upi&pn=AutoMet&tr=${p.paymentId}&am=${amountMajor}&cu=${p.currency || 'INR'}&tn=${encodeURIComponent((p.purpose === 'COMMISSION' ? 'Commission ' : 'Ride ') + p.paymentId)}`;
+  }
   if (role === 'driver' && p.commission) out.commission_minor = p.cash && p.cash.adjustedCommission ? p.cash.adjustedCommission.commissionMinor : p.commission.commissionMinor;
   return out;
 }
@@ -81,7 +87,7 @@ exports.create = guard(async (req, res) => {
   if (!tripId) return fail(res, 400, 'trip_id is required', 'BAD_REQUEST');
   const method = String((req.body && req.body.method) || 'UPI').toUpperCase();
   const r = await svc.createPayment({ tenantId: await tenantOf(req), tripId, riderId: req.authActorId, method, idempotencyKey: keyOf(req) });
-  return ok(res, { payment: publicPayment(r.payment, 'user'), created: r.created, checkout: r.checkout || null }, r.created ? 201 : 200);
+  const pub = publicPayment(r.payment, 'user', r.checkout); return ok(res, { payment: pub, created: r.created, checkout: r.checkout || null }, r.created ? 201 : 200);
 });
 
 exports.forTrip = guard(async (req, res) => {
@@ -128,7 +134,7 @@ exports.payCommission = guard(async (req, res) => {
   const b = req.body || {};
   if (!isMinor(b.amount_minor)) return fail(res, 400, 'amount_minor must be whole minor units', 'BAD_AMOUNT');
   const r = await svc.createCommissionPayment({ tenantId: await tenantOf(req), driverId: req.authActorId, amountMinor: b.amount_minor, idempotencyKey: keyOf(req) });
-  return ok(res, { payment: publicPayment(r.payment, 'driver'), created: r.created, checkout: r.checkout || null }, r.created ? 201 : 200);
+  const pub = publicPayment(r.payment, 'driver', r.checkout); return ok(res, { payment: pub, created: r.created, checkout: r.checkout || null }, r.created ? 201 : 200);
 });
 
 exports.mockSimulate = guard(async (req, res) => {
