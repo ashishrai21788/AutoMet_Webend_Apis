@@ -9,6 +9,14 @@ router.post(
   tripsController.createRequest
 );
 router.post(
+  '/auto-dispatch',
+  requireAuth({ roles: ['user'], enforceBodyUserId: true }),
+  (req, res, next) => {
+    if (req.body) req.body.driver_id = null;
+    return tripsController.createRequest(req, res, next);
+  }
+);
+router.post(
   '/estimate',
   requireAuth({ roles: ['user'] }),
   tripsController.estimate
@@ -30,6 +38,11 @@ router.post(
 );
 router.post(
   '/driver-response',
+  requireAuth({ roles: ['driver'], enforceBodyDriverId: true }),
+  tripsController.driverResponse
+);
+router.post(
+  '/offer-response',
   requireAuth({ roles: ['driver'], enforceBodyDriverId: true }),
   tripsController.driverResponse
 );

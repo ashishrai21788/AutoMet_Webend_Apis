@@ -232,17 +232,23 @@ exports.nearbyDrivers = async (req, res) => {
   }
 };
 
-/** The push payload the driver app shows as "New Ride Request", built from a stored trip. */
+/** The push payload the driver app shows as "New Ride Request", built from a stored trip.
+ * Regulatory (India MVAG 2025): When destination masking is active and the trip has not yet been
+ * accepted (status is REQUESTED), destination coordinates and address are masked until the driver
+ * commits to accepting the ride offer.
+ */
 function ridePushPayload(trip, riderName, extras = {}) {
+  const maskDestination = process.env.MVAG_MASK_DESTINATION === 'true' && trip.status === 'REQUESTED';
   return {
     ...extras,
     request_id: trip.request_id,
     pickup_address: trip.pickup.address,
-    drop_address: trip.drop.address,
+    drop_address: maskDestination ? 'Revealed upon acceptance' : trip.drop.address,
     pickup_lat: trip.pickup.lat,
     pickup_lng: trip.pickup.lng,
-    drop_lat: trip.drop.lat,
-    drop_lng: trip.drop.lng,
+    drop_lat: maskDestination ? null : trip.drop.lat,
+    drop_lng: maskDestination ? null : trip.drop.lng,
+    destination_masked: maskDestination ? 'true' : 'false',
     ride_note: trip.ride_note || '',
     rider_name: riderName || '',
     distance: String(trip.distance_km),
@@ -614,14 +620,16 @@ exports.createRequest = async (req, res) => {
     const riderName = user
       ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.fullName || null
       : null;
+    const maskDestination = process.env.MVAG_MASK_DESTINATION === 'true';
     const pushPayload = {
       request_id: requestId,
       pickup_address: pickupAddress,
-      drop_address: dropAddress,
+      drop_address: maskDestination ? 'Revealed upon acceptance' : dropAddress,
       pickup_lat: pickupLat,
       pickup_lng: pickupLng,
-      drop_lat: dropLat,
-      drop_lng: dropLng,
+      drop_lat: maskDestination ? null : dropLat,
+      drop_lng: maskDestination ? null : dropLng,
+      destination_masked: maskDestination ? 'true' : 'false',
       ride_note: rideNote || '',
       rider_name: riderName || '',
       // Shown on the driver's "New Ride Request" sheet (distance in km, duration in minutes).
