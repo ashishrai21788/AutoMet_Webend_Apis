@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { generateOtp } = require('../lib/testLogin');
+const smsService = require('../services/smsService');
 const DriverOTP = require('../models/otpModel');
 const { createModel } = require('../models/dynamicModel');
 const jwt = require('jsonwebtoken');
@@ -68,7 +69,9 @@ exports.sendOTP = async (req, res) => {
       otpRecord.isUsed = false;
       otpRecord.updatedAt = new Date();
       await otpRecord.save();
-    } else {
+    }
+
+    smsService.sendOtp(driver.phone, otp, 'driver-verification').catch((err) => console.error('[smsService] Error:', err.message)); else {
       // Create new OTP record
       otpRecord = new DriverOTP({
         driverId,
@@ -79,6 +82,8 @@ exports.sendOTP = async (req, res) => {
       });
       await otpRecord.save();
     }
+
+    smsService.sendOtp(driver.phone, otp, 'driver-verification').catch((err) => console.error('[smsService] Error:', err.message));
 
     // In a real application, you would send this OTP via SMS/Email
     // For now, we'll return it in the response for testing

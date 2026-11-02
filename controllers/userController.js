@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { generateOtp, testCodeFor } = require('../lib/testLogin');
+const smsService = require('../services/smsService');
 const { phoneVariants, canonicalPhone } = require('../lib/phoneVariants');
 const { effectiveTenantId } = require('../lib/appTenant');
 const { createModel } = require('../models/dynamicModel');
@@ -157,6 +158,7 @@ exports.registerUser = async (req, res) => {
       expiresAt
     });
     await otpRecord.save();
+    smsService.sendOtp(user.phone, otp, 'user-register').catch((err) => console.error('[smsService] Error:', err.message));
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -237,6 +239,7 @@ exports.loginUser = async (req, res) => {
       });
       await otpRecord.save();
     }
+    smsService.sendOtp(user.phone, otp, 'user-login').catch((err) => console.error('[smsService] Error:', err.message));
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -605,6 +608,7 @@ exports.resendUserOtp = async (req, res) => {
       expiresAt
     });
     await otpRecord.save();
+    smsService.sendOtp(user.phone, otp, 'user-resend').catch((err) => console.error('[smsService] Error:', err.message));
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
