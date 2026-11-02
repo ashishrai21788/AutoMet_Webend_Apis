@@ -146,6 +146,7 @@ const getAdmin = () => {
  * Call before creating a trip so we fail fast with a clear error instead of creating then deleting the trip.
  */
 const isFcmReady = () => {
+  if (process.env.FCM_MOCK === '1') return true;
   if (admin.apps.length === 0) {
     initializeFirestore();
   }
@@ -200,6 +201,7 @@ const buildFcmMessage = (fcmToken, payload, options = {}) => {
 
 const sendFCMNotification = async (fcmToken, payload, options = {}) => {
   try {
+    if (process.env.FCM_MOCK === '1') return { success: true, messageId: 'mock-fcm-' + Date.now() };
     const adm = getAdmin();
     if (!adm || !adm.messaging) {
       return { success: false, error: 'Firebase Admin not initialized or FCM unavailable. Set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_SERVICE_ACCOUNT_PATH.' };

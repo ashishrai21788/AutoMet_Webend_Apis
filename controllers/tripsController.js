@@ -932,10 +932,21 @@ exports.cancelRequest = async (req, res) => {
     const now = new Date();
     const newStatus = cancelledBy === 'DRIVER' ? 'CANCELLED_BY_DRIVER' : 'CANCELLED_BY_USER';
 
-    await TripDetails.updateOne(
+    const claimedCancel = await TripDetails.findOneAndUpdate(
       { trip_id: tripId, status: 'REQUESTED' },
-      { $set: { status: newStatus, cancelled_by: cancelledBy, cancelled_at: now, updated_at: now } }
+      { $set: { status: newStatus, cancelled_by: cancelledBy, cancelled_at: now, updated_at: now } },
+      { new: true }
     );
+
+    if (!claimedCancel) {
+      const current = await TripDetails.findOne({ trip_id: tripId });
+      const currentStatus = current ? current.status : 'UNKNOWN';
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel trip with status: ${currentStatus}. Only REQUESTED trips can be cancelled via this endpoint.`,
+        data: { trip_id: tripId, current_status: currentStatus }
+      });
+    }
 
     // Notify the other party via socket
     if (cancelledBy === 'USER' && trip.driver_id) {
