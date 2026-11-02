@@ -69,9 +69,7 @@ exports.sendOTP = async (req, res) => {
       otpRecord.isUsed = false;
       otpRecord.updatedAt = new Date();
       await otpRecord.save();
-    }
-
-    smsService.sendOtp(driver.phone, otp, 'driver-verification').catch((err) => console.error('[smsService] Error:', err.message)); else {
+    } else {
       // Create new OTP record
       otpRecord = new DriverOTP({
         driverId,
