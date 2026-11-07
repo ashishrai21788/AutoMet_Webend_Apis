@@ -1041,7 +1041,10 @@ async function ensureTripFare(tripDetails) {
         distance_km: tripDetails.distance_km,
         estimated_duration_min: tripDetails.estimated_duration_min,
         fare_basis: tripDetails.fare_basis || 'ESTIMATE',
-        payment_mode: tripDetails.payment_mode || 'CASH'
+        payment_mode: tripDetails.payment_mode || 'CASH',
+        fare_breakdown: tripDetails.fare_breakdown,
+        waiting_charge: tripDetails.waiting_charge,
+        chargeable_waiting_minutes: tripDetails.chargeable_waiting_minutes
       };
     }
     const driver = await createModel('drivers').findOne({ driverId: tripDetails.driver_id }).select('vehicleType').lean();
@@ -1198,8 +1201,75 @@ exports.updateTripStatus = async (req, res) => {
           data: { trip_id: tripId, current_status: latestStatus }
         });
       }
-      // On completion make sure the trip has a fare (trips created before fares existed get one computed now).
-      let fareInfo = status === 'COMPLETED' ? await ensureTripFare(tripDetails) : null;
+      // On completion, compute authoritative waiting time and finalize the fare
+      if (status === 'COMPLETED') {
+        try {
+          const arrivedAt = moved.arrived_at ? new Date(moved.arrived_at) : null;
+          const startedAt = moved.started_at ? new Date(moved.started_at) : null;
+          let waitingMin = 0;
+          if (arrivedAt && startedAt && startedAt > arrivedAt) {
+            waitingMin = Math.max(0, Math.round((startedAt.getTime() - arrivedAt.getTime()) / 60000));
+          }
+
+          let waitingFreeMin = 2; // default 2 minutes free waiting
+          let waitingPerMin = 1.50; // default Rs. 1.50 per minute
+          try {
+            const { forTenant } = require('../lib/tenantData');
+            const { FareRule } = require('../models/businessModels');
+            const tId = moved.tenant_id || (req.appTenant && req.appTenant.tenantId);
+            if (tId) {
+              const rule = await forTenant(tId).findOne(FareRule, {
+                categoryId: moved.category_id,
+                active: true
+              }).lean();
+              if (rule) {
+                if (typeof rule.waitingFreeMinutes === 'number') waitingFreeMin = rule.waitingFreeMinutes;
+                if (typeof rule.waitingPerMinute === 'number' && rule.waitingPerMinute > 0) waitingPerMin = rule.waitingPerMinute;
+              }
+            }
+          } catch (_) {}
+
+          const chargeableMin = Math.max(0, waitingMin - waitingFreeMin);
+          const waitingCharge = Math.round(chargeableMin * waitingPerMin * 100) / 100;
+
+          if (waitingCharge > 0) {
+            const breakdown = moved.fare_breakdown || { lines: [] };
+            const existingLines = Array.isArray(breakdown.lines) ? [...breakdown.lines] : [];
+            const filteredLines = existingLines.filter(l => l && l.key !== 'waiting');
+            filteredLines.push({
+              key: 'waiting',
+              label: `Waiting (${waitingMin} min)`,
+              amount: waitingCharge
+            });
+
+            const baseTotal = filteredLines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+            const finalFare = Math.round(baseTotal * 100) / 100;
+
+            await TripDetails.updateOne(
+              { trip_id: tripId },
+              {
+                $set: {
+                  fare: finalFare,
+                  total_paid: finalFare,
+                  fare_basis: 'ACTUAL',
+                  'fare_breakdown.lines': filteredLines,
+                  'fare_breakdown.fare': finalFare,
+                  'fare_breakdown.total': finalFare,
+                  waiting_minutes: waitingMin,
+                  chargeable_waiting_minutes: chargeableMin,
+                  waiting_charge: waitingCharge
+                }
+              }
+            );
+          }
+        } catch (fareErr) {
+          console.warn('[updateTripStatus] Waiting fee calculation error:', fareErr.message);
+        }
+      }
+
+      // Read the updated trip details with final fare
+      const freshTrip = (status === 'COMPLETED' ? await TripDetails.findOne({ trip_id: tripId }).lean() : null) || moved;
+      let fareInfo = status === 'COMPLETED' ? await ensureTripFare(freshTrip) : null;
       if (fareInfo && tollMinor > 0) {
         const { digitsOf, toMinor } = require('../lib/riderInvoice');
         const d = digitsOf(fareInfo.currency || 'INR');
