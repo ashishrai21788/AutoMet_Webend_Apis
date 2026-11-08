@@ -5,28 +5,29 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    // DB_ENGINE=postgres: the same entry point, backed by PostgreSQL (see docs/POSTGRES_ENGINE.md)
+    // Standard Engine: PostgreSQL (see docs/POSTGRES_ENGINE.md)
     if (isPostgres) {
-      await mongoose.connect(process.env.DATABASE_URL);
+      const dbUrl = process.env.DATABASE_URL || process.env.PROD_POOLER_URL;
+      if (!dbUrl) {
+        throw new Error('Missing required DATABASE_URL environment variable for PostgreSQL.');
+      }
+      await mongoose.connect(dbUrl);
       console.log('✅ PostgreSQL connected');
       return;
     }
-    // Build MongoDB URI from environment variables
+
+    // Legacy Fallback only (when explicitly set to DB_ENGINE=mongo)
     const username = process.env.MONGODB_USERNAME;
     const password = process.env.MONGODB_PASSWORD;
     const cluster = process.env.MONGODB_CLUSTER;
     const dbName = process.env.DB_NAME;
     
-    // Local/contract-test opt-in: connect to an explicit URI (for example a temporary local MongoDB). Production never sets
-    // DB_USE_URI, so it keeps using the Atlas variables below exactly as before.
     const useUri = process.env.DB_USE_URI === '1' && !!process.env.MONGODB_URI;
 
-    // Validate required environment variables
     if (!useUri && (!username || !password || !cluster || !dbName)) {
-      throw new Error('Missing required MongoDB environment variables. Please check your .env file.');
+      throw new Error('Missing required MongoDB environment variables. Please check your .env file or use DB_ENGINE=postgres (default).');
     }
     
-    // URL encode username and password to handle special characters
     const encodedUsername = encodeURIComponent(username);
     const encodedPassword = encodeURIComponent(password);
     
@@ -34,21 +35,19 @@ const connectDB = async () => {
       ? process.env.MONGODB_URI
       : `mongodb+srv://${encodedUsername}:${encodedPassword}@${cluster}/${dbName}?retryWrites=true&w=majority&appName=AshishRai`;
     
-    // Configure mongoose connection options
     const options = {
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxIdleTimeMS: 30000,
       retryWrites: true,
       w: 'majority',
-      connectTimeoutMS: 10000 // 10 second connection timeout
+      connectTimeoutMS: 10000
     };
     
     await mongoose.connect(mongoURI, options);
-    console.log(`✅ MongoDB connected to database: ${dbName}`);
+    console.log(`✅ MongoDB connected (legacy fallback) to database: ${dbName}`);
     
-    // Set up connection event listeners
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);
     });
@@ -62,17 +61,9 @@ const connectDB = async () => {
     });
     
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
-    if (error.message.includes('ENOTFOUND') || error.message.includes('querySrv')) {
-      console.error(
-        '💡 DNS lookup failed for MONGODB_CLUSTER. Open MongoDB Atlas → Connect → Drivers, copy the host (e.g. cluster0.xxxxx.mongodb.net) and update MONGODB_CLUSTER in Render + .env.'
-      );
-    }
-    if (error.message.includes('Missing required MongoDB environment variables')) {
-      console.error('💡 Set MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER, and DB_NAME on Render (Environment tab).');
-    }
-    throw error; // Re-throw to let the calling function handle it
+    console.error('❌ Database connection error:', error.message);
+    throw error;
   }
 };
 
-module.exports = connectDB; 
+module.exports = connectDB;

@@ -20,7 +20,7 @@
 
 const http = require('http');
 const https = require('https');
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 

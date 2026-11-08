@@ -14,18 +14,26 @@ const run = (env, code) => {
   }
 };
 
-test('default and DB_ENGINE=mongo: the entry point IS the real mongoose module, so nothing changes', () => {
-  for (const env of [{ DB_ENGINE: '' }, { DB_ENGINE: 'mongo' }, { DB_ENGINE: ' MONGO ' }]) {
+test('DB_ENGINE=mongo: the entry point IS the real mongoose module for legacy fallback', () => {
+  for (const env of [{ DB_ENGINE: 'mongo' }, { DB_ENGINE: ' MONGO ' }]) {
     const r = run(env, "console.log(require('./lib/db/mongoose') === require('mongoose'), require('./lib/db/engine').ENGINE)");
     assert.equal(r.ok, true, JSON.stringify(env));
     assert.equal(r.out, 'true mongo');
   }
 });
 
+test('default and DB_ENGINE=postgres: returns the Postgres facade', () => {
+  for (const env of [{ DB_ENGINE: '' }, { DB_ENGINE: 'postgres' }, { DB_ENGINE: ' POSTGRES ' }]) {
+    const r = run(env, "const m = require('./lib/db/mongoose'); const real = require('mongoose'); console.log([m !== real, require('./lib/db/engine').ENGINE].join(','))");
+    assert.equal(r.ok, true, JSON.stringify(env));
+    assert.equal(r.out, 'true,postgres');
+  }
+});
+
 test('an unknown engine stops start-up with a clear message', () => {
   const r = run({ DB_ENGINE: 'oracle' }, "require('./lib/db/mongoose')");
   assert.equal(r.ok, false);
-  assert.match(r.err, /DB_ENGINE must be one of mongo, postgres/);
+  assert.match(r.err, /DB_ENGINE must be one of (postgres, mongo|mongo, postgres)/);
 });
 
 test('postgres returns the Postgres facade (not the real mongoose module) with the same surface', () => {
