@@ -10,8 +10,8 @@ Status: **DONE** built and tested, **NEXT** the order to build in, **LATER** del
 | 1 | SOS (emergency) | **DONE** (this document, section 1) | M | Safety, and the business learns about an emergency |
 | 2 | Hindi and other languages | NEXT | L | Both apps are English only; India launch |
 | 3 | Accessibility and text size | NEXT | M | The rider app ignores the phone's font size; no accessibility pass has been done |
-| 4 | Offers list (coupon discovery) | NEXT | S | Riders must already know a code |
-| 5 | Note to driver, book for someone else | NEXT | M | Common pickup needs |
+| 4 | Offers list (coupon discovery) | **DONE** | S | Discovered offers in booking sheet + private code toggle in admin |
+| 5 | Note to driver, book for someone else | **DONE** | M | Note chip, guest passenger details and dialler integration |
 | 6 | Driver sees live surge | NEXT | S | Drivers see it only after the fact, in earnings |
 | 7 | Lost-item reporting | NEXT | M | Frequent support request |
 | 8 | Real push delivery check, typing indicators | OWNER / NEXT | S | Needs the production Firebase key |
