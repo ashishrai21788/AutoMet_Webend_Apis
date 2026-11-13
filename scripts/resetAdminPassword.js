@@ -15,18 +15,11 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
+const connectDB = require('../config/db');
 
 const args = process.argv.slice(2);
 const value = (name) => { const a = args.find((x) => x.startsWith(`${name}=`)); return a ? a.slice(name.length + 1) : null; };
-
-function connectionString() {
-  const { MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER, DB_NAME } = process.env;
-  if (!MONGODB_USERNAME || !MONGODB_PASSWORD || !MONGODB_CLUSTER || !DB_NAME) {
-    throw new Error('MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER and DB_NAME must be set (in .env or the environment).');
-  }
-  return `mongodb+srv://${encodeURIComponent(MONGODB_USERNAME)}:${encodeURIComponent(MONGODB_PASSWORD)}@${MONGODB_CLUSTER}/${DB_NAME}?retryWrites=true&w=majority&appName=AshishRai`;
-}
 
 function temporaryPassword() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
@@ -36,11 +29,12 @@ function temporaryPassword() {
 async function main() {
   const email = String(value('--email') || '').trim().toLowerCase();
   if (!email) throw new Error('Pass --email=<the admin account email>.');
-  await mongoose.connect(connectionString(), { serverSelectionTimeoutMS: 15000 });
+  await connectDB();
   const users = mongoose.connection.db.collection('admin_users');
   const account = await users.findOne({ email });
   if (!account) throw new Error(`No admin account has the email ${email}.`);
-  console.log(`\nDatabase: ${process.env.DB_NAME}\nAccount:  ${account.name} <${account.email}>  role: ${account.role}  ${account.active === false ? '(INACTIVE)' : ''}\n`);
+  const dbName = process.env.DB_NAME || 'PostgreSQL';
+  console.log(`\nDatabase: ${dbName}\nAccount:  ${account.name} <${account.email}>  role: ${account.role}  ${account.active === false ? '(INACTIVE)' : ''}\n`);
   if (!args.includes('--execute')) {
     console.log('Dry run: nothing changed. Add --execute to set a new one-time password.\n');
     return;
@@ -56,4 +50,4 @@ async function main() {
   console.log(`New one-time password for ${account.email}:\n\n    ${password}\n\nThey must choose their own password at the next sign-in. This is not shown again.\n`);
 }
 
-main().catch((e) => { console.error(`\nFailed: ${e.message}\n`); process.exitCode = 1; }).finally(() => mongoose.disconnect());
+main().catch((e) => { console.error(`\nFailed: ${e.message}\n`); process.exitCode = 1; }).finally(() => mongoose.connection.close().catch(() => {}));

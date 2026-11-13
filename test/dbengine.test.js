@@ -42,7 +42,7 @@ test('postgres returns the Postgres facade (not the real mongoose module) with t
   assert.match(r.out, /true,function,function,function,number/);
 });
 
-test('no file outside the entry point and the two maintenance scripts requires mongoose directly', () => {
+test('no file outside the entry point requires mongoose directly', () => {
   const found = [];
   const walk = (rel) => {
     const abs = path.join(root, rel);
@@ -56,5 +56,5 @@ test('no file outside the entry point and the two maintenance scripts requires m
   for (const entry of ['models', 'controllers', 'lib', 'services', 'routes', 'config', 'scripts', 'index.js', 'monitor.js']) walk(entry);
   // the Postgres engine itself builds on Mongoose's schema classes and ObjectId; everything else goes through the entry point
   const outside = found.filter((f) => !f.startsWith('lib/db/postgres/'));
-  assert.deepEqual(outside.sort(), ['lib/db/mongoose.js', 'scripts/resetAdminPassword.js', 'scripts/resetBusinessSetup.js']);
+  assert.deepEqual(outside.sort(), ['lib/db/mongoose.js']);
 });

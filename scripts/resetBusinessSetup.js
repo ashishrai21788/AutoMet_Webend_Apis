@@ -16,23 +16,30 @@
  * NEW App ID) straight away. Without it those records would belong to no business until the server restarts, because the
  * server recreates it at start-up anyway. Use --no-default only if you will restart the server before anyone uses the apps.
  *
- * THIS CANNOT BE UNDONE. Take a database backup first (MongoDB Atlas: Backup, or `mongodump`).
+ * THIS CANNOT BE UNDONE. Take a database backup first.
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-const mongoose = require('mongoose');
+const mongoose = require('../lib/db/mongoose');
+const connectDB = require('../config/db');
+const { isPostgres } = require('../lib/db/engine');
 const { plan, execute } = require('../lib/resetBusinessSetup');
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name) => { const a = args.find((x) => x.startsWith(`${name}=`)); return a ? a.slice(name.length + 1) : null; };
 
-function connectionString() {
-  const { MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER, DB_NAME } = process.env;
-  if (!MONGODB_USERNAME || !MONGODB_PASSWORD || !MONGODB_CLUSTER || !DB_NAME) {
-    throw new Error('MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER and DB_NAME must be set (in .env or the environment).');
+function verifyConfig() {
+  if (isPostgres) {
+    if (!process.env.DATABASE_URL && !process.env.PROD_POOLER_URL) {
+      throw new Error('DATABASE_URL must be set (in .env or the environment).');
+    }
+  } else {
+    const { MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER, DB_NAME } = process.env;
+    if (!MONGODB_USERNAME || !MONGODB_PASSWORD || !MONGODB_CLUSTER || !DB_NAME) {
+      throw new Error('MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_CLUSTER and DB_NAME must be set (in .env or the environment).');
+    }
   }
-  return `mongodb+srv://${encodeURIComponent(MONGODB_USERNAME)}:${encodeURIComponent(MONGODB_PASSWORD)}@${MONGODB_CLUSTER}/${DB_NAME}?retryWrites=true&w=majority&appName=AshishRai`;
 }
 
 function logoRemover() {
@@ -46,10 +53,11 @@ function logoRemover() {
 const pad = (n) => String(n).padStart(6);
 
 async function main() {
-  const dbName = process.env.DB_NAME;
-  await mongoose.connect(connectionString(), { serverSelectionTimeoutMS: 15000 });
+  verifyConfig();
+  const dbName = process.env.DB_NAME || (isPostgres ? 'postgres' : 'unknown');
+  await connectDB();
   const db = mongoose.connection.db;
-  console.log(`\nDatabase: ${dbName}   Cluster: ${process.env.MONGODB_CLUSTER}\n`);
+  console.log(`\nDatabase: ${dbName}   Engine: ${process.env.DB_ENGINE || 'postgres'}\n`);
 
   const p = await plan(db);
   console.log('Would be deleted:');
@@ -88,4 +96,4 @@ async function main() {
 
 main()
   .catch((e) => { console.error('\nFAILED:', e.message); process.exitCode = 1; })
-  .finally(() => mongoose.disconnect().catch(() => {}));
+  .finally(() => mongoose.connection.close().catch(() => {}));

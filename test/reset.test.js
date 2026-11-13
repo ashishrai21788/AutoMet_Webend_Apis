@@ -99,8 +99,13 @@ test('the lists name only collections that exist in the models', () => {
 });
 
 test('the command line tool refuses to run without database settings and says why', () => {
-  const env = { ...process.env, MONGODB_USERNAME: '', MONGODB_PASSWORD: '', MONGODB_CLUSTER: '', DB_NAME: '' };
+  const env = { ...process.env, DB_ENGINE: 'mongo', MONGODB_USERNAME: '', MONGODB_PASSWORD: '', MONGODB_CLUSTER: '', DB_NAME: '' };
   const r = spawnSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'resetBusinessSetup.js'), '--execute', '--confirm=anything'], { env, encoding: 'utf8', timeout: 20000 });
   assert.notEqual(r.status, 0);
   assert.match(r.stderr + r.stdout, /MONGODB_USERNAME.*must be set/);
+
+  const pgEnv = { ...process.env, DB_ENGINE: 'postgres', DATABASE_URL: '', PROD_POOLER_URL: '' };
+  const rPg = spawnSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'resetBusinessSetup.js'), '--execute', '--confirm=anything'], { env: pgEnv, encoding: 'utf8', timeout: 20000 });
+  assert.notEqual(rPg.status, 0);
+  assert.match(rPg.stderr + rPg.stdout, /DATABASE_URL.*must be set/);
 });

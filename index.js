@@ -138,13 +138,18 @@ app.use('/api', (req, res, next) => {
   
   // Check if database is connected
   if (!serverHealth.dbConnected || mongoose.connection.readyState !== 1) {
+    const { isPostgres } = require('./lib/db/engine');
+    const dbName = isPostgres ? 'PostgreSQL' : 'MongoDB';
+    const hint = isPostgres
+      ? 'Check GET /health or GET /api/health for dbConnected status. Verify DATABASE_URL in .env and ensure PostgreSQL is reachable.'
+      : 'Check GET /health or GET /api/health for dbConnected status. Fix MongoDB credentials in .env and restart the server.';
     return res.status(503).json({
       success: false,
-      message: 'Database connection not available. All /api/* routes need MongoDB. Check server logs for connection errors and ensure .env has correct MONGODB_* and DB is reachable.',
+      message: Database connection not available. All /api/* routes need . Check server logs for connection errors and ensure database is reachable.,
       error: 'DATABASE_CONNECTION_ERROR',
       timestamp: new Date().toISOString(),
       retryAfter: 30,
-      hint: 'Check GET /health or GET /api/health for dbConnected status. Fix MongoDB credentials in .env and restart the server.'
+      hint
     });
   }
   
@@ -258,7 +263,7 @@ app.get('/api/health', (req, res) => {
     success: dbConnected,
     message: dbConnected
       ? 'API and database ready'
-      : 'Server is up but database is not connected. All other /api/* routes will return 503 until MongoDB connects.',
+      : 'Server is up but database is not connected. All other /api/* routes will return 503 until the database connects.',
     dbConnected,
     /** False means ride-request push to drivers will fail until FIREBASE_SERVICE_ACCOUNT_* is set */
     fcmReady,
