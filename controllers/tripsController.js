@@ -9,6 +9,9 @@ const { offerExtras } = require('../lib/rideOffer');
 const { sendPushToDriver, sendPushToUser } = require('../lib/pushNotification');
 const { priceTrip, priceTripWithCoupon, withSurge, loadPricingConfig } = require('../lib/tripPricing');
 const coupons = require('../lib/coupons');
+const { Coupon, CouponUse } = require('../models/couponModel');
+const { digitsOf } = require('../lib/riderInvoice');
+const tripShare = require('../lib/tripShare');
 const { sameBusiness, tenantForAccount } = require('../lib/appTenant');
 const { checkDriverAvailable, refusal } = require('../lib/driverAvailability');
 const { findDriverConflict, COMMITTED_STATUSES } = require('../lib/driverBusy');
@@ -251,6 +254,9 @@ function ridePushPayload(trip, riderName, extras = {}) {
     destination_masked: maskDestination ? 'true' : 'false',
     ride_note: trip.ride_note || '',
     rider_name: riderName || '',
+    passenger_name: trip.passenger && trip.passenger.name ? trip.passenger.name : '',
+    passenger_phone: trip.passenger && trip.passenger.phone ? trip.passenger.phone : '',
+    is_for_other: trip.passenger ? 'true' : 'false',
     distance: String(trip.distance_km),
     estimated_duration: String(trip.estimated_duration_min),
     fare: String(trip.fare),
@@ -260,6 +266,7 @@ function ridePushPayload(trip, riderName, extras = {}) {
     coupon_covered: String(require('../lib/driverEarnings').couponCoveredMajor(trip))
   };
 }
+exports.ridePushPayload = ridePushPayload;
 
 /**
  * Moves an automatically dispatched request that its driver rejected or ignored on to the next nearest driver.
@@ -310,7 +317,7 @@ async function reofferTrip(trip, now = new Date()) {
       await TripDetails.updateOne({ trip_id: claimed.trip_id }, { $set: { push_sent: true, push_sent_at: now, push_status: 'DELIVERED' } });
       emitToDriver(nextId, 'ride_request_received', {
         trip_id: claimed.trip_id, request_id: claimed.request_id, user_id: claimed.user_id, driver_id: nextId,
-        pickup: claimed.pickup, drop: claimed.drop, ride_note: claimed.ride_note,
+        pickup: claimed.pickup, drop: claimed.drop, ride_note: claimed.ride_note || '', passenger: claimed.passenger || null,
         requested_at: claimed.requested_at, timeout_at: claimed.timeout_at
       });
       return true;
@@ -335,7 +342,14 @@ exports.createRequest = async (req, res) => {
     const dropAddress = body.drop_address != null ? String(body.drop_address).trim() : '';
     const dropLat = body.drop_latitude;
     const dropLng = body.drop_longitude;
-    const rideNote = body.ride_note != null ? String(body.ride_note).trim() : null;
+    const rideNoteRaw = body.ride_note != null ? body.ride_note : body.note;
+    const rideNote = rideNoteRaw != null ? String(rideNoteRaw).trim().slice(0, 200) : null;
+    let passenger = null;
+    const pName = body.passenger_name != null ? String(body.passenger_name).trim().slice(0, 60) : (body.passenger && body.passenger.name ? String(body.passenger.name).trim().slice(0, 60) : null);
+    const pPhone = body.passenger_phone != null ? String(body.passenger_phone).trim().slice(0, 20) : (body.passenger && body.passenger.phone ? String(body.passenger.phone).trim().slice(0, 20) : null);
+    if (pName || pPhone) {
+      passenger = { name: pName || null, phone: pPhone || null };
+    }
     // the ride type the rider chose (a vehicle category of their business); priced and dispatched by that category
     const requestedCategoryId = body.category_id != null ? String(body.category_id).trim() : '';
 
@@ -526,6 +540,8 @@ exports.createRequest = async (req, res) => {
       pickup: { address: pickupAddress, lat: pickupLat, lng: pickupLng },
       drop: { address: dropAddress, lat: dropLat, lng: dropLng },
       ride_note: rideNote || undefined,
+      passenger: passenger || undefined,
+      share_token: (passenger && passenger.phone) ? tripShare.newToken() : null,
       fare: estimate.fare,
       currency: estimate.currency,
       distance_km: estimate.distance_km,
@@ -632,6 +648,9 @@ exports.createRequest = async (req, res) => {
       destination_masked: maskDestination ? 'true' : 'false',
       ride_note: rideNote || '',
       rider_name: riderName || '',
+      passenger_name: passenger && passenger.name ? passenger.name : '',
+      passenger_phone: passenger && passenger.phone ? passenger.phone : '',
+      is_for_other: passenger ? 'true' : 'false',
       // Shown on the driver's "New Ride Request" sheet (distance in km, duration in minutes).
       distance: String(estimate.distance_km),
       estimated_duration: String(estimate.duration_min),
@@ -673,18 +692,34 @@ exports.createRequest = async (req, res) => {
       driver_id: driverId,
       pickup: trip.pickup,
       drop: trip.drop,
-      ride_note: trip.ride_note,
+      ride_note: trip.ride_note || '',
+      passenger: trip.passenger || null,
       requested_at: trip.requested_at,
       timeout_at: trip.timeout_at
     };
     emitToDriver(driverId, 'ride_request_received', tripPayload);
 
-    return res.status(201).json(buildImmediateCreateResponse({
+    const createResp = buildImmediateCreateResponse({
       tripId,
       requestId,
       timeoutAt: timeoutAt.toISOString(),
       estimate
-    }));
+    });
+    if (trip.ride_note) {
+      createResp.data.ride_note = trip.ride_note;
+      createResp.ride_note = trip.ride_note;
+    }
+    if (trip.passenger) {
+      createResp.data.passenger = trip.passenger;
+      createResp.passenger = trip.passenger;
+    }
+    if (trip.share_token) {
+      const shareUrl = `${req.protocol}://${req.get('host')}/t/${trip.share_token}`;
+      createResp.data.share_token = trip.share_token;
+      createResp.data.share_url = shareUrl;
+      createResp.share_url = shareUrl;
+    }
+    return res.status(201).json(createResp);
   } catch (error) {
     console.error('[trips createRequest]', error);
     res.status(500).json({
@@ -1190,5 +1225,91 @@ exports.checkTimeouts = async (req, res) => {
       success: false,
       message: error.message || 'Failed to check timeouts'
     });
+  }
+};
+
+/**
+ * GET /api/trips/coupons (and /api/user/coupons)
+ * Returns the active and eligible coupon offers for the authenticated rider.
+ * Private coupons (showInApp=false), expired/scheduled/used up, and ineligible coupons are filtered.
+ */
+exports.listCoupons = async (req, res) => {
+  try {
+    const user = req.user || null;
+    const userId = user ? (user.userId || req.authActorId) : (req.authActorId || null);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const tenant = user ? await tenantForAccount(user.tenantId ? user : { ...user, tenantId: user.tenant_id }) : req.appTenant || null;
+    const tenantId = tenant ? tenant.tenantId : (user && (user.tenantId || user.tenant_id)) || (req.appTenant && req.appTenant.tenantId) || null;
+    const now = new Date();
+
+    const filter = {
+      active: true,
+      showInApp: { $ne: false },
+      startsAt: { $lte: now },
+      endsAt: { $gte: now }
+    };
+    if (tenantId) filter.tenantId = tenantId;
+
+    if (tenantId) {
+      try {
+        await coupons.reconcile(tenantId, { userId });
+      } catch (e) {
+        console.warn('[tripsController listCoupons] reconcile error:', e.message);
+      }
+    }
+
+    const rows = await Coupon.find(filter).sort({ createdAt: -1 }).lean();
+    const digits = digitsOf((tenant && tenant.market && tenant.market.currency) || 'INR');
+
+    let completedRidesCount = null;
+    const userUses = tenantId && rows.length
+      ? await CouponUse.find({ tenantId, userId, couponId: { $in: rows.map((r) => r.couponId) } }).lean()
+      : [];
+    const useMap = new Map(userUses.map((u) => [u.couponId, u.count]));
+
+    const categoryId = req.query.category_id || req.query.categoryId || null;
+    const regionId = req.query.region_id || req.query.regionId || null;
+
+    const available = [];
+    for (const c of rows) {
+      if (c.totalLimit > 0 && c.redeemed >= c.totalLimit) continue;
+      const userCount = useMap.get(c.couponId) || 0;
+      if (c.perUserLimit > 0 && userCount >= c.perUserLimit) continue;
+      if (c.newUsersOnly) {
+        if (completedRidesCount === null) {
+          completedRidesCount = await TripDetails.countDocuments({ user_id: userId, status: 'COMPLETED' });
+        }
+        if (completedRidesCount > 0) continue;
+      }
+      const matchesCategory = !categoryId || !(c.categoryIds && c.categoryIds.length) || c.categoryIds.includes(categoryId);
+      const matchesRegion = !regionId || !(c.regionIds && c.regionIds.length) || c.regionIds.includes(regionId);
+
+      available.push({
+        id: c.couponId,
+        code: c.code,
+        title: c.title || '',
+        description: c.description || '',
+        type: c.type,
+        value: c.type === 'FIXED' ? c.value / 10 ** digits : c.value,
+        maxDiscount: c.maxDiscountMinor ? c.maxDiscountMinor / 10 ** digits : 0,
+        minFare: c.minFareMinor ? c.minFareMinor / 10 ** digits : 0,
+        currency: c.currency || 'INR',
+        endsAt: c.endsAt,
+        newUsersOnly: !!c.newUsersOnly,
+        applicable: matchesCategory && matchesRegion
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Active offers',
+      data: available
+    });
+  } catch (error) {
+    console.error('[tripsController listCoupons]', error);
+    return res.status(500).json({ success: false, message: 'Could not load offers' });
   }
 };

@@ -193,3 +193,55 @@ test('admin: the list shows the real number of uses, with cancelled bookings alr
   assert.equal(db.Coupon.rows[0].redeemed, 1);
   assert.equal(c.couponId, db.Coupon.rows[0].couponId);
 });
+
+test('rider offers discovery: listCoupons returns only active, in-date, in-limit public offers for their business', async () => {
+  reset();
+  const tripsController = require('../controllers/tripsController');
+
+  // 1. Public active coupon for tenant t1
+  await db.Coupon.create(mk({ code: 'OFFER10', title: '10% Off', description: 'Get 10% off', type: 'PERCENT', value: 10, showInApp: true, active: true }));
+
+  // 2. Private coupon (showInApp: false)
+  await db.Coupon.create(mk({ code: 'SECRET50', title: 'Secret 50%', showInApp: false, active: true }));
+
+  // 3. Inactive coupon
+  await db.Coupon.create(mk({ code: 'INACTIVE', showInApp: true, active: false }));
+
+  // 4. Other tenant's coupon
+  await db.Coupon.create(mk({ tenantId: 't2', code: 'OTHERBIZ', showInApp: true, active: true }));
+
+  // 5. Expired coupon
+  await db.Coupon.create(mk({ code: 'OLDPROMO', showInApp: true, active: true, startsAt: new Date(NOW - 2 * DAY), endsAt: new Date(NOW - DAY) }));
+
+  // 6. Scheduled future coupon
+  await db.Coupon.create(mk({ code: 'FUTURE', showInApp: true, active: true, startsAt: new Date(NOW + DAY), endsAt: new Date(NOW + 2 * DAY) }));
+
+  // 7. Used up coupon
+  await db.Coupon.create(mk({ code: 'GONE', showInApp: true, active: true, totalLimit: 2, redeemed: 2 }));
+
+  await db.Tenant.create({ tenantId: 't1', name: 'Biz 1', isDefault: false });
+  const req = {
+    user: { userId: 'rider-discovery-1', tenantId: 't1' },
+    authActorId: 'rider-discovery-1',
+    appTenant: { tenantId: 't1', market: { currency: 'INR' } },
+    query: {}
+  };
+  let resStatus = 200;
+  let resBody = null;
+  const res = {
+    status(s) { resStatus = s; return this; },
+    json(b) { resBody = b; return this; }
+  };
+
+  await tripsController.listCoupons(req, res);
+  assert.equal(resStatus, 200);
+  assert.ok(resBody.success);
+  assert.equal(resBody.data.length, 1);
+  assert.equal(resBody.data[0].code, 'OFFER10');
+  assert.equal(resBody.data[0].title, '10% Off');
+  assert.equal(resBody.data[0].applicable, true);
+
+  // Private code is NOT discoverable in offers list, but CAN still be directly evaluated by code
+  const evalPrivate = await coupons.check({ tenantId: 't1', code: 'SECRET50', userId: 'rider-discovery-1', grossMinor: 10000 });
+  assert.equal(evalPrivate.ok, true, 'private codes still work when typed directly');
+});

@@ -3,6 +3,7 @@
 process.env.JWT_SECRET = 'test-secret-for-dispatch-tests';
 process.env.RATE_LIMIT_DISABLED = '1';
 process.env.DISPATCH_MAX_ATTEMPTS = '3';
+delete process.env.DB_ENGINE;
 
 const path = require('node:path');
 const test = require('node:test');
@@ -13,6 +14,7 @@ const db = createFakeDb();
 db.install();
 
 // push stand-ins: every driver is reachable and every push succeeds, and we record who was pushed
+require('../config/firestore').isFcmReady = () => true;
 const pushed = [];
 const pushPath = require.resolve(path.join(__dirname, '..', 'lib', 'fcmTripPush.js'));
 require.cache[pushPath] = {
@@ -140,4 +142,63 @@ test('the sweeper moves an unanswered automatic offer instead of ending it, and 
   row().timeout_at = new Date(Date.now() - 1000);
   await expireTimedOutRequests(new Date());
   assert.equal(row().status, 'NO_RESPONSE');
+});
+
+test('createRequest stores note and passenger, limits lengths, generates share link, and carries them in push', async () => {
+  await reset();
+  let pushCaptured = null;
+  const fcmTripPush = require('../lib/fcmTripPush');
+  const originalSend = fcmTripPush.sendRideRequestPushWithRetry;
+  fcmTripPush.sendRideRequestPushWithRetry = async (token, tripId, payload, ctx) => {
+    pushCaptured = payload;
+    return originalSend(token, tripId, payload, ctx);
+  };
+
+  const req = {
+    protocol: 'https',
+    get: () => 'api.automet.in',
+    user: { userId: 'u1' },
+    authActorId: 'u1',
+    body: {
+      request_id: 'REQ_NOTE_PASS_1',
+      user_id: 'u1',
+      pickup_address: 'Gate 2, Tech Park',
+      pickup_latitude: 28.57,
+      pickup_longitude: 77.48,
+      drop_address: 'Airport Terminal 3',
+      drop_latitude: 28.55,
+      drop_longitude: 77.09,
+      ride_note: '   Please wait near Gate 2 security booth   ',
+      passenger_name: 'Jane Doe',
+      passenger_phone: '+919876543210'
+    }
+  };
+  let resStatus = 200;
+  let resBody = null;
+  const res = {
+    status(s) { resStatus = s; return this; },
+    json(b) { resBody = b; return this; }
+  };
+
+  await require('../controllers/tripsController').createRequest(req, res);
+  assert.equal(resStatus, 201);
+  assert.ok(resBody.success);
+  assert.equal(resBody.data.ride_note, 'Please wait near Gate 2 security booth');
+  assert.deepEqual(resBody.data.passenger, { name: 'Jane Doe', phone: '+919876543210' });
+  assert.ok(resBody.data.share_token, 'generates share token for passenger');
+  assert.ok(resBody.data.share_url.includes('/t/'), 'generates share url');
+
+  const saved = db.TripDetails.rows.find((r) => r.request_id === 'REQ_NOTE_PASS_1');
+  assert.ok(saved);
+  assert.equal(saved.ride_note, 'Please wait near Gate 2 security booth');
+  assert.equal(saved.passenger.name, 'Jane Doe');
+  assert.equal(saved.passenger.phone, '+919876543210');
+
+  // Verify push payload generation for driver
+  const payload = require('../controllers/tripsController').ridePushPayload(saved, 'Test Rider');
+  assert.equal(payload.ride_note, 'Please wait near Gate 2 security booth');
+  assert.equal(payload.passenger_name, 'Jane Doe');
+  assert.equal(payload.passenger_phone, '+919876543210');
+  assert.equal(payload.is_for_other, 'true');
+  assert.equal(saved.push_sent, true);
 });

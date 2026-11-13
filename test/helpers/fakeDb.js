@@ -218,7 +218,7 @@ function createFakeDb() {
     PricingVersion: fakeModel({ uniques: [['tenantId', 'version']], defaults: () => ({ createdAt: new Date() }) }),
     CancellationPolicyChange: fakeModel({ uniques: ['changeId'], defaults: () => ({ createdAt: new Date() }) }),
     ConfigVersion: fakeModel({ uniques: [['tenantId', 'version']], defaults: () => ({ changed: [], createdAt: new Date() }) }),
-    Coupon: fakeModel({ uniques: ['couponId', ['tenantId', 'code']], defaults: () => ({ redeemed: 0, active: true, createdAt: new Date(), updatedAt: new Date() }) }),
+    Coupon: fakeModel({ uniques: ['couponId', ['tenantId', 'code']], defaults: () => ({ redeemed: 0, active: true, showInApp: true, createdAt: new Date(), updatedAt: new Date() }) }),
     CouponUse: fakeModel({ uniques: [['tenantId', 'couponId', 'userId']] }),
     CouponRedemption: fakeModel({ uniques: ['redemptionId', ['tenantId', 'tripId']], defaults: () => ({ state: 'RESERVED', createdAt: new Date(), updatedAt: new Date() }) }),
     LegalDocument: fakeModel({ uniques: ['docId', ['tenantId', 'type', 'version']], defaults: () => ({ status: 'DRAFT', createdAt: new Date(), updatedAt: new Date() }) }),
@@ -249,6 +249,8 @@ function createFakeDb() {
       DriverVehicleAssignment: db.DriverVehicleAssignment, EntityHistory: db.EntityHistory
     });
     stub('models/tripDetailsModel.js', { TripDetails: db.TripDetails });
+    let tripCounterSeq = 0;
+    stub('models/tripCounterModel.js', { TripCounter: fakeModel({}), getNextTripId: async () => `amt_id_${String(++tripCounterSeq).padStart(6, '0')}` });
     stub('models/supportModels.js', { DriverIssue: db.DriverIssue });
     stub('models/riderPresenceModel.js', { RiderPresence: db.RiderPresence });
     stub('models/chatMessageModel.js', { ChatMessage: db.ChatMessage });

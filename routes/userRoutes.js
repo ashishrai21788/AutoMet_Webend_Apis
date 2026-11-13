@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const tripsController = require('../controllers/tripsController');
 const { requireAuth } = require('../lib/authMiddleware');
 const supportController = require('../controllers/supportController');
 const { createLimiter } = require('../lib/rateLimit');
@@ -45,6 +46,10 @@ router.post(
   supportController.submitRiderIssue
 );
 router.get('/issues', requireAuth({ roles: ['user'] }), supportController.myRiderIssues);
+
+// Active coupon and discount offers for rider
+router.get('/coupons', requireAuth({ roles: ['user'] }), tripsController.listCoupons);
+router.get('/offers', requireAuth({ roles: ['user'] }), tripsController.listCoupons);
 
 // Resend OTP - users_otp
 router.post('/resend-otp', ...sendLimit, userController.resendUserOtp);

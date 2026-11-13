@@ -35,6 +35,11 @@ const tripDetailsSchema = new mongoose.Schema({
   },
 
   ride_note: { type: String, default: null, trim: true },
+  // Booking for someone else: the passenger's name and contact number (optional)
+  passenger: {
+    name: { type: String, default: null, trim: true },
+    phone: { type: String, default: null, trim: true }
+  },
 
   // Fare and trip size. Computed on the server when the request is created (see lib/fare.js), so every client shows
   // the same numbers. fare_basis is 'ESTIMATE' until a real meter / GPS trace exists, then 'ACTUAL'.

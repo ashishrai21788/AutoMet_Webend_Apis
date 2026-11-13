@@ -28,6 +28,7 @@ const couponSchema = new mongoose.Schema({
   categoryIds: { type: [String], default: [] }, // empty: every vehicle category
   regionIds: { type: [String], default: [] }, // empty: every service area
   newUsersOnly: { type: Boolean, default: false }, // only riders with no completed ride yet
+  showInApp: { type: Boolean, default: true }, // visible in the rider app offers list (false = private code)
   /** who pays for the discount: BUSINESS (the driver is still paid the full fare) or DRIVER (the driver earns on what the rider paid) */
   fundedBy: { type: String, enum: ['BUSINESS', 'DRIVER'], default: 'BUSINESS' },
   active: { type: Boolean, default: true },

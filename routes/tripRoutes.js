@@ -26,6 +26,11 @@ router.post(
   requireAuth({ roles: ['user'] }),
   tripsController.rideOptions
 );
+router.get(
+  '/coupons',
+  requireAuth({ roles: ['user'] }),
+  tripsController.listCoupons
+);
 router.post(
   '/nearby-drivers',
   requireAuth({ roles: ['user'] }),

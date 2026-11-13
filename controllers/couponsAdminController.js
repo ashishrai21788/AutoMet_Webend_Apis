@@ -24,7 +24,7 @@ const view = (x, digits) => ({
   id: x.couponId, code: x.code, title: x.title || '', description: x.description || '', type: x.type,
   value: x.type === 'FIXED' ? x.value / 10 ** digits : x.value, maxDiscount: x.maxDiscountMinor / 10 ** digits, minFare: x.minFareMinor / 10 ** digits,
   startsAt: x.startsAt, endsAt: x.endsAt, totalLimit: x.totalLimit, perUserLimit: x.perUserLimit, categoryIds: x.categoryIds || [], regionIds: x.regionIds || [],
-  newUsersOnly: !!x.newUsersOnly, fundedBy: x.fundedBy || 'BUSINESS', active: !!x.active, redeemed: x.redeemed || 0,
+  newUsersOnly: !!x.newUsersOnly, showInApp: x.showInApp !== false, fundedBy: x.fundedBy || 'BUSINESS', active: !!x.active, redeemed: x.redeemed || 0,
   state: !x.active ? 'OFF' : new Date(x.endsAt) < new Date() ? 'EXPIRED' : new Date(x.startsAt) > new Date() ? 'SCHEDULED' : (x.totalLimit > 0 && x.redeemed >= x.totalLimit) ? 'USED_UP' : 'LIVE'
 });
 
@@ -51,6 +51,7 @@ async function validate(req, body, digits, { partial = false, existing = null } 
   whole('totalLimit', 10000000); whole('perUserLimit', 1000);
   for (const k of ['startsAt', 'endsAt']) if (!partial || b[k] !== undefined) { const d = new Date(b[k]); if (Number.isNaN(d.getTime())) errors[k] = 'Choose a date'; else out[k] = d; }
   if (b.newUsersOnly !== undefined) out.newUsersOnly = !!b.newUsersOnly;
+  if (b.showInApp !== undefined) out.showInApp = !!b.showInApp;
   if (b.active !== undefined) out.active = !!b.active;
   if (b.fundedBy !== undefined) { const f = String(b.fundedBy).toUpperCase(); if (!['BUSINESS', 'DRIVER'].includes(f)) errors.fundedBy = 'Choose who pays for it'; else out.fundedBy = f; }
   // restrictions must name this business's own categories and regions
@@ -93,7 +94,7 @@ exports.create = c.handle(async (req, res) => {
   if (Object.keys(errors).length) return c.invalid(res, errors);
   const now = new Date();
   try {
-    const doc = await Coupon.create({ tenantId: req.business.tenantId, couponId: c.newId('cp'), currency: currencyOf(req), perUserLimit: 1, totalLimit: 0, ...out, redeemed: 0, createdBy: req.admin.adminId, createdAt: now, updatedAt: now });
+    const doc = await Coupon.create({ tenantId: req.business.tenantId, couponId: c.newId('cp'), currency: currencyOf(req), perUserLimit: 1, totalLimit: 0, showInApp: true, ...out, redeemed: 0, createdBy: req.admin.adminId, createdAt: now, updatedAt: now });
     await audit(req, 'coupon.created', doc.couponId, { code: out.code, type: out.type });
     return c.ok(res, view(doc.toObject ? doc.toObject() : doc, digits));
   } catch (e) {
